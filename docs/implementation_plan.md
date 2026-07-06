@@ -43,7 +43,16 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 
 **Goal:** hybrid retrieval that measurably beats naive vector search. *(Engineering-signal #1.)*
 
-**Day 2 — Ingestion (`ingest.py`)**
+> **Status (2026-07-07):** Days 2 & 3 done, and Day 4's *core* pulled forward — the full
+> dense→sparse→RRF→cross-encoder pipeline is built and tested. Ingestion: 48 RFCs → 2,888
+> chunks (bge-small, 384-d), FAISS + BM25 with asserted shared IDs. `test_retrieve.py`: 4
+> passing (alignment, four-scores, FR-R7, EnsembleRetriever orchestration), 1 skipped (FR-R6).
+> **FR-R7 artifact captured** (for the README): query *"What does the invalid_grant error
+> mean?"* → gold chunk `rfc6749#0043` is **BM25 rank 1** but **pure-dense rank 24**; hybrid
+> RRF+rerank recovers it into the final top-5. **Still open (needs the eval set, Phase 3):**
+> tuning N/K/fusion/chunk-size and the FR-R6 rerank-vs-fusion recall number.
+
+**Day 2 — Ingestion (`ingest.py`)** — ✅ done
 - load → clean/normalize → chunk (~512 tok, 10–15% overlap) → local embeddings → FAISS dense index → BM25 index over the **same** chunks.
 - Enforce **shared chunk IDs** across both indexes (FR-I2). Make ingestion idempotent (FR-I3). Record chunking strategy on the index (FR-I4).
 - **Exit:** `python -m sentinel.ingest` builds both indexes cleanly.
