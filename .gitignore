@@ -1,0 +1,34 @@
+# --- Secrets (never commit — §16.6) ---
+.env
+.env.local
+*.pem
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Databases & indexes (rebuilt from source — §16.6) ---
+*.db
+*.sqlite
+*.sqlite3
+indexes/
+
+# --- Dashboard (Next.js) ---
+dashboard/.next/
+dashboard/node_modules/
+node_modules/
+.next/
+
+# --- Eval JSON exports consumed by the dashboard ---
+dashboard/data/*.json
+
+# --- OS / editor noise ---
+.DS_Store
+.idea/
+.vscode/
+*.swp

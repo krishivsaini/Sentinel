@@ -1,0 +1,70 @@
+[project]
+name = "sentinel"
+version = "0.1.0"
+description = "Production hybrid-retrieval RAG service with a Ragas evaluation gate wired into CI."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Krishiv Saini" }]
+
+# Version floors reflect the current PyPI releases verified 2026-07-06.
+# uv pins exact versions in uv.lock (committed) — that is the reproducibility contract (§16.6).
+dependencies = [
+    # --- Retrieval orchestration (the deliberate framework choice — §2/§9) ---
+    "langchain>=1.3,<2",
+    "langchain-community>=0.4,<0.5",
+    "langchain-huggingface>=1.2,<2",      # HF embedding integration for LangChain retrievers
+    # --- Generation + Ragas judge (only paid-eligible calls; free tier) ---
+    "langchain-google-genai>=4.2,<5",
+    # --- Local models: embeddings + cross-encoder reranker (run at ₹0) ---
+    "sentence-transformers>=5.6,<6",
+    # --- Indexes ---
+    "faiss-cpu>=1.14,<2",                  # dense vector index
+    "rank-bm25>=0.2.2,<0.3",               # sparse BM25 index
+    # --- Evaluation ---
+    "ragas>=0.4.3,<0.5",
+    "datasets>=5.0,<6",                    # ragas dataset plumbing
+    # --- API service (production hygiene — §11) ---
+    "fastapi>=0.139,<0.140",
+    "uvicorn[standard]>=0.50,<0.51",
+    "sse-starlette>=2.1",                  # SSE token streaming for /query
+    "python-jose[cryptography]>=3.5,<4",   # JWT auth
+    "python-multipart>=0.0.9",             # form parsing for the token endpoint
+    "slowapi>=0.1.10,<0.2",                # per-IP rate limiting
+    # --- Cross-cutting ---
+    "pydantic>=2.13,<3",
+    "pydantic-settings>=2.14,<3",          # config.py loads secrets/knobs from env
+    "tenacity>=9.1,<10",                   # backoff around Gemini/Ragas judge (429s)
+    "tiktoken>=0.8",                       # approximate token counting for chunking
+    "structlog>=25.1",                     # structured logging + per-stage latency
+    "numpy>=2.0",
+]
+
+[project.optional-dependencies]
+# Nothing here yet — reserved for the v2 guardrail layer (PII/injection deps).
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.28",                          # FastAPI TestClient / async API tests
+    "ruff>=0.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sentinel"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
