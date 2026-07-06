@@ -26,7 +26,7 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 **Goal:** make every load-bearing decision before writing pipeline code.
 
 **Tasks**
-1. **Corpus choice + licensing** — ✅ **DECIDED (2026-07-06): IETF RFC web-protocol stack** (~40–60 curated RFCs: HTTP 9110–9114 + obsoleted 2616/7231, URI 3986/6570, TLS 8446, OAuth 6749/6750, JWT 7519, cookies 6265, TCP 9293, DNS 1034/1035/8484, keywords 2119/8174). Licensing verified: IETF Trust permits whole-RFC reproduction; no derivative works — pipeline quotes verbatim only (see [`requirement.md` §5](./requirement.md)). **Remaining task:** finalize the exact RFC list and fetch plain-text from rfc-editor.org into `data/corpus/`.
+1. **Corpus choice + licensing** — ✅ **DONE (2026-07-06): IETF RFC web-protocol stack, 48 curated RFCs** fetched verbatim into `data/corpus/`. Exact list + titles + thematic clusters are pinned in [`data/corpus_manifest.json`](../data/corpus_manifest.json); `scripts/fetch_corpus.py` downloads idempotently from rfc-editor.org and records per-file sha256/bytes in `data/corpus/PROVENANCE.json`. Coverage: HTTP core 9110–9114, HTTP compression 7541/9204, HTTP extensions (5789/6585/6797/8288/8615), URIs 3986/6570, cookies 6265, WebSocket 6455, QUIC 9000–9002, TCP 9293, TLS 8446/7301/6066/2818, PKI 5280/6960/8555, OAuth 6749/6750/7636/8628/9068, HTTP auth 7617/7616, JOSE/JWT 7515–7519, encodings 8259/4648/3339, DNS 1034/1035/8484/7858, keywords 2119/8174. Obsoleted HTTP RFCs (2616/7231) deliberately excluded so ground truth stays unambiguous against a single current spec. Size ~5.3 MB / ~2.0–2.4K chunks — inside the FR-C4 window. Licensing verified: IETF Trust permits whole-RFC reproduction; no derivative works — pipeline quotes verbatim only (see [`requirement.md` §5](./requirement.md)).
 2. Scaffold the repo tree (build plan §4): `sentinel/`, `data/`, `dashboard/`, `tests/`, `scripts/`, `.github/workflows/`.
 3. `pyproject.toml` via `uv` with pinned deps. **Verify current package names + exact Gemini Flash model ID against provider docs first** (build plan §5 note) — do not invent IDs.
 4. `.gitignore` (`.env`, `*.db`, `indexes/`, `__pycache__`, `.next`, `node_modules`, `dashboard/data/*.json`), `.env.example`, MIT `LICENSE` (already present).
@@ -35,7 +35,7 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 
 **Exit gate:** corpus justified in one sentence; repo skeleton pushed; `config.py` + `schema.py` compile.
 
-**Decision resolved:** corpus = IETF RFC web-protocol stack (licensing verified). The one remaining open item is finalizing the exact RFC list.
+**Decision resolved:** corpus = IETF RFC web-protocol stack, 48 RFCs, fetched + verified + provenance-recorded (licensing verified). Phase 0 corpus work is complete; next up is Day 2 ingestion.
 
 ---
 
@@ -183,8 +183,8 @@ All acceptance criteria in [`requirement.md` §6](./requirement.md) pass, and al
 
 ## 11. Immediate Next Actions
 
-1. ✅ **Corpus decided** — IETF RFC web-protocol stack, licensing verified. Next sub-task: finalize the exact RFC list + fetch plain-text into `data/corpus/`.
-2. Verify current package names + the exact Gemini Flash model ID against provider docs.
-3. Scaffold the repo tree and write `config.py` + `schema.py`.
+1. ✅ **Corpus done** — IETF RFC web-protocol stack (48 RFCs) finalized, fetched, verified, provenance-recorded. Pinned in `data/corpus_manifest.json`.
+2. ✅ Repo scaffold, `config.py`, `schema.py`, `pyproject.toml` — committed (979d5c3).
+3. **Next: Phase 1, Day 2 — ingestion** (`sentinel/ingest.py`): load the 48 RFCs → clean/normalize → chunk → embed → FAISS + BM25 over shared chunk IDs.
 
 > These docs (`requirement.md`, `product_design.md`, `architecture.md`, `implementation_plan.md`) complete the planning layer. The next commit should be the Phase 0 scaffold — but the corpus decision comes first.

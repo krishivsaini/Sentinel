@@ -1,0 +1,488 @@
+{
+  "corpus_name": "IETF web-protocol stack",
+  "generated_utc": "2026-07-06T17:59:29+00:00",
+  "count": 48,
+  "total_bytes": 5309820,
+  "files": {
+    "rfc2119.txt": {
+      "number": 2119,
+      "title": "Key words for use in RFCs to Indicate Requirement Levels",
+      "cluster": "keywords",
+      "url": "https://www.rfc-editor.org/rfc/rfc2119.txt",
+      "bytes": 4723,
+      "sha256": "3c2ceb7bfc84cd34720f4a5271338ab9d8280d34bdd1eb250c64306202f2ed8b",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc8174.txt": {
+      "number": 8174,
+      "title": "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words",
+      "cluster": "keywords",
+      "url": "https://www.rfc-editor.org/rfc/rfc8174.txt",
+      "bytes": 6071,
+      "sha256": "5ca0e2f90be0bc5928ee465f76518fee316dfa775aed885658a29a419cc293b7",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc9110.txt": {
+      "number": 9110,
+      "title": "HTTP Semantics",
+      "cluster": "http-core",
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.txt",
+      "bytes": 502941,
+      "sha256": "21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc9111.txt": {
+      "number": 9111,
+      "title": "HTTP Caching",
+      "cluster": "http-core",
+      "url": "https://www.rfc-editor.org/rfc/rfc9111.txt",
+      "bytes": 84477,
+      "sha256": "aeb52adb3279d5f23dae34f68af11bd5cef0a0aff7ffcd014c9ca93c5302cf3e",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc9112.txt": {
+      "number": 9112,
+      "title": "HTTP/1.1",
+      "cluster": "http-core",
+      "url": "https://www.rfc-editor.org/rfc/rfc9112.txt",
+      "bytes": 109913,
+      "sha256": "e4f426bac6206b67fdf9e0da826154f70588db2133a0a86b15cde4ff725d8937",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc9113.txt": {
+      "number": 9113,
+      "title": "HTTP/2",
+      "cluster": "http-core",
+      "url": "https://www.rfc-editor.org/rfc/rfc9113.txt",
+      "bytes": 191811,
+      "sha256": "a00ef91b64e111a282e77ec66980f5242e77c0bb5e33e0927e3b6757080506de",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc9114.txt": {
+      "number": 9114,
+      "title": "HTTP/3",
+      "cluster": "http-core",
+      "url": "https://www.rfc-editor.org/rfc/rfc9114.txt",
+      "bytes": 155206,
+      "sha256": "6b84555c88eeebcf5d2b2e1d9d7b58630abc97ab877b2cf62dee4cd635db34e4",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7541.txt": {
+      "number": 7541,
+      "title": "HPACK: Header Compression for HTTP/2",
+      "cluster": "http-compression",
+      "url": "https://www.rfc-editor.org/rfc/rfc7541.txt",
+      "bytes": 117827,
+      "sha256": "2239d7f8fb839b69ae2e928e685559b11376888269f131512197a0e3bacf7f7a",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc9204.txt": {
+      "number": 9204,
+      "title": "QPACK: Field Compression for HTTP/3",
+      "cluster": "http-compression",
+      "url": "https://www.rfc-editor.org/rfc/rfc9204.txt",
+      "bytes": 99258,
+      "sha256": "926b4d7e9772b5c316fe87a1e160f5ced118101459ede5b13d11bf9a9273c931",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc5789.txt": {
+      "number": 5789,
+      "title": "PATCH Method for HTTP",
+      "cluster": "http-extensions",
+      "url": "https://www.rfc-editor.org/rfc/rfc5789.txt",
+      "bytes": 21706,
+      "sha256": "9405262c2f3a33848c6cf1694e5e40222eb27a6858a6d93e70328b444d197e8f",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc6585.txt": {
+      "number": 6585,
+      "title": "Additional HTTP Status Codes",
+      "cluster": "http-extensions",
+      "url": "https://www.rfc-editor.org/rfc/rfc6585.txt",
+      "bytes": 17164,
+      "sha256": "f6d55d1b491cd515c35827cf9181753b23b2a68c4df14e56d83dc445b3876e58",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc6797.txt": {
+      "number": 6797,
+      "title": "HTTP Strict Transport Security (HSTS)",
+      "cluster": "http-extensions",
+      "url": "https://www.rfc-editor.org/rfc/rfc6797.txt",
+      "bytes": 103554,
+      "sha256": "7cefa03f77547532580b7f877b4e6388bb66c20631b624667a0065c14ae3d364",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc8288.txt": {
+      "number": 8288,
+      "title": "Web Linking (Link header)",
+      "cluster": "http-extensions",
+      "url": "https://www.rfc-editor.org/rfc/rfc8288.txt",
+      "bytes": 50797,
+      "sha256": "820f624e0b0884af5c732e8087a65182452e49f2f49cd784ad7c30e16a4fc35d",
+      "fetched_utc": "2026-07-06T17:59:05+00:00",
+      "status": "fetched"
+    },
+    "rfc8615.txt": {
+      "number": 8615,
+      "title": "Well-Known Uniform Resource Identifiers (URIs)",
+      "cluster": "http-extensions",
+      "url": "https://www.rfc-editor.org/rfc/rfc8615.txt",
+      "bytes": 26866,
+      "sha256": "02d45caeb86c00197d30428472102bb558881fa61937804330c1242a0be5b5dc",
+      "fetched_utc": "2026-07-06T17:59:07+00:00",
+      "status": "fetched"
+    },
+    "rfc3986.txt": {
+      "number": 3986,
+      "title": "Uniform Resource Identifier (URI): Generic Syntax",
+      "cluster": "uri",
+      "url": "https://www.rfc-editor.org/rfc/rfc3986.txt",
+      "bytes": 141811,
+      "sha256": "3102dae4b68cebe40337730312fcb612297b8928547267e8b3d1ee6002b2d683",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc6570.txt": {
+      "number": 6570,
+      "title": "URI Template",
+      "cluster": "uri",
+      "url": "https://www.rfc-editor.org/rfc/rfc6570.txt",
+      "bytes": 79813,
+      "sha256": "c7b8c79f432821e867fafb1127080545202994c156405ae89cbae42ec0c66810",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc6265.txt": {
+      "number": 6265,
+      "title": "HTTP State Management Mechanism (Cookies)",
+      "cluster": "cookies",
+      "url": "https://www.rfc-editor.org/rfc/rfc6265.txt",
+      "bytes": 79724,
+      "sha256": "dc4177094813e85a44a7897b892b76bc09160b3a03aea44f0f511f3a98f91933",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc6455.txt": {
+      "number": 6455,
+      "title": "The WebSocket Protocol",
+      "cluster": "websocket",
+      "url": "https://www.rfc-editor.org/rfc/rfc6455.txt",
+      "bytes": 162067,
+      "sha256": "765775326aee0ecca9b04bde3fd1f52932d498e33e34e428bd61b8a24da0fa3b",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc9000.txt": {
+      "number": 9000,
+      "title": "QUIC: A UDP-Based Multiplexed and Secure Transport",
+      "cluster": "quic",
+      "url": "https://www.rfc-editor.org/rfc/rfc9000.txt",
+      "bytes": 403442,
+      "sha256": "f88aae47f8b18e102024916e975e919201d8dde689cba79b01079eaedd402e22",
+      "fetched_utc": "2026-07-06T17:59:09+00:00",
+      "status": "fetched"
+    },
+    "rfc9001.txt": {
+      "number": 9001,
+      "title": "Using TLS to Secure QUIC",
+      "cluster": "quic",
+      "url": "https://www.rfc-editor.org/rfc/rfc9001.txt",
+      "bytes": 126175,
+      "sha256": "3bbaecdf5afd278052a2c48348ce118c4ff8d0cf6b9915549858171b3f98a591",
+      "fetched_utc": "2026-07-06T17:59:11+00:00",
+      "status": "fetched"
+    },
+    "rfc9002.txt": {
+      "number": 9002,
+      "title": "QUIC Loss Detection and Congestion Control",
+      "cluster": "quic",
+      "url": "https://www.rfc-editor.org/rfc/rfc9002.txt",
+      "bytes": 89071,
+      "sha256": "3a8a54eea1ad5d1c134a548bf15edfa0e21bfb4106dbd7db3c09cace842099af",
+      "fetched_utc": "2026-07-06T17:59:13+00:00",
+      "status": "fetched"
+    },
+    "rfc9293.txt": {
+      "number": 9293,
+      "title": "Transmission Control Protocol (TCP)",
+      "cluster": "tcp",
+      "url": "https://www.rfc-editor.org/rfc/rfc9293.txt",
+      "bytes": 263696,
+      "sha256": "6d9ac8be4b0286f8c3d337addf442b2eb6a9b14e1366594ea7fbc273f93dc2d9",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc8446.txt": {
+      "number": 8446,
+      "title": "The Transport Layer Security (TLS) Protocol Version 1.3",
+      "cluster": "tls",
+      "url": "https://www.rfc-editor.org/rfc/rfc8446.txt",
+      "bytes": 337736,
+      "sha256": "47871bc8820a2c3b6ea89f061055577058862cf543686b82d10131239702b3bd",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7301.txt": {
+      "number": 7301,
+      "title": "TLS Application-Layer Protocol Negotiation Extension (ALPN)",
+      "cluster": "tls",
+      "url": "https://www.rfc-editor.org/rfc/rfc7301.txt",
+      "bytes": 17439,
+      "sha256": "ba122aee58871c604c9e98e2c9f81d5042e4056bd497cd41e23ad80fe3123222",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc6066.txt": {
+      "number": 6066,
+      "title": "TLS Extensions: Extension Definitions (SNI, etc.)",
+      "cluster": "tls",
+      "url": "https://www.rfc-editor.org/rfc/rfc6066.txt",
+      "bytes": 55079,
+      "sha256": "6a33cceaa5e1b6518923d9d04ffaa738bad0417806b3c94a995484e140f5cbc0",
+      "fetched_utc": "2026-07-06T17:59:15+00:00",
+      "status": "fetched"
+    },
+    "rfc2818.txt": {
+      "number": 2818,
+      "title": "HTTP Over TLS (HTTPS)",
+      "cluster": "tls",
+      "url": "https://www.rfc-editor.org/rfc/rfc2818.txt",
+      "bytes": 15170,
+      "sha256": "4ef02c2b9185fe7b0af4c8777be460f1e156bc57313b1290c9097f83b9f43916",
+      "fetched_utc": "2026-07-06T17:59:17+00:00",
+      "status": "fetched"
+    },
+    "rfc5280.txt": {
+      "number": 5280,
+      "title": "Internet X.509 PKI Certificate and CRL Profile",
+      "cluster": "pki",
+      "url": "https://www.rfc-editor.org/rfc/rfc5280.txt",
+      "bytes": 352580,
+      "sha256": "a2f2628c0a83b873fc4786abd921f9b2c02395954b655d190bf16b831633345d",
+      "fetched_utc": "2026-07-06T17:59:19+00:00",
+      "status": "fetched"
+    },
+    "rfc6960.txt": {
+      "number": 6960,
+      "title": "X.509 Internet PKI Online Certificate Status Protocol (OCSP)",
+      "cluster": "pki",
+      "url": "https://www.rfc-editor.org/rfc/rfc6960.txt",
+      "bytes": 82037,
+      "sha256": "7e63ffa1ea2ce2737d9aaf895a63776e9105ddbdfc97b8ae4029e3e825b4cdea",
+      "fetched_utc": "2026-07-06T17:59:20+00:00",
+      "status": "fetched"
+    },
+    "rfc8555.txt": {
+      "number": 8555,
+      "title": "Automatic Certificate Management Environment (ACME)",
+      "cluster": "pki",
+      "url": "https://www.rfc-editor.org/rfc/rfc8555.txt",
+      "bytes": 196903,
+      "sha256": "a40983bbf91f2bd3a976d1c16520aa4418c02ba6d6f1ddcaf772881f823b2497",
+      "fetched_utc": "2026-07-06T17:59:22+00:00",
+      "status": "fetched"
+    },
+    "rfc6749.txt": {
+      "number": 6749,
+      "title": "The OAuth 2.0 Authorization Framework",
+      "cluster": "oauth",
+      "url": "https://www.rfc-editor.org/rfc/rfc6749.txt",
+      "bytes": 163498,
+      "sha256": "f204fc8661d6c92d2ec6e0b54808f961a9ad26e792f57f312d9528335519bd71",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc6750.txt": {
+      "number": 6750,
+      "title": "The OAuth 2.0 Authorization Framework: Bearer Token Usage",
+      "cluster": "oauth",
+      "url": "https://www.rfc-editor.org/rfc/rfc6750.txt",
+      "bytes": 38949,
+      "sha256": "9dc385cf4ecdd85024e5a95e447ede9230e11700bf35251906b25b37557d604b",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7636.txt": {
+      "number": 7636,
+      "title": "Proof Key for Code Exchange by OAuth Public Clients (PKCE)",
+      "cluster": "oauth",
+      "url": "https://www.rfc-editor.org/rfc/rfc7636.txt",
+      "bytes": 39482,
+      "sha256": "1972e5d81cbaba7066cfd46374207bc2b4546b085ed5dd9b034e79e023e0ca31",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc8628.txt": {
+      "number": 8628,
+      "title": "OAuth 2.0 Device Authorization Grant",
+      "cluster": "oauth",
+      "url": "https://www.rfc-editor.org/rfc/rfc8628.txt",
+      "bytes": 46718,
+      "sha256": "ebd3c37415aa665b55b412fccd9571943e8dbd3f2bf0b18fee4924264252decd",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc9068.txt": {
+      "number": 9068,
+      "title": "JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens",
+      "cluster": "oauth",
+      "url": "https://www.rfc-editor.org/rfc/rfc9068.txt",
+      "bytes": 35141,
+      "sha256": "68d3ff3910c0f2340fd7b93b430e00053da845b6eebe095ebef0c8bfda5e14c5",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7617.txt": {
+      "number": 7617,
+      "title": "The 'Basic' HTTP Authentication Scheme",
+      "cluster": "http-auth",
+      "url": "https://www.rfc-editor.org/rfc/rfc7617.txt",
+      "bytes": 30163,
+      "sha256": "bc941321da9912fbb1bc92ad1820848ddfd3283dbfbc30f26ea2800bdaf541db",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7616.txt": {
+      "number": 7616,
+      "title": "HTTP Digest Access Authentication",
+      "cluster": "http-auth",
+      "url": "https://www.rfc-editor.org/rfc/rfc7616.txt",
+      "bytes": 71946,
+      "sha256": "65e4770b3c3bfe129cdaaca358454118a6c10fd261dd3822e07ca786199e907b",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7515.txt": {
+      "number": 7515,
+      "title": "JSON Web Signature (JWS)",
+      "cluster": "jose",
+      "url": "https://www.rfc-editor.org/rfc/rfc7515.txt",
+      "bytes": 131110,
+      "sha256": "ecbf84674118e62526511c1237e1deaa86aada86d25b247623a2a7e04ae62e40",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7516.txt": {
+      "number": 7516,
+      "title": "JSON Web Encryption (JWE)",
+      "cluster": "jose",
+      "url": "https://www.rfc-editor.org/rfc/rfc7516.txt",
+      "bytes": 108322,
+      "sha256": "722cfcddc15f58e746891ba4b846853d3711153a774e4dd55ad6db100474a21f",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7517.txt": {
+      "number": 7517,
+      "title": "JSON Web Key (JWK)",
+      "cluster": "jose",
+      "url": "https://www.rfc-editor.org/rfc/rfc7517.txt",
+      "bytes": 93906,
+      "sha256": "681c19b92a85068716b7e89c5815aa821bd3f11c755ff1c641b40ae9851bb33c",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7518.txt": {
+      "number": 7518,
+      "title": "JSON Web Algorithms (JWA)",
+      "cluster": "jose",
+      "url": "https://www.rfc-editor.org/rfc/rfc7518.txt",
+      "bytes": 155905,
+      "sha256": "9a9ae524b09ea700ad3f189bac115df95ba69af84b26ffdbe3cdfb8d2152b1fc",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7519.txt": {
+      "number": 7519,
+      "title": "JSON Web Token (JWT)",
+      "cluster": "jose",
+      "url": "https://www.rfc-editor.org/rfc/rfc7519.txt",
+      "bytes": 63039,
+      "sha256": "fecd930e9ccf2276b95c0017c6c4ff5d09352e4bc3c7629946447894e0f97248",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc8259.txt": {
+      "number": 8259,
+      "title": "The JavaScript Object Notation (JSON) Data Interchange Format",
+      "cluster": "encoding",
+      "url": "https://www.rfc-editor.org/rfc/rfc8259.txt",
+      "bytes": 28360,
+      "sha256": "61a5378f4255c720beb2a4b4a63b29540147c140f36988bf086291989b4cd2d7",
+      "fetched_utc": "2026-07-06T17:59:24+00:00",
+      "status": "fetched"
+    },
+    "rfc4648.txt": {
+      "number": 4648,
+      "title": "The Base16, Base32, and Base64 Data Encodings",
+      "cluster": "encoding",
+      "url": "https://www.rfc-editor.org/rfc/rfc4648.txt",
+      "bytes": 35491,
+      "sha256": "84e14418f795d503be5f34bf23ce4ebaa119e9ec7c9f667d8caeb111385b178f",
+      "fetched_utc": "2026-07-06T17:59:26+00:00",
+      "status": "fetched"
+    },
+    "rfc3339.txt": {
+      "number": 3339,
+      "title": "Date and Time on the Internet: Timestamps",
+      "cluster": "encoding",
+      "url": "https://www.rfc-editor.org/rfc/rfc3339.txt",
+      "bytes": 35064,
+      "sha256": "9ab2b8864a85dca73a88f49b0927bc7bc85f596926e4fd1890905777924e700a",
+      "fetched_utc": "2026-07-06T17:59:28+00:00",
+      "status": "fetched"
+    },
+    "rfc1034.txt": {
+      "number": 1034,
+      "title": "Domain Names - Concepts and Facilities",
+      "cluster": "dns",
+      "url": "https://www.rfc-editor.org/rfc/rfc1034.txt",
+      "bytes": 126103,
+      "sha256": "d6b10a71441df879cc2817d23f2dad120c8a5f87e74eba1e4ed4b743a76a891a",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc1035.txt": {
+      "number": 1035,
+      "title": "Domain Names - Implementation and Specification",
+      "cluster": "dns",
+      "url": "https://www.rfc-editor.org/rfc/rfc1035.txt",
+      "bytes": 122549,
+      "sha256": "d14ae809fc9b41bbcae26bb38c937c9515808b944f3252b00de9fe0e95f4fdfb",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc8484.txt": {
+      "number": 8484,
+      "title": "DNS Queries over HTTPS (DoH)",
+      "cluster": "dns",
+      "url": "https://www.rfc-editor.org/rfc/rfc8484.txt",
+      "bytes": 46879,
+      "sha256": "c2cb41fb72bf45935ba7372fef9d83478ed2ecc7f3749ea9a16b52b06ef0f343",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    },
+    "rfc7858.txt": {
+      "number": 7858,
+      "title": "Specification for DNS over Transport Layer Security (DoT)",
+      "cluster": "dns",
+      "url": "https://www.rfc-editor.org/rfc/rfc7858.txt",
+      "bytes": 42138,
+      "sha256": "872e634c8d5ca4219a90147d356570e7d10046ad12d560e7d8b24f3aa340fdf0",
+      "fetched_utc": null,
+      "status": "skipped-exists"
+    }
+  }
+}

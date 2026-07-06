@@ -1,0 +1,249 @@
+{
+  "corpus_name": "IETF web-protocol stack",
+  "one_sentence": "The IETF web-protocol stack: HTTP/1.1-3 and its QUIC/TCP transports, TLS 1.3 and its PKI/certificate layer, DNS, URIs, cookies, WebSockets, core web data-encodings, and the OAuth/JWT/JOSE authorization family - curated verbatim RFCs from the RFC Editor.",
+  "source_base_url": "https://www.rfc-editor.org/rfc/",
+  "license_basis": "IETF Trust permits whole-RFC reproduction. Text is committed VERBATIM; no derivative works. See docs/requirement.md \u00a75.",
+  "fetched_utc": "2026-07-06T17:59:29+00:00",
+  "rfcs": [
+    {
+      "number": 2119,
+      "title": "Key words for use in RFCs to Indicate Requirement Levels",
+      "cluster": "keywords"
+    },
+    {
+      "number": 8174,
+      "title": "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words",
+      "cluster": "keywords"
+    },
+    {
+      "number": 9110,
+      "title": "HTTP Semantics",
+      "cluster": "http-core"
+    },
+    {
+      "number": 9111,
+      "title": "HTTP Caching",
+      "cluster": "http-core"
+    },
+    {
+      "number": 9112,
+      "title": "HTTP/1.1",
+      "cluster": "http-core"
+    },
+    {
+      "number": 9113,
+      "title": "HTTP/2",
+      "cluster": "http-core"
+    },
+    {
+      "number": 9114,
+      "title": "HTTP/3",
+      "cluster": "http-core"
+    },
+    {
+      "number": 7541,
+      "title": "HPACK: Header Compression for HTTP/2",
+      "cluster": "http-compression"
+    },
+    {
+      "number": 9204,
+      "title": "QPACK: Field Compression for HTTP/3",
+      "cluster": "http-compression"
+    },
+    {
+      "number": 5789,
+      "title": "PATCH Method for HTTP",
+      "cluster": "http-extensions"
+    },
+    {
+      "number": 6585,
+      "title": "Additional HTTP Status Codes",
+      "cluster": "http-extensions"
+    },
+    {
+      "number": 6797,
+      "title": "HTTP Strict Transport Security (HSTS)",
+      "cluster": "http-extensions"
+    },
+    {
+      "number": 8288,
+      "title": "Web Linking (Link header)",
+      "cluster": "http-extensions"
+    },
+    {
+      "number": 8615,
+      "title": "Well-Known Uniform Resource Identifiers (URIs)",
+      "cluster": "http-extensions"
+    },
+    {
+      "number": 3986,
+      "title": "Uniform Resource Identifier (URI): Generic Syntax",
+      "cluster": "uri"
+    },
+    {
+      "number": 6570,
+      "title": "URI Template",
+      "cluster": "uri"
+    },
+    {
+      "number": 6265,
+      "title": "HTTP State Management Mechanism (Cookies)",
+      "cluster": "cookies"
+    },
+    {
+      "number": 6455,
+      "title": "The WebSocket Protocol",
+      "cluster": "websocket"
+    },
+    {
+      "number": 9000,
+      "title": "QUIC: A UDP-Based Multiplexed and Secure Transport",
+      "cluster": "quic"
+    },
+    {
+      "number": 9001,
+      "title": "Using TLS to Secure QUIC",
+      "cluster": "quic"
+    },
+    {
+      "number": 9002,
+      "title": "QUIC Loss Detection and Congestion Control",
+      "cluster": "quic"
+    },
+    {
+      "number": 9293,
+      "title": "Transmission Control Protocol (TCP)",
+      "cluster": "tcp"
+    },
+    {
+      "number": 8446,
+      "title": "The Transport Layer Security (TLS) Protocol Version 1.3",
+      "cluster": "tls"
+    },
+    {
+      "number": 7301,
+      "title": "TLS Application-Layer Protocol Negotiation Extension (ALPN)",
+      "cluster": "tls"
+    },
+    {
+      "number": 6066,
+      "title": "TLS Extensions: Extension Definitions (SNI, etc.)",
+      "cluster": "tls"
+    },
+    {
+      "number": 2818,
+      "title": "HTTP Over TLS (HTTPS)",
+      "cluster": "tls"
+    },
+    {
+      "number": 5280,
+      "title": "Internet X.509 PKI Certificate and CRL Profile",
+      "cluster": "pki"
+    },
+    {
+      "number": 6960,
+      "title": "X.509 Internet PKI Online Certificate Status Protocol (OCSP)",
+      "cluster": "pki"
+    },
+    {
+      "number": 8555,
+      "title": "Automatic Certificate Management Environment (ACME)",
+      "cluster": "pki"
+    },
+    {
+      "number": 6749,
+      "title": "The OAuth 2.0 Authorization Framework",
+      "cluster": "oauth"
+    },
+    {
+      "number": 6750,
+      "title": "The OAuth 2.0 Authorization Framework: Bearer Token Usage",
+      "cluster": "oauth"
+    },
+    {
+      "number": 7636,
+      "title": "Proof Key for Code Exchange by OAuth Public Clients (PKCE)",
+      "cluster": "oauth"
+    },
+    {
+      "number": 8628,
+      "title": "OAuth 2.0 Device Authorization Grant",
+      "cluster": "oauth"
+    },
+    {
+      "number": 9068,
+      "title": "JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens",
+      "cluster": "oauth"
+    },
+    {
+      "number": 7617,
+      "title": "The 'Basic' HTTP Authentication Scheme",
+      "cluster": "http-auth"
+    },
+    {
+      "number": 7616,
+      "title": "HTTP Digest Access Authentication",
+      "cluster": "http-auth"
+    },
+    {
+      "number": 7515,
+      "title": "JSON Web Signature (JWS)",
+      "cluster": "jose"
+    },
+    {
+      "number": 7516,
+      "title": "JSON Web Encryption (JWE)",
+      "cluster": "jose"
+    },
+    {
+      "number": 7517,
+      "title": "JSON Web Key (JWK)",
+      "cluster": "jose"
+    },
+    {
+      "number": 7518,
+      "title": "JSON Web Algorithms (JWA)",
+      "cluster": "jose"
+    },
+    {
+      "number": 7519,
+      "title": "JSON Web Token (JWT)",
+      "cluster": "jose"
+    },
+    {
+      "number": 8259,
+      "title": "The JavaScript Object Notation (JSON) Data Interchange Format",
+      "cluster": "encoding"
+    },
+    {
+      "number": 4648,
+      "title": "The Base16, Base32, and Base64 Data Encodings",
+      "cluster": "encoding"
+    },
+    {
+      "number": 3339,
+      "title": "Date and Time on the Internet: Timestamps",
+      "cluster": "encoding"
+    },
+    {
+      "number": 1034,
+      "title": "Domain Names - Concepts and Facilities",
+      "cluster": "dns"
+    },
+    {
+      "number": 1035,
+      "title": "Domain Names - Implementation and Specification",
+      "cluster": "dns"
+    },
+    {
+      "number": 8484,
+      "title": "DNS Queries over HTTPS (DoH)",
+      "cluster": "dns"
+    },
+    {
+      "number": 7858,
+      "title": "Specification for DNS over Transport Layer Security (DoT)",
+      "cluster": "dns"
+    }
+  ]
+}
