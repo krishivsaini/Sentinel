@@ -77,20 +77,40 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 
 **Goal:** grounded, cited answers served with production hygiene.
 
-**Day 5 — Generation (`generate.py`)**
+> **Status (2026-07-08):** Day 5 done. `generate.py` streams grounded answers over
+> `gemini-3.5-flash` (temperature 0) via langchain-google-genai, emits inline `[chunk_id]`
+> citations parsed + filtered against the retrieved set (hallucinated IDs can't become
+> citations), and abstains with a fixed sentence when context is insufficient. Verified
+> live end-to-end: the 429 question → grounded answer quoting `429`/`Retry-After`/`MUST`
+> with citation `[rfc6585#0002]`; an out-of-corpus question → clean abstention. Note:
+> Gemini-3 returns **structured content blocks**, not plain strings — handled in `_part_text`.
+> `test_generate.py`: 5 hermetic (always run) + 2 live (opt-in via `SENTINEL_RUN_LLM_TESTS=1`,
+> both passing). Retry/backoff for 429s via LangChain `.with_retry()`.
+
+**Day 5 — Generation (`generate.py`)** — ✅ done
 - Grounded system prompt: answer only from retrieved context; emit inline citations by chunk ID (FR-G1, FR-G2).
 - Abstain when context is insufficient (FR-G3). Capture generation latency separately (FR-G4).
-- **Exit:** end-to-end cited answers (no API yet).
+- **Exit:** end-to-end cited answers.
 
-**Day 6 — FastAPI service (`serve.py`, `test_serve.py`)**
-- `POST /query` with **SSE** token streaming; `GET /healthz`.
-- **JWT** auth (single demo user) — reject unauthenticated `/query`; `slowapi` per-IP rate limit — test proves it fires.
-- Structured logging (`logging_config.py`): per-stage latency, retrieved chunk IDs, outcome. Pydantic validation everywhere.
-- **Exit:** service runs; auth + rate-limit tests green.
+**Day 6 — FastAPI service (`serve.py`, `test_serve.py`)** — ✅ done
+- `POST /query` with **SSE** token streaming (`retrieved` → `token`* → `done` events; the `done` event carries the full `Answer` — text, citations, retrieved set with all four scores, per-stage `latency_ms`); `GET /healthz`; `POST /token` (JWT).
+- **JWT** auth (single demo user) — unauthenticated `/query` → 401; `slowapi` per-IP rate limit — a test proves it fires (limiter created per-app so tests don't bleed state).
+- Structured logging (`logging_config.py`, structlog JSON): per-stage latency, retrieved chunk IDs, outcome. Pydantic validation everywhere. Pipeline injected as a `QueryEngine` dependency so `test_serve.py` (5 passing) is hermetic — no models/API.
+- **Startup warmup (lifespan):** loads the index + both local models *and runs one dummy retrieval*, so first-query latency is honest (cold-start model load + first-inference kernel warmup would otherwise land inside the timed stages). Lifespan doesn't fire under `TestClient(app)` without `with`, keeping tests fast.
+- **Exit:** service runs; auth + rate-limit tests green. Verified live over HTTP (token → SSE query, grounded + cited).
 
-**Day 7 — Honest latency**
-- Fire a few hundred queries to get real **per-stage p95** (retrieve/rerank/generate). Record measured numbers — no guesses (NFR-3).
-- **Exit:** honest per-stage latency numbers recorded.
+**Day 7 — Honest latency** — ✅ done
+- `scripts/bench_latency.py` measures each stage in isolation (never blended, NFR-3) after a warmup; writes `data/latency_report.json` (committable artifact) with p50/p95/p99 + platform/device/config.
+- **Measured (macOS, MPS, 2026-07-08):**
+
+  | stage | n | p50 | **p95** | p99 |
+  |---|---|---|---|---|
+  | retrieve (dense+sparse+RRF) | 200 | 61 ms | **379 ms** | 518 ms |
+  | rerank (cross-encoder) | 200 | 878 ms | **1928 ms** | 3624 ms |
+  | generate (Gemini 3.5 Flash) | 6 | 5951 ms | **7192 ms** | 7261 ms |
+
+- **Honesty notes:** retrieve/rerank are local → full 200-sample p95. **Rerank is the dominant local cost** (lever: shrink the rerank pool). Generation p95 is over **n=6 clean, un-throttled single calls** — the Gemini free tier throttled heavily during benchmarking (the google-genai SDK's *transport-level* retries, not just LangChain's, inflate a throttled call to minutes; `max_retries=0` doesn't fully disable them). Throttled calls are excluded as a free-tier artifact, not a system property; the benchmark now guards each generate call with a hard timeout + per-sample skip so this can't pollute future runs.
+- **Exit:** honest per-stage p95 recorded in `data/latency_report.json` + here.
 
 **Risks:** SSE + Pydantic response shape friction; measuring latency per stage rather than blended (must instrument each stage).
 
