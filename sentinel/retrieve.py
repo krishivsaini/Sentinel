@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import pickle
+import time
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -84,6 +85,15 @@ def _reranker():
     from sentence_transformers import CrossEncoder
 
     return CrossEncoder(settings.reranker_model)
+
+
+def warmup() -> None:
+    """Eagerly load the index + both local models AND run one dummy end-to-end retrieval so the
+    FIRST real query isn't penalized by one-time model loading or first-inference kernel warmup
+    — otherwise that cost lands inside the timed retrieve/rerank stages and makes per-stage
+    latency dishonest (NFR-3). Called from the service lifespan."""
+    _load_index()
+    hybrid_retrieve_timed("warmup", top_k=1)
 
 
 # --------------------------------------------------------------------------- base searches
@@ -173,23 +183,30 @@ def rrf_fuse(ranked_lists: list[list[str]], k: int | None = None) -> dict[str, f
     return fused
 
 
-def hybrid_retrieve(question: str, top_k: int | None = None) -> list[RetrievedChunk]:
-    """Full pipeline: dense + sparse -> RRF -> cross-encoder rerank -> top-K, all four scores."""
+def hybrid_retrieve_timed(
+    question: str, top_k: int | None = None
+) -> tuple[list[RetrievedChunk], float, float]:
+    """Full pipeline, returning (results, retrieve_ms, rerank_ms) so the service can report
+    per-stage latency in isolation (never blended, NFR-3). 'retrieve' covers dense + sparse +
+    RRF; 'rerank' covers the cross-encoder pass."""
     top_k = top_k or settings.rerank_top_k
     idx = _load_index()
 
+    t0 = time.perf_counter()
     dense = dense_search(question)
     sparse = sparse_search(question)
     dense_map = dict(dense)
     sparse_map = dict(sparse)
-
     fused_map = rrf_fuse([[c for c, _ in dense], [c for c, _ in sparse]])
     pool = sorted(fused_map, key=lambda c: fused_map[c], reverse=True)[:RERANK_POOL_SIZE]
+    retrieve_ms = (time.perf_counter() - t0) * 1000.0
 
+    t1 = time.perf_counter()
     rerank_scores = _reranker().predict([[question, idx.id2chunk[c].text] for c in pool])
     reranked = sorted(zip(pool, rerank_scores), key=lambda x: x[1], reverse=True)[:top_k]
+    rerank_ms = (time.perf_counter() - t1) * 1000.0
 
-    return [
+    results = [
         RetrievedChunk(
             chunk_id=cid,
             text=idx.id2chunk[cid].text,
@@ -200,6 +217,13 @@ def hybrid_retrieve(question: str, top_k: int | None = None) -> list[RetrievedCh
         )
         for cid, score in reranked
     ]
+    return results, retrieve_ms, rerank_ms
+
+
+def hybrid_retrieve(question: str, top_k: int | None = None) -> list[RetrievedChunk]:
+    """Full pipeline: dense + sparse -> RRF -> cross-encoder rerank -> top-K, all four scores."""
+    results, _, _ = hybrid_retrieve_timed(question, top_k)
+    return results
 
 
 def retrieve(question: str) -> list[RetrievedChunk]:
