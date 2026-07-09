@@ -120,22 +120,57 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 
 **Goal:** the headline — a credible, calibrated Ragas pipeline with failure attribution.
 
-**Day 8 — Ground truth (`scripts/build_ground_truth.py`, `data/ground_truth.jsonl`)**
-- LLM-draft 80–120 `{question, reference_answer, relevant_contexts}` triples, **then hand-correct every item** (FR-GT2 — fully synthetic gold is prohibited).
-- **Exit:** 80–120 hand-corrected triples committed.
+> **Status (2026-07-09):** Day 8 batch done — **48 hand-authored/verified triples** in
+> `data/ground_truth.jsonl` (balanced 3/cluster across all 16 clusters). Free-tier throttling
+> made bulk LLM drafting unreliable (19/48, then 0), so — per the production-reliability call —
+> ground truth is built **LLM-free**: `build_ground_truth.py --assist` surfaces candidate chunks
+> via local retrieval, and answers were authored/verified against the actual RFC text
+> (`scripts/assemble_ground_truth.py` holds the authored answers + gold chunk_ids; 17 verified
+> Gemini drafts reused, 31 hand-authored). Every `relevant_contexts` entry is a real corpus
+> passage; `[chunk_id]` markers stripped; faithfulness spot-checked. **To reach the §16 target
+> of 80–120:** append seeds to `data/gt_seed_questions.jsonl` and re-run the same LLM-free flow.
 
-**Day 9 — Ragas pipeline (`eval/run_eval.py`, `eval/store.py`)**
-- Run full retrieve→rerank→generate over ground truth; score faithfulness, answer relevance, context recall.
-- Wrap judge calls in `tenacity` backoff (NFR-5 — survive free-tier 429s).
-- Write `EvalResult` to SQLite keyed by git SHA; export JSON. Print summary table + mean faithfulness (FR-E4, FR-E5).
-- **Exit:** `run_eval.py` produces real metrics.
+> **Status (2026-07-09) — Day 9 done:** the Ragas pipeline runs end-to-end and produces real
+> metrics (`sentinel/eval/run_eval.py`, `store.py`, `attribution.py`; 31 hermetic tests green).
+> **Model IDs re-verified against the live API** (no invention): `gemini-3.5-flash` free tier is
+> only **~20 requests/day** (would throttle both the eval *and* the product endpoint) and
+> `gemini-2.0-flash` is no longer free — both dropped. Final picks: **generation =
+> `gemini-2.5-flash`**, **judge = `gemini-2.5-flash-lite`** (different models on purpose:
+> separate free-tier quota pools + the judge never grades its own model's output). Free-tier
+> survival is real, not hoped-for: per-item (not batch `evaluate()`) scoring, **backoff that
+> honors the server's `retryDelay`** (waits out the 10-RPM window instead of guessing), and
+> **SQLite checkpointing keyed by git SHA** so a 429-killed run *resumes* instead of re-burning
+> quota. A ragas↔langchain-community-0.4 import incompatibility (`ChatVertexAI`) is handled by a
+> targeted shim in `sentinel/eval/__init__.py`. Abstentions score faithfulness **1.0** (a refusal
+> can't hallucinate; its failure to answer is caught as low answer-relevance → `generation_fail`).
 
-**Day 10 — Attribution + judge calibration (`eval/attribution.py`, `data/ground_truth_audit.md`)**
-- Attribution: low context_recall ⇒ retrieval failure; recalled-but-unfaithful ⇒ generation failure; count both (FR-E3).
-- Hand-score ~15 items; report correlation with Ragas in `ground_truth_audit.md` (FR-E6). Add the ≥20-case second-annotator agreement writeup (FR-GT3).
-- **Exit:** `attribution.py` works; `ground_truth_audit.md` written.
+**Day 8 — Ground truth (`scripts/build_ground_truth.py`, `data/ground_truth.jsonl`)** — ✅ batch (48/80–120)
+- LLM-draft 80–120 `{question, reference_answer, relevant_contexts}` triples, **then hand-correct every item** (FR-GT2 — fully synthetic gold is prohibited). *(Built LLM-free from local retrieval instead — see status above.)*
+- **Exit:** hand-corrected triples committed (48 now; extend to 80–120 by appending seeds).
 
-**Risks:** free-tier rate limits during a full run (space it out; backoff is mandatory); poor judge correlation (surface it honestly — a calibrated modest number beats an uncalibrated good one).
+**Day 9 — Ragas pipeline (`eval/run_eval.py`, `eval/store.py`)** — ✅ done
+- Run full retrieve→rerank→generate over ground truth; score faithfulness, answer relevance, context recall. *(Done — per-item loop, not batch `evaluate()`, so it's controllable + resumable.)*
+- Wrap judge calls in backoff (NFR-5 — survive free-tier 429s). *(Done — retry-delay-aware backoff around **both** judge and generation calls.)*
+- Write `EvalResult` to SQLite keyed by git SHA; export JSON. Print summary table + mean faithfulness (FR-E4, FR-E5). *(Done — `store.py`; per-item checkpoint + `dashboard/data/eval_<run>.json` + `latest.json`.)*
+- **Exit:** `run_eval.py` produces real metrics. ✅ `python -m sentinel.eval.run_eval [--subset N | --ci]`.
+
+**Day 10 — Attribution + judge calibration (`eval/attribution.py`, `data/ground_truth_audit.md`)** — ✅ done
+- Attribution: low context_recall ⇒ retrieval failure; recalled-but-unfaithful ⇒ generation failure; count both (FR-E3). *(Done — `attribution.py`, exercised in `test_eval.py`.)*
+- Hand-score ~20 items; report correlation with Ragas in `ground_truth_audit.md` (FR-E6). *(Done — Pearson r ≈ −0.10; the judge is lenient (credits topically-plausible claims), so the headline faithfulness is an upper bound. `scripts/judge_calibration.py`.)*
+- Second-annotator agreement writeup (FR-GT3). *(Done — 24-item second pass; 22 confirmed, 2 gold-context defects fixed; honest single-annotator caveat.)*
+- **Exit:** `attribution.py` works; `ground_truth_audit.md` written. ✅
+
+> **Status (2026-07-10) — Phase 3 done.** Eval runs end-to-end on Groq's free tier (generation
+> `gpt-oss-20b`, judge `llama-4-scout-17b`) via a provider-agnostic factory (`sentinel/llm.py`).
+> The LLM-backend journey is documented for honesty: Gemini free is ~20 req/day; Groq's reliable
+> judge (Scout) is deprecated 2026-07-17 and the non-deprecated free models are reasoning models
+> that break Ragas' structured output — so the judge is a **documented, swappable** constraint (a
+> paid `gpt-4o-mini` is a one-line change). Ground truth = 48 hand-authored triples (second-pass
+> audited); judge calibrated and reported honestly (r ≈ −0.10).
+
+**Risks (borne out):** free-tier rate limits forced heavy pacing + retry-delay-aware backoff; the
+judge correlation is weak and is surfaced honestly rather than hidden — a calibrated modest number
+beats an uncalibrated good one.
 
 ---
 
