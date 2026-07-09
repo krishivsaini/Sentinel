@@ -39,7 +39,8 @@ class Settings(BaseSettings):
     )
 
     # ---------------------------------------------------------------- Secrets
-    # GOOGLE_API_KEY has no SENTINEL_ prefix (that's the name the Google SDK expects).
+    # These use the provider SDKs' own env var names (no SENTINEL_ prefix).
+    groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     google_api_key: str = Field(default="", alias="GOOGLE_API_KEY")
     jwt_secret: str = Field(default="dev-insecure-change-me", validation_alias="SENTINEL_JWT_SECRET")
     demo_user: str = "demo"
@@ -49,10 +50,25 @@ class Settings(BaseSettings):
     # Local (₹0) models — verified stable HF model IDs.
     embedding_model: str = "BAAI/bge-small-en-v1.5"          # dense embeddings
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"  # cross-encoder rerank
-    # Gemini free tier — ONLY for generation + Ragas judge. Verified stable 2026-07-06.
-    # Fallback for higher free-tier RPD if 3.5-flash quota is tight: gemini-2.5-flash-lite.
-    generation_model: str = "gemini-3.5-flash"
-    judge_model: str = "gemini-3.5-flash"
+    # LLM providers for product generation + the Ragas judge. Live free-tier quotas were probed
+    # against the API 2026-07-09 (do not invent IDs): EVERY Gemini free model here caps at
+    # ~20 requests/DAY (gemini-3.5-flash, -2.5-flash-lite) or 0 (gemini-2.0-flash) — far too few
+    # for a 48-item eval (~300 judge calls) or the per-PR CI gate. Groq's free tier gives
+    # llama-3.3-70b ~1,000 req/day, which covers both. So generation + judge run on Groq; Gemini
+    # stays wired as an alternate provider (sentinel/llm.py) for anyone who enables billing.
+    # Generator and judge are DIFFERENT models (separate Groq free-tier quota pools) so the judge
+    # never grades its own model's output (self-preference bias; calibrated Day 10).
+    #   generation = openai/gpt-oss-20b — non-deprecated, emits clean cited answers (no <think>),
+    #                8K TPM (fine at 1 call/item with pacing).
+    #   judge      = llama-4-scout-17b — the ONLY free model that reliably produces Ragas'
+    #                structured output (the GPT-OSS/Qwen reasoning models return NaN scores; probed
+    #                2026-07-09). KNOWN LIMITATION: Scout is deprecated by Groq on 2026-07-17. The
+    #                pipeline is provider-agnostic (sentinel/llm.py) — swap this to a current model
+    #                (e.g. a paid openai gpt-4o-mini, the Ragas-native judge) via one config line.
+    generation_provider: str = "groq"          # "groq" | "google"
+    generation_model: str = "openai/gpt-oss-20b"
+    judge_provider: str = "groq"
+    judge_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
 
     # ---------------------------------------------------------------- Chunking (§8)
     # Record which strategy produced an index so eval runs are attributable (§8).
@@ -82,8 +98,19 @@ class Settings(BaseSettings):
     api_port: int = 8000
 
     # ---------------------------------------------------------------- Resilience (§5)
-    judge_max_retries: int = 6             # tenacity attempts around 429s
-    judge_backoff_seconds: float = 2.0     # exponential base
+    # We do NOT storm-retry: each attempt is one real hit AFTER waiting out the window the server
+    # tells us to (RetryInfo.retryDelay — e.g. "retry in 45s" for a 10-RPM free-tier burst), so
+    # retries are genuine, quota-respectful attempts, not amplification. max cap must exceed a
+    # full RPM window (~60s) or we'd wake early and 429 again.
+    judge_max_retries: int = 8             # attempts around 429s (tenacity, honoring retryDelay)
+    judge_backoff_seconds: float = 2.0     # exponential base when the server gives no retryDelay
+    judge_backoff_max_seconds: float = 65.0  # cap per wait — long enough to clear a per-minute window
+    judge_call_timeout: float = 90.0       # per-metric-call ceiling (a hung judge can't stall a run)
+    # Proactive pacing between eval items. Both generation (~4K tokens/call, 12K TPM) and the
+    # judge (~6 calls/item, 30K TPM) are token-heavy on the free tier; a real gap keeps a
+    # sequential run under those TPM limits so backoff only has to absorb true bursts (§12).
+    # 25s keeps generation (llama-3.3-70b, 12K TPM) comfortably under its per-minute window.
+    eval_item_pause_seconds: float = 25.0
 
 
 settings = Settings()

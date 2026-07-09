@@ -5,9 +5,10 @@ context and to emit inline citations referencing chunk IDs (FR-G1, FR-G2). If co
 insufficient, the model abstains rather than answer from parametric memory (FR-G3) — this
 directly protects faithfulness. Generation latency is captured separately (FR-G4).
 
-Uses Gemini (config.generation_model) via langchain-google-genai, streamed token-by-token
-for the SSE endpoint. Citations are parsed from the model's inline [chunk_id] markers and
-filtered against the retrieved set, so a hallucinated ID can never become a citation.
+Uses the configured chat model (config.generation_provider/model — Groq's llama-3.3-70b on the
+free tier by default; see sentinel/llm.py), streamed token-by-token for the SSE endpoint.
+Citations are parsed from the model's inline [chunk_id] markers and filtered against the
+retrieved set, so a hallucinated ID can never become a citation.
 
 Run:  python -m sentinel.generate "your question"   (end-to-end retrieve -> generate harness)
 """
@@ -17,7 +18,6 @@ from __future__ import annotations
 import re
 import time
 from collections.abc import Iterator
-from functools import lru_cache
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -46,18 +46,18 @@ with EXACTLY this sentence and nothing else: "{ABSTAIN_MESSAGE}"
 names, requirement keywords such as MUST/SHOULD — verbatim when they matter."""
 
 
-@lru_cache(maxsize=2)
 def _llm(retry: bool = True):
-    """Lazily construct the chat model. The SDK's own `max_retries` gives exponential backoff
-    around free-tier 429s (NFR-5) — right for the service. Latency benchmarking passes
-    retry=False (max_retries=0) so a throttle fails fast and is skipped, instead of the SDK's
-    internal retry inflating the measured latency with minutes of backoff."""
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    """The grounded-generation chat model (config.generation_provider/model — Groq by default).
+    `retry` toggles the SDK's own `max_retries`: on for the service (exponential backoff around
+    free-tier 429s, NFR-5); off for latency benchmarking, so a throttle fails fast instead of the
+    SDK's internal retry inflating the measured latency with minutes of backoff. Cached in the
+    factory (sentinel/llm.py) per (provider, model, temperature, max_retries)."""
+    from sentinel.llm import chat_model
 
-    return ChatGoogleGenerativeAI(
-        model=settings.generation_model,
+    return chat_model(
+        settings.generation_provider,
+        settings.generation_model,
         temperature=0.0,  # deterministic + faithful; no creative drift off the context
-        google_api_key=settings.google_api_key or None,
         max_retries=(settings.judge_max_retries if retry else 0),
     )
 

@@ -14,8 +14,11 @@ dependencies = [
     "langchain>=1.3,<2",
     "langchain-community>=0.4,<0.5",
     "langchain-huggingface>=1.2,<2",      # HF embedding integration for LangChain retrievers
-    # --- Generation + Ragas judge (only paid-eligible calls; free tier) ---
-    "langchain-google-genai>=4.2,<5",
+    # --- Generation + Ragas judge (free-tier LLM calls) ---
+    # Groq powers product generation + the Ragas judge: its free tier gives llama-3.3-70b
+    # ~1,000 requests/day (vs Gemini's ~20/day/model), enough for the full eval AND the CI gate.
+    "langchain-groq>=1.1,<2",
+    "langchain-google-genai>=4.2,<5",     # kept as an alternate provider (see sentinel/llm.py)
     # --- Local models: embeddings + cross-encoder reranker (run at ₹0) ---
     "sentence-transformers>=5.6,<6",
     # --- Indexes ---
