@@ -1,0 +1,48 @@
+{"question": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?", "cluster": "keywords"}
+{"question": "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?", "cluster": "keywords"}
+{"question": "What does the key word MUST NOT mean in an RFC?", "cluster": "keywords"}
+{"question": "What does the HTTP 429 status code indicate, and what header may the response include?", "cluster": "http-core"}
+{"question": "How does HTTP decide whether a stored cached response is still fresh?", "cluster": "http-core"}
+{"question": "What does the 308 Permanent Redirect status code mean?", "cluster": "http-core"}
+{"question": "What is the purpose of the dynamic table in HPACK header compression?", "cluster": "http-compression"}
+{"question": "Why does QPACK use separate encoder and decoder streams in HTTP/3?", "cluster": "http-compression"}
+{"question": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?", "cluster": "http-compression"}
+{"question": "What is the HTTP PATCH method used for, and is it idempotent?", "cluster": "http-extensions"}
+{"question": "What does the 431 Request Header Fields Too Large status code indicate?", "cluster": "http-extensions"}
+{"question": "What does the max-age directive in the HSTS Strict-Transport-Security header specify?", "cluster": "http-extensions"}
+{"question": "What are the main components of a URI's generic syntax?", "cluster": "uri"}
+{"question": "Which characters are allowed in a percent-encoded octet in a URI?", "cluster": "uri"}
+{"question": "How does a URI Template expand a simple string variable such as {var}?", "cluster": "uri"}
+{"question": "What does the Secure attribute of an HTTP cookie do?", "cluster": "cookies"}
+{"question": "What is the effect of the HttpOnly attribute on a cookie?", "cluster": "cookies"}
+{"question": "How does a user agent decide whether a cookie's domain matches a request host?", "cluster": "cookies"}
+{"question": "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?", "cluster": "websocket"}
+{"question": "What HTTP status code does a server return to complete the WebSocket opening handshake?", "cluster": "websocket"}
+{"question": "What is the purpose of the Sec-WebSocket-Key request header?", "cluster": "websocket"}
+{"question": "What is a QUIC stateless reset and when is it used?", "cluster": "quic"}
+{"question": "How does QUIC detect lost packets?", "cluster": "quic"}
+{"question": "What is a QUIC connection ID used for?", "cluster": "quic"}
+{"question": "What is the maximum segment lifetime (MSL) in TCP and why does it matter?", "cluster": "tcp"}
+{"question": "How does the TCP three-way handshake establish a connection?", "cluster": "tcp"}
+{"question": "What is the purpose of the TCP receive window?", "cluster": "tcp"}
+{"question": "Which TLS 1.3 handshake message carries the server's certificate?", "cluster": "tls"}
+{"question": "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?", "cluster": "tls"}
+{"question": "How does a TLS client indicate the target server name using Server Name Indication (SNI)?", "cluster": "tls"}
+{"question": "What information does the Subject field identify in an X.509 certificate?", "cluster": "pki"}
+{"question": "What does an OCSP response tell a client about a certificate's status?", "cluster": "pki"}
+{"question": "How does the ACME http-01 challenge validate control of a domain?", "cluster": "pki"}
+{"question": "What does the invalid_grant error mean in OAuth 2.0?", "cluster": "oauth"}
+{"question": "How does PKCE protect the OAuth 2.0 authorization code flow?", "cluster": "oauth"}
+{"question": "How is an OAuth 2.0 bearer token presented in an HTTP request?", "cluster": "oauth"}
+{"question": "How are credentials encoded in the HTTP Basic authentication scheme?", "cluster": "http-auth"}
+{"question": "What is the purpose of the nonce in HTTP Digest access authentication?", "cluster": "http-auth"}
+{"question": "What are the registered claim names defined for a JSON Web Token (JWT)?", "cluster": "jose"}
+{"question": "How is a JWS Compact Serialization structured?", "cluster": "jose"}
+{"question": "What does the alg (algorithm) header parameter specify in a JWS?", "cluster": "jose"}
+{"question": "How does base64url encoding differ from standard base64 encoding?", "cluster": "encoding"}
+{"question": "What structured data types does JSON define per RFC 8259?", "cluster": "encoding"}
+{"question": "What is the format of an Internet date-time timestamp per RFC 3339?", "cluster": "encoding"}
+{"question": "What does an A resource record provide in the DNS?", "cluster": "dns"}
+{"question": "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?", "cluster": "dns"}
+{"question": "How are DNS queries carried in DNS over HTTPS (DoH)?", "cluster": "dns"}
+{"question": "What transport port does DNS over TLS (DoT) use by default?", "cluster": "dns"}
