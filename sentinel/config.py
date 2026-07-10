@@ -103,7 +103,10 @@ class Settings(BaseSettings):
     # tells us to (RetryInfo.retryDelay — e.g. "retry in 45s" for a 10-RPM free-tier burst), so
     # retries are genuine, quota-respectful attempts, not amplification. max cap must exceed a
     # full RPM window (~60s) or we'd wake early and 429 again.
-    judge_max_retries: int = 8             # attempts around 429s (tenacity, honoring retryDelay)
+    # A judged item fires ~6 calls (~18K tokens) that overrun the 8K-TPM free window mid-item, so
+    # later calls must WAIT OUT the per-minute window; a generous retry budget lets each call grind
+    # through rather than skipping the item. Only engages on throttle — normal/paid runs hit attempt 1.
+    judge_max_retries: int = 15            # attempts around 429s (tenacity, honoring retryDelay)
     judge_backoff_seconds: float = 2.0     # exponential base when the server gives no retryDelay
     judge_backoff_max_seconds: float = 65.0  # cap per wait — long enough to clear a per-minute window
     judge_call_timeout: float = 90.0       # per-metric-call ceiling (a hung judge can't stall a run)
