@@ -57,18 +57,19 @@ class Settings(BaseSettings):
     # llama-3.3-70b ~1,000 req/day, which covers both. So generation + judge run on Groq; Gemini
     # stays wired as an alternate provider (sentinel/llm.py) for anyone who enables billing.
     # Generator and judge are DIFFERENT models (separate Groq free-tier quota pools) so the judge
-    # never grades its own model's output (self-preference bias; calibrated Day 10).
-    #   generation = openai/gpt-oss-20b — non-deprecated, emits clean cited answers (no <think>),
-    #                8K TPM (fine at 1 call/item with pacing).
-    #   judge      = llama-4-scout-17b — the ONLY free model that reliably produces Ragas'
-    #                structured output (the GPT-OSS/Qwen reasoning models return NaN scores; probed
-    #                2026-07-09). KNOWN LIMITATION: Scout is deprecated by Groq on 2026-07-17. The
-    #                pipeline is provider-agnostic (sentinel/llm.py) — swap this to a current model
-    #                (e.g. a paid openai gpt-4o-mini, the Ragas-native judge) via one config line.
+    # never grades its own model's output (self-preference bias; calibrated Day 10). Both are
+    # non-deprecated GPT-OSS on Groq's free tier, run with reasoning_effort="low" (set in
+    # sentinel/llm.py) — at default effort these reasoning models burn their whole token budget
+    # "thinking" and return EMPTY answers (generation) or reasoning-polluted output that Ragas
+    # can't parse (judge); "low" makes them terse and reliable.
+    #   generation = openai/gpt-oss-20b  — clean cited answers, fast.
+    #   judge      = openai/gpt-oss-120b — larger; produces valid Ragas structured output.
+    # (The provider-agnostic factory also allows a paid openai gpt-4o-mini judge via one config
+    # line — the Ragas-native default — if a stronger/faster judge is wanted.)
     generation_provider: str = "groq"          # "groq" | "google"
     generation_model: str = "openai/gpt-oss-20b"
     judge_provider: str = "groq"
-    judge_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
+    judge_model: str = "openai/gpt-oss-120b"
 
     # ---------------------------------------------------------------- Chunking (§8)
     # Record which strategy produced an index so eval runs are attributable (§8).

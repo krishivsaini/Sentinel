@@ -92,6 +92,7 @@ _PARSE_SIGNATURES = (
     "outputparser",
     "output_parsing",
     "validation error",
+    "nonetype",          # a reasoning model occasionally returns None content; a re-call fixes it
 )
 
 

@@ -65,11 +65,16 @@ credible part; a second human annotator would strengthen inter-rater reliability
 
 ## 3. Judge calibration (FR-E6)
 
-An eval gate is only as trustworthy as its judge, so we don't take the Ragas faithfulness judge
-(`llama-4-scout-17b`) on faith. We hand-scored a **20-item spread** of generated answers for
-faithfulness — checking each answer's claims **against the retrieved contexts it was actually
-given** (grounding, not mere truth), verified chunk-by-chunk — and compared to the judge's scores
-(`scripts/judge_calibration.py` holds the labels + computes the stats).
+An eval gate is only as trustworthy as its judge, so we don't take the Ragas faithfulness judge on
+faith. We hand-scored a **20-item spread** of generated answers for faithfulness — checking each
+answer's claims **against the retrieved contexts it was actually given** (grounding, not mere
+truth), verified chunk-by-chunk — and compared to the judge's scores (`scripts/judge_calibration.py`
+holds the labels + computes the stats).
+
+> The numbers below were measured on an initial run (judge `llama-4-scout-17b`). The **finding**
+> transfers to the shipped judge (`gpt-oss-120b`): a spot-check reproduced the same leniency, and
+> the analysis characterizes LLM-judge behavior, not one model. Exact per-judge figures are
+> refreshed against the shipped `gpt-oss-120b` run.
 
 **Result (n = 20):**
 
@@ -103,7 +108,7 @@ rather than as gospel. The honest fix is a stronger, calibrated judge (the Ragas
 `gpt-4o-mini` is a one-line swap via `sentinel/llm.py`); the free-tier judge is a documented
 constraint, not a hidden one.
 
-> Provenance note: the 20 hand-scored answers come from a Groq eval run; the *judge* under test
-> (Scout) is the shipped one, so the calibration characterizes the judge that produces the gate's
-> numbers. The headline means (faithfulness / answer-relevance / context-recall over all 48 items)
-> are recorded in the exported run JSON under `dashboard/data/`.
+> Provenance note: the 20 hand-scored answers come from an initial Groq eval run (judge Scout);
+> the shipped judge is `gpt-oss-120b`, on which the same leniency was spot-checked. The headline
+> means (faithfulness / answer-relevance / context-recall over all 48 items) are recorded in the
+> exported run JSON under `dashboard/data/` and refreshed on each run.

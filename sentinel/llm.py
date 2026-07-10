@@ -30,11 +30,18 @@ def chat_model(
     if provider == "groq":
         from langchain_groq import ChatGroq
 
+        extra: dict = {}
+        # GPT-OSS are reasoning models: at the default effort they can burn the whole token
+        # budget "thinking" and return EMPTY content (generation) or reasoning-polluted output
+        # that breaks Ragas' structured parsing (judge). "low" keeps them terse and on-task.
+        if "gpt-oss" in model:
+            extra["reasoning_effort"] = "low"
         return ChatGroq(
             model=model,
             temperature=temperature,
             max_retries=max_retries,
             api_key=settings.groq_api_key or None,
+            **extra,
         )
     if provider == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI

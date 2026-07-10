@@ -160,13 +160,15 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 - Second-annotator agreement writeup (FR-GT3). *(Done — 24-item second pass; 22 confirmed, 2 gold-context defects fixed; honest single-annotator caveat.)*
 - **Exit:** `attribution.py` works; `ground_truth_audit.md` written. ✅
 
-> **Status (2026-07-10) — Phase 3 done.** Eval runs end-to-end on Groq's free tier (generation
-> `gpt-oss-20b`, judge `llama-4-scout-17b`) via a provider-agnostic factory (`sentinel/llm.py`).
-> The LLM-backend journey is documented for honesty: Gemini free is ~20 req/day; Groq's reliable
-> judge (Scout) is deprecated 2026-07-17 and the non-deprecated free models are reasoning models
-> that break Ragas' structured output — so the judge is a **documented, swappable** constraint (a
-> paid `gpt-4o-mini` is a one-line change). Ground truth = 48 hand-authored triples (second-pass
-> audited); judge calibrated and reported honestly (r ≈ −0.10).
+> **Status (2026-07-10) — Phase 3 done.** Eval runs end-to-end on Groq's free tier via a
+> provider-agnostic factory (`sentinel/llm.py`): generation `gpt-oss-20b`, judge `gpt-oss-120b`,
+> **both non-deprecated**. The LLM-backend journey is documented for honesty: Gemini free is
+> ~20 req/day (dropped); Groq's Scout judge works but deprecates 2026-07-17 (dropped); the
+> non-deprecated GPT-OSS models are *reasoning* models that at default effort return empty answers
+> (generation) or Ragas-breaking output (judge) — fixed with `reasoning_effort="low"`, which makes
+> both reliable. Ground truth = 48 hand-authored triples (second-pass audited); judge calibrated
+> and reported honestly (r ≈ −0.10 — the judge is lenient, so faithfulness is an upper bound). A
+> paid `gpt-4o-mini` judge remains a one-line swap for anyone wanting a stronger/faster judge.
 
 **Risks (borne out):** free-tier rate limits forced heavy pacing + retry-delay-aware backoff; the
 judge correlation is weak and is surfaced honestly rather than hidden — a calibrated modest number
