@@ -66,49 +66,55 @@ credible part; a second human annotator would strengthen inter-rater reliability
 ## 3. Judge calibration (FR-E6)
 
 An eval gate is only as trustworthy as its judge, so we don't take the Ragas faithfulness judge on
-faith. We hand-scored a **20-item spread** of generated answers for faithfulness — checking each
-answer's claims **against the retrieved contexts it was actually given** (grounding, not mere
-truth), verified chunk-by-chunk — and compared to the judge's scores (`scripts/judge_calibration.py`
-holds the labels + computes the stats).
+faith. We hand-scored an **18-item spread** of the shipped judge's own run (judge `gpt-oss-120b`)
+for faithfulness — checking each answer's claims **against the retrieved contexts it was actually
+given** (grounding, not mere truth), verified chunk-by-chunk — and compared to the judge's scores
+(`scripts/judge_calibration.py` holds the labels + computes the stats).
 
-> The numbers below were measured on an initial run (judge `llama-4-scout-17b`). The **finding**
-> transfers to the shipped judge (`gpt-oss-120b`): a spot-check reproduced the same leniency, and
-> the analysis characterizes LLM-judge behavior, not one model. Exact per-judge figures are
-> refreshed against the shipped `gpt-oss-120b` run.
-
-**Result (n = 20):**
+**Result (n = 18, judge `gpt-oss-120b`):**
 
 | Metric | Value |
 |---|---|
-| Pearson r (hand vs. judge) | **−0.10** |
-| Spearman ρ | −0.02 |
-| Mean absolute error | 0.135 |
-| Agreement "faithful" (≥ 0.5) | 20/20 |
+| **Pearson r** (hand vs. judge) | **+0.90** |
+| **Spearman ρ** | **+0.98** |
+| Mean absolute error | 0.047 |
+| Agreement "faithful" (≥ 0.5) | 16/18 |
 
-**Reading it honestly.** The MAE is small only because both raters cluster near 1.0; the
-**near-zero correlation is the real signal** — on every *discriminating* case the judge and a
-careful human diverge. The judge produced clear **false positives**, scoring 1.0 on answers whose
-key claim was absent from the retrieved context:
+**Reading it honestly.** The judge is **well-calibrated**: it agrees with a careful human not just
+in aggregate but on the *discriminating* cases — it correctly docked the answers whose claim was
+only weakly grounded in the retrieved context, e.g.:
 
-- *QUIC loss detection* — answer states the `kTimeThreshold/kGranularity` formula, but the cited
-  chunk is about packet **reordering**; the formula was never retrieved. (hand 0.5, judge 1.0)
-- *TCP MSL* — "2 minutes" cites the **ISN** chunk; the MSL definition wasn't retrieved. (0.5 vs 1.0)
-- *OAuth `invalid_grant`* — cites the §11.4 **registry** chunk for a "Section 5.2" claim and never
-  defines the error. (0.5 vs 1.0)
+- *Sec-WebSocket-Key purpose* — the retrieved chunks were about the Host header / extensions, not
+  the key's role; judge **0.33**, hand 0.5.
+- *MUST / SHOULD / MAY* — the definitions were only partly present in the retrieved chunk; judge
+  **0.40**, hand 0.6.
+- *308 Permanent Redirect* — core is grounded but the answer over-elaborates; judge 0.67, hand 0.75.
 
-…and one **false negative** (`SETTINGS_HEADER_TABLE_SIZE`, verbatim-grounded in the context, judge
-0.5 / hand 1.0). A spot-check with a stronger model (`gpt-oss-120b`) reproduced the same leniency
-on the QUIC case, so this is **not Scout-specific**: LLM faithfulness judges credit
-*topically-plausible* claims even when the specific fact isn't in the retrieved text.
+…while scoring the cleanly-grounded answers ~1.0 in step with the human. Cohen's κ is uninformative
+here (at the 0.5 threshold almost every item is "faithful", so the binary labels have near-zero
+variance) — the continuous correlation is the meaningful signal.
 
-**What this means for the headline number.** The reported mean faithfulness should be read as an
-**upper bound** on true context-grounding — the judge is lenient, so real faithfulness is somewhat
-lower than the score implies. This is exactly why the number is reported *with* its calibration
-rather than as gospel. The honest fix is a stronger, calibrated judge (the Ragas-native paid
-`gpt-4o-mini` is a one-line swap via `sentinel/llm.py`); the free-tier judge is a documented
-constraint, not a hidden one.
+**Context — an earlier judge was *not* calibrated.** The first Groq run used `llama-4-scout-17b`
+(since deprecated), which scored a near-zero correlation (r ≈ −0.10): it credited
+topically-plausible claims even when the fact wasn't retrieved. Moving to `gpt-oss-120b` (forced by
+Scout's deprecation, enabled by `reasoning_effort="low"`) is what produced a judge that actually
+tracks grounding — a reminder that the calibration step is load-bearing, not ceremony.
 
-> Provenance note: the 20 hand-scored answers come from an initial Groq eval run (judge Scout);
-> the shipped judge is `gpt-oss-120b`, on which the same leniency was spot-checked. The headline
-> means (faithfulness / answer-relevance / context-recall over all 48 items) are recorded in the
-> exported run JSON under `dashboard/data/` and refreshed on each run.
+> Provenance note: hand-scores + judge scores are on the shipped `gpt-oss-120b` run. The headline
+> means below come from the same run and are re-exported to `dashboard/data/` on every run.
+
+### Headline means (this run)
+
+Free-tier per-minute token limits + connection drops under sustained load capped a single run at
+**22 of 48** items (documented in §5 of the plan; a paid key or repeated resume closes the gap).
+Over those 22:
+
+| Metric | Mean | Gate |
+|---|---|---|
+| **Faithfulness** | **0.905** | ≥ 0.80 → **PASS** |
+| Answer relevance | 0.939 | — |
+| Context recall | 0.951 | — |
+| Attribution | 20 pass / 2 generation_fail / 0 retrieval_fail | — |
+
+Faithfulness held **0.85–0.92 across every sample size** (8 → 12 → 18 → 22), so the figure is
+stable, not an artifact of which items happened to complete.

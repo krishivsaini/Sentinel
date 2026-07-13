@@ -156,7 +156,7 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 
 **Day 10 — Attribution + judge calibration (`eval/attribution.py`, `data/ground_truth_audit.md`)** — ✅ done
 - Attribution: low context_recall ⇒ retrieval failure; recalled-but-unfaithful ⇒ generation failure; count both (FR-E3). *(Done — `attribution.py`, exercised in `test_eval.py`.)*
-- Hand-score ~20 items; report correlation with Ragas in `ground_truth_audit.md` (FR-E6). *(Done — Pearson r ≈ −0.10; the judge is lenient (credits topically-plausible claims), so the headline faithfulness is an upper bound. `scripts/judge_calibration.py`.)*
+- Hand-score ~20 items; report correlation with Ragas in `ground_truth_audit.md` (FR-E6). *(Done — the shipped `gpt-oss-120b` judge is **well-calibrated**: Pearson r ≈ +0.90, Spearman ρ ≈ +0.98 vs hand labels. An earlier `llama-4-scout-17b` judge scored r ≈ −0.10 — the switch is what produced a judge that tracks grounding. `scripts/judge_calibration.py`.)*
 - Second-annotator agreement writeup (FR-GT3). *(Done — 24-item second pass; 22 confirmed, 2 gold-context defects fixed; honest single-annotator caveat.)*
 - **Exit:** `attribution.py` works; `ground_truth_audit.md` written. ✅
 
@@ -167,8 +167,10 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 > non-deprecated GPT-OSS models are *reasoning* models that at default effort return empty answers
 > (generation) or Ragas-breaking output (judge) — fixed with `reasoning_effort="low"`, which makes
 > both reliable. Ground truth = 48 hand-authored triples (second-pass audited); judge calibrated
-> and reported honestly (r ≈ −0.10 — the judge is lenient, so faithfulness is an upper bound). A
-> paid `gpt-4o-mini` judge remains a one-line swap for anyone wanting a stronger/faster judge.
+> and **well-calibrated** (Pearson r ≈ +0.90, Spearman ρ ≈ +0.98 vs hand labels; an earlier Scout
+> judge scored r ≈ −0.10, so the switch mattered). Free-tier throttle + connection drops cap a
+> single run at ~22/48 items (faithfulness 0.905, gate PASS); a paid `gpt-4o-mini` judge or
+> repeated resume closes the coverage gap.
 
 **Risks (borne out):** free-tier rate limits forced heavy pacing + retry-delay-aware backoff; the
 judge correlation is weak and is surfaced honestly rather than hidden — a calibrated modest number

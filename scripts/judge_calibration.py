@@ -45,27 +45,28 @@ REVIEW_PATH = DATA_DIR / "judge_calibration.review.jsonl"
 #   c5d31ac8 MSL: "2 minutes" cites the ISN chunk (rfc9293#0095); MSL def wasn't retrieved. -> 0.5
 #   563701c0 invalid_grant: "Section 5.2" cites the §11.4 registry chunk; never defines it.  -> 0.5
 #   17926543 SETTINGS_HEADER_TABLE_SIZE: claim is verbatim in CTX1 -> fully grounded 1.0 (judge 0.5).
+# Refreshed against the SHIPPED judge (gpt-oss-120b) on its own generated answers (18-item
+# spread from the run). Each label = author's faithfulness judgment of the answer's claims vs the
+# retrieved contexts it was given (grounding, not truth), verified chunk-by-chunk.
 HAND_SCORES: dict[str, float] = {
-    "7dc0e4be": 1.0,   # RFC 8174 uppercase rule — grounded in rfc8174#0000
-    "7ee78eef": 1.0,   # cache freshness (lifetime vs age) — grounded in the §4.2 chunks
-    "34fe7013": 0.5,   # QUIC loss formula NOT in retrieved context (judge said 1.0)
+    "7dc0e4be": 1.0,   # RFC 8174 uppercase rule — grounded
+    "7ee78eef": 1.0,   # cache freshness (lifetime vs age) — grounded
     "8918f788": 1.0,   # URI Template simple string expansion — grounded
-    "831f7b29": 1.0,   # ACME http-01 — grounded in rfc8555#0067/0068
-    "1fb62edf": 0.75,  # bearer 3 methods — URI-query method not in retrieved context
-    "1d37c635": 1.0,   # WebSocket 101 — grounded in rfc6455#0012
-    "c95f1d2d": 1.0,   # JWT registered claims ("include") — grounded
-    "908c3495": 1.0,   # 308 Permanent Redirect — grounded
+    "5644d0fb": 1.0,   # Sec-WebSocket-Accept steps — grounded (GUID concat in ctx)
+    "1d37c635": 1.0,   # WebSocket 101 — grounded
+    "605c1219": 1.0,   # URI generic-syntax 5 components — grounded
+    "908c3495": 0.75,  # 308 — core grounded, over-elaborates (judge 0.67)
     "de139471": 1.0,   # 429 Too Many Requests — grounded
-    "17926543": 1.0,   # SETTINGS_HEADER_TABLE_SIZE verbatim in CTX1 (judge said 0.5)
-    "563701c0": 0.5,   # invalid_grant miscited + undefined (judge said 1.0)
-    "57039f91": 1.0,   # HSTS max-age — grounded in rfc6797#0021
-    "e6955712": 0.75,  # QUIC connection ID — primary citation is the ack-eliciting chunk
-    "6db1d152": 1.0,   # PATCH method + idempotency — grounded
-    "c5d31ac8": 0.5,   # MSL "2 minutes" not in retrieved context (judge said 1.0)
-    "ebc3da16": 0.75,  # TCP receive window — cited chunk is urgent-data; weak grounding
-    "ceb616d9": 1.0,   # HPACK dynamic table — grounded in rfc7541 dynamic-table chunks
-    "b2650475": 1.0,   # MUST/SHOULD grounded + honestly flags MAY as absent (judge 0.8)
-    "a0abd31b": 1.0,   # QPACK separate streams — grounded in rfc9114#0006 + rfc9204#0005
+    "17926543": 1.0,   # SETTINGS_HEADER_TABLE_SIZE — grounded
+    "36dba029": 1.0,   # cookie Secure attribute — grounded
+    "97ae64c7": 0.5,   # MUST NOT — cites rfc2119#0000 but retrieved ctx are other RFCs (judge 0.75)
+    "06b1a8a7": 1.0,   # QUIC stateless reset — grounded
+    "6db1d152": 1.0,   # PATCH method — grounded
+    "3b3680d9": 1.0,   # cookie HttpOnly — grounded
+    "8bc6d836": 0.5,   # Sec-WebSocket-Key purpose — weak grounding in retrieved ctx (judge 0.33)
+    "b2650475": 0.6,   # MUST/SHOULD/MAY — definitions only partly in retrieved chunk (judge 0.40)
+    "04fa2607": 0.9,   # percent-encoding — grounded (judge 0.75)
+    "a0abd31b": 1.0,   # QPACK separate streams — grounded
 }
 
 
