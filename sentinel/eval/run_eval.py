@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import math
+import os
 import re
 import subprocess
 import uuid
@@ -403,6 +404,51 @@ def _print_summary(result: EvalResult, json_path) -> None:
     print("=" * 78 + "\n")
 
 
+def _ci_gate(result: EvalResult) -> bool:
+    """The CI faithfulness gate (§13, FR-CI2/3). Returns True to pass, False to fail. Fails on
+    EITHER insufficient coverage (too few items scored to trust the mean — throttle/skips) OR mean
+    faithfulness below the threshold. Writes a Markdown summary to $GITHUB_STEP_SUMMARY when run in
+    GitHub Actions so the metrics surface directly in the PR's checks (FR-CI3)."""
+    m = result.means
+    n = len(result.per_item)
+    gate = settings.faithfulness_threshold
+    enough = n >= settings.ci_min_items
+    passed = enough and m.faithfulness >= gate
+
+    if not enough:
+        reason = f"insufficient coverage — only {n}/{settings.ci_min_items} items scored"
+    elif passed:
+        reason = f"mean faithfulness {m.faithfulness:.3f} >= {gate:.2f}"
+    else:
+        reason = f"mean faithfulness {m.faithfulness:.3f} < {gate:.2f}"
+
+    md = "\n".join(
+        [
+            f"## Faithfulness gate — {'PASS ✅' if passed else 'FAIL ❌'}",
+            "",
+            f"**{reason}**",
+            "",
+            "| metric | value |",
+            "|---|---|",
+            f"| mean faithfulness | **{m.faithfulness:.3f}** (gate >= {gate:.2f}) |",
+            f"| answer relevance | {m.answer_relevance:.3f} |",
+            f"| context recall | {m.context_recall:.3f} |",
+            f"| items scored | {n} (min {settings.ci_min_items}) |",
+            f"| attribution | {result.attribution_counts.retrieval_fail} retrieval_fail, "
+            f"{result.attribution_counts.generation_fail} generation_fail |",
+            "",
+            f"_judge `{settings.judge_model}` · generation `{settings.generation_model}` · "
+            f"git `{result.git_sha}`_",
+        ]
+    )
+    print("\n" + md + "\n")
+    summary_path = os.getenv("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with open(summary_path, "a", encoding="utf-8") as fh:
+            fh.write(md + "\n")
+    return passed
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Run the Ragas eval over the ground-truth set.")
     ap.add_argument("--subset", type=int, default=None, help="evaluate only N representative items")
@@ -417,8 +463,8 @@ def main() -> None:
     subset_n = settings.ci_eval_subset_size if args.ci else args.subset
     result = run(subset_n=subset_n, resume=not args.no_resume)
 
-    if args.ci and result.means.faithfulness < settings.faithfulness_threshold:
-        raise SystemExit(1)  # the gate: a red build below threshold (§13)
+    if args.ci and not _ci_gate(result):
+        raise SystemExit(1)  # the gate: a red build below threshold / on thin coverage (§13)
 
 
 if __name__ == "__main__":

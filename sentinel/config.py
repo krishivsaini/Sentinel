@@ -85,7 +85,13 @@ class Settings(BaseSettings):
 
     # ---------------------------------------------------------------- Eval + gate (§12/§13)
     faithfulness_threshold: float = 0.80   # CI gate fails below this
-    ci_eval_subset_size: int = 25          # representative subset run in CI (cost/time bound)
+    # Representative subset run in CI. Kept small on purpose: the free-tier judge is per-minute
+    # token-limited and the endpoint degrades under sustained load (see plan §5), so a big subset
+    # throttles and flakes. 10 completes reliably in a PR run; a paid judge key lifts this freely.
+    ci_eval_subset_size: int = 10
+    # A gate needs enough data to mean something: if fewer than this many items actually score
+    # (throttle/skip), the gate fails as "insufficient coverage" rather than passing on thin data.
+    ci_min_items: int = 6
     # A per-item score below this flags the item for failure attribution (§12).
     low_score_threshold: float = 0.60
     # context_recall below this => classify as a retrieval failure (else generation failure).

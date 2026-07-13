@@ -1,34 +1,58 @@
-# Faithfulness gate (§13) — engineering-signal #3 — implemented in Phase 4, Day 11.
+# Faithfulness gate (§13) — engineering-signal #3 — Phase 4, Day 11.
 #
-# On every PR: install deps, run a representative SUBSET of the eval (config.ci_eval_subset_size),
-# compute mean faithfulness, and FAIL the build if it drops below config.faithfulness_threshold.
-# The full eval runs locally/on-demand; the CI subset stays small to cost cents and stay under
-# Gemini free-tier RPM/RPD (NFR-6). GOOGLE_API_KEY is a repository secret (FR-CI4).
+# On every PR to main: build the FAISS + BM25 indexes from the committed corpus, run a
+# representative SUBSET of the Ragas eval (config.ci_eval_subset_size), and FAIL the check if
+# mean faithfulness drops below config.faithfulness_threshold — or if too few items score to
+# trust the mean (config.ci_min_items). The metric summary is written to the job summary so it
+# shows directly in the PR's checks (FR-CI3). The full eval runs locally/on-demand.
 #
-# STUB: trigger is workflow_dispatch (manual) until run_eval.py exists (Phase 3), so this does
-# not post a misleading red check during scaffolding. Phase 4 switches the trigger to:
-#   on:
-#     pull_request:
-#       branches: [main]
+# Requires the GROQ_API_KEY repository secret (Settings > Secrets and variables > Actions), FR-CI4.
+# The free-tier judge is per-minute token-limited and the endpoint degrades under sustained load,
+# so the subset is deliberately small; a paid judge key makes this fast and fully reliable.
 
 name: eval-gate
 
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eval-gate-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   faithfulness-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-      - name: Sync deps
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
         run: uv sync --frozen
-      - name: Run eval subset + enforce faithfulness gate
+
+      # bge embeddings + the cross-encoder reranker download on first use; cache them across runs.
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-models-${{ hashFiles('sentinel/config.py') }}
+
+      # Indexes are gitignored (rebuilt from source, §16.6); build them from the committed corpus.
+      - name: Build indexes from corpus
+        run: uv run python -m sentinel.ingest
+
+      # --ci runs config.ci_eval_subset_size items and exits non-zero below the gate; the run
+      # writes its Markdown summary to $GITHUB_STEP_SUMMARY (set automatically by Actions).
+      - name: Faithfulness gate (eval subset)
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-        run: |
-          # TODO(Phase 4, Day 11): run_eval must exit non-zero when mean faithfulness < threshold,
-          # and print the metric summary to the job output (FR-CI2, FR-CI3).
-          uv run python -m sentinel.eval.run_eval --subset 25
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: uv run python -m sentinel.eval.run_eval --ci --no-resume

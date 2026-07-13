@@ -139,6 +139,41 @@ def test_save_writes_run_row_and_json_export(tmp_store) -> None:
     assert set(store.load_scored_items("deadbee")) == {"q1", "q2"}
 
 
+# --------------------------------------------------------------------------- CI gate
+
+
+def _result(n: int, faith: float) -> EvalResult:
+    return EvalResult(
+        run_id="r",
+        git_sha="abc",
+        timestamp=datetime.now(timezone.utc),
+        per_item=[_item(question=f"q{i}", faith=faith) for i in range(n)],
+        means=EvalMeans(faithfulness=faith, answer_relevance=0.9, context_recall=0.9),
+        attribution_counts=AttributionCounts(),
+    )
+
+
+def test_ci_gate_passes_above_threshold_with_coverage() -> None:
+    assert run_eval._ci_gate(_result(settings.ci_min_items, 0.95)) is True
+
+
+def test_ci_gate_fails_below_threshold() -> None:
+    assert run_eval._ci_gate(_result(settings.ci_min_items, 0.50)) is False
+
+
+def test_ci_gate_fails_on_insufficient_coverage_even_if_faithful() -> None:
+    """A perfect score over too few items must not pass — the mean isn't trustworthy."""
+    assert run_eval._ci_gate(_result(settings.ci_min_items - 1, 1.0)) is False
+
+
+def test_ci_gate_writes_github_step_summary(tmp_path, monkeypatch) -> None:
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    run_eval._ci_gate(_result(settings.ci_min_items, 0.95))
+    text = summary.read_text()
+    assert "Faithfulness gate" in text and "PASS" in text and "mean faithfulness" in text
+
+
 # --------------------------------------------------------------------------- run_eval helpers
 
 
