@@ -5,7 +5,7 @@ context and to emit inline citations referencing chunk IDs (FR-G1, FR-G2). If co
 insufficient, the model abstains rather than answer from parametric memory (FR-G3) — this
 directly protects faithfulness. Generation latency is captured separately (FR-G4).
 
-Uses the configured chat model (config.generation_provider/model — Groq's llama-3.3-70b on the
+Uses the configured chat model (config.generation_provider/model — Groq's gpt-oss-20b on the
 free tier by default; see sentinel/llm.py), streamed token-by-token for the SSE endpoint.
 Citations are parsed from the model's inline [chunk_id] markers and filtered against the
 retrieved set, so a hallucinated ID can never become a citation.

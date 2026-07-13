@@ -182,13 +182,24 @@ beats an uncalibrated good one.
 
 **Goal:** the rarest signal — eval wired into CI, blocking merges.
 
-**Tasks**
-- `.github/workflows/eval-gate.yml`: on PR → install deps → run a **~25-item representative subset** → compute mean faithfulness → **fail the build if < threshold** (FR-CI1, FR-CI2). Keep it fast/cheap, under free-tier limits (NFR-6).
-- Post the metric summary as a PR comment / job output (FR-CI3). LLM key as a **repository secret** (FR-CI4).
-- **Prove it:** open a demonstration PR with a deliberately-bad change that turns the gate red; capture the screenshot; preserve the PR in history (FR-CI5).
-- **Exit:** the gate blocks a bad PR; demonstration PR + screenshot exist.
+> **Status (2026-07-13) — code done; one manual step (secret + PR) remains.**
+> `.github/workflows/eval-gate.yml` now triggers on PRs to main: it builds the indexes from the
+> committed corpus, runs `run_eval --ci` over a small representative subset, and fails the check
+> below the faithfulness threshold **or** on insufficient coverage. The metric summary is written
+> to `$GITHUB_STEP_SUMMARY` so it renders in the PR checks (FR-CI2/CI3). A demonstration branch
+> `demo/prompt-regression-breaks-grounding` carries a deliberately-bad prompt regression (grounding
+> loosened) to turn the gate red (FR-CI5). **Two manual steps** (I can't do them): add the
+> `GROQ_API_KEY` repository secret (FR-CI4), then open the demo PR and screenshot the red check.
 
-**Risk:** CI runtime/cost creep — keep the subset small; the full eval stays local.
+**Tasks**
+- `.github/workflows/eval-gate.yml`: on PR → install deps → build indexes → run subset → **fail below threshold** (FR-CI1, FR-CI2). *(Done. Subset is `ci_eval_subset_size=10` — smaller than the plan's 25 because the free-tier judge is per-minute token-limited; a paid key lifts it. Coverage floor `ci_min_items=6` prevents a thin-run false pass.)*
+- Post the metric summary as a PR comment / job output (FR-CI3). LLM key as a **repository secret** (FR-CI4). *(Done — Markdown summary → `$GITHUB_STEP_SUMMARY`; workflow reads `secrets.GROQ_API_KEY`.)*
+- **Prove it:** demonstration PR with a deliberately-bad change that turns the gate red (FR-CI5). *(Branch pushed; opening the PR + screenshot is the remaining manual step, needs the secret set first.)*
+- **Exit:** the gate blocks a bad PR; demonstration PR + screenshot exist. *(Pending the secret + PR.)*
+
+**Risk:** CI runtime/cost creep — keep the subset small; the full eval stays local. **Borne out:**
+free-tier throttle means even the small subset can flake; the honest fix for reliable CI is a paid
+judge key (a one-line `config` / secret swap).
 
 ---
 
