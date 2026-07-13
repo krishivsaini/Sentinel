@@ -82,6 +82,9 @@ _TRANSIENT = (
     "unavailable",
     "500",
     "internal error",
+    "connection error",   # Groq drops connections under sustained load — transient, retry it
+    "connection reset",
+    "connection aborted",
 )
 
 # A judge occasionally emits structured output ragas can't parse (esp. smaller models). It's not
@@ -271,6 +274,28 @@ def run(subset_n: int | None = None, resume: bool = True) -> EvalResult:
     return result
 
 
+async def _score_one(gt: GroundTruthItem, faithfulness, answer_relevancy, context_recall):
+    """Retrieve -> generate -> score one item. Returns (answer, abstained, retrieved, faith,
+    arel, crec). Wrapped in a wall-clock timeout by the caller so a hang can't stall the run."""
+    retrieved = hybrid_retrieve(gt.question)
+    # Generation is sync (streams via the sync client); run it off the loop in a worker thread.
+    # retry=False so _with_backoff owns the retry budget (no SDK amplification).
+    answer, _citations, _gen_ms = await asyncio.to_thread(
+        _with_backoff, partial(collect_answer, gt.question, retrieved, retry=False)
+    )
+    abstained = is_abstention(answer)
+    sample = SingleTurnSample(
+        user_input=gt.question,
+        response=answer,
+        retrieved_contexts=[c.text for c in retrieved],
+        reference=gt.reference_answer,
+    )
+    faith = _coerce_faithfulness(await _score_async(faithfulness, sample), abstained)
+    arel = _coerce(await _score_async(answer_relevancy, sample))
+    crec = _coerce(await _score_async(context_recall, sample))
+    return answer, abstained, retrieved, faith, arel, crec
+
+
 async def _score_items(
     items: list[GroundTruthItem], git_sha: str, run_id: str, resume: bool
 ) -> list[EvalItemResult]:
@@ -285,29 +310,17 @@ async def _score_items(
             continue
 
         try:
-            retrieved = hybrid_retrieve(gt.question)
-            # Generation is sync (streams via the sync client); run it off the loop in a worker
-            # thread. retry=False so _with_backoff owns the retry budget (no SDK amplification),
-            # and generation is as throttle-resilient as the judge.
-            answer, _citations, _gen_ms = await asyncio.to_thread(
-                _with_backoff, partial(collect_answer, gt.question, retrieved, retry=False)
+            # A whole-item wall-clock ceiling: a hung HTTP call (server stops streaming without
+            # closing) has no other timeout on the generation path and would otherwise stall the
+            # entire run indefinitely. wait_for turns that into a skip -> resume retries the item.
+            answer, abstained, retrieved, faith, arel, crec = await asyncio.wait_for(
+                _score_one(gt, faithfulness, answer_relevancy, context_recall),
+                timeout=settings.eval_item_timeout,
             )
-            abstained = is_abstention(answer)
-            contexts = [c.text for c in retrieved]
-            sample = SingleTurnSample(
-                user_input=gt.question,
-                response=answer,
-                retrieved_contexts=contexts,
-                reference=gt.reference_answer,
-            )
-
-            faith = _coerce_faithfulness(await _score_async(faithfulness, sample), abstained)
-            arel = _coerce(await _score_async(answer_relevancy, sample))
-            crec = _coerce(await _score_async(context_recall, sample))
         except Exception as e:
-            # One item's unrecoverable failure (e.g. a judge that never returns parseable output,
-            # even after retries) must not sink the whole run. Skip it — it is NOT checkpointed,
-            # so a later resume retries it (a fresh stochastic judge call often parses).
+            # One item's unrecoverable failure (a never-parseable judge, a hang) must not sink the
+            # run. Skip it — it is NOT checkpointed, so a later resume retries it (a fresh
+            # stochastic call often succeeds).
             log.warning("eval.item.error", i=i, question=gt.question[:70], error=str(e)[:180])
             continue
 

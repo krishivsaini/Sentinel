@@ -110,6 +110,10 @@ class Settings(BaseSettings):
     judge_backoff_seconds: float = 2.0     # exponential base when the server gives no retryDelay
     judge_backoff_max_seconds: float = 65.0  # cap per wait — long enough to clear a per-minute window
     judge_call_timeout: float = 90.0       # per-metric-call ceiling (a hung judge can't stall a run)
+    # Whole-item wall-clock ceiling. A hung HTTP stream on the generation path has no other
+    # timeout and once stalled a run indefinitely; this turns a hang into a skip (resume retries
+    # it). Generous vs. an observed ~2-3 min throttled item, but far below an indefinite hang.
+    eval_item_timeout: float = 600.0
     # Proactive pacing between eval items. Both generation (~4K tokens/call, 12K TPM) and the
     # judge (~6 calls/item, 30K TPM) are token-heavy on the free tier; a real gap keeps a
     # sequential run under those TPM limits so backoff only has to absorb true bursts (§12).
