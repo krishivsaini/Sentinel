@@ -45,6 +45,14 @@ def test_parse_citations_empty_when_none_cited() -> None:
     assert parse_citations("no markers here", _chunks("rfc6585#0002")) == []
 
 
+def test_parse_citations_accepts_fullwidth_brackets() -> None:
+    """Some models cite with CJK fullwidth brackets 【…】 instead of [...] (~23% of gpt-oss-20b
+    answers). Those are real citations — dropping them would report a grounded answer as uncited."""
+    chunks = _chunks("rfc6455#0012", "rfc6585#0002")
+    text = "The server returns 101【rfc6455#0012】and rate limits with 429 [rfc6585#0002]."
+    assert [c.chunk_id for c in parse_citations(text, chunks)] == ["rfc6455#0012", "rfc6585#0002"]
+
+
 def test_is_abstention() -> None:
     assert is_abstention(ABSTAIN_MESSAGE)
     assert is_abstention("  " + ABSTAIN_MESSAGE.upper() + "  ")

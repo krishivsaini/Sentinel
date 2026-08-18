@@ -26,8 +26,11 @@ from sentinel.schema import Citation, RetrievedChunk
 
 # Verbatim sentence the model must emit when the context can't answer the question (FR-G3).
 ABSTAIN_MESSAGE = "I don't have enough information in the provided context to answer that."
-# Inline citation marker the model is told to use, e.g. "[rfc9110#0007]".
-_CITATION_RE = re.compile(r"\[(rfc\d+#\d+)\]")
+# Inline citation marker the model is told to use, e.g. "[rfc9110#0007]". Some models emit the
+# CJK fullwidth brackets 【…】 instead (observed in ~23% of gpt-oss-20b answers) — accepting both
+# keeps those citations from being silently dropped, which would report a correctly-grounded
+# answer as uncited (FR-G2).
+_CITATION_RE = re.compile(r"[\[【]\s*(rfc\d+#\d+)\s*[\]】]")
 
 SYSTEM_PROMPT = f"""You are Sentinel, a precise question-answering assistant for IETF \
 web-protocol RFCs (HTTP, TLS, TCP, DNS, URIs, cookies, OAuth/JWT/JOSE, and related standards).
