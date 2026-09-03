@@ -94,6 +94,16 @@ only weakly grounded in the retrieved context, e.g.:
 here (at the 0.5 threshold almost every item is "faithful", so the binary labels have near-zero
 variance) — the continuous correlation is the meaningful signal.
 
+**Calibration is host-specific, not just model-specific.** Serving the *same* judge
+(`openai/gpt-oss-120b`) from a different provider changes its faithfulness judgments. Replaying
+identical stored inputs through both hosts (`scripts/compare_judge_hosts.py`) gives mean |Δ| =
+0.114 on faithfulness (max 0.57), while `context_recall` is identical (Δ = 0.000) and answer
+relevancy nearly so (0.033). Re-running this calibration against the NVIDIA-hosted judge drops it
+to **r = +0.54 / ρ = +0.38** — it is systematically more lenient, scoring 0.75 where hand labels
+say 0.50–0.60. So the gate judge stays Groq-hosted, and any judge swap requires re-calibration
+before its numbers are treated as the headline. A useful corollary: because `context_recall`
+transfers exactly, retrieval diagnostics from a run judged on either host are directly comparable.
+
 **Context — an earlier judge was *not* calibrated.** The first Groq run used `llama-4-scout-17b`
 (since deprecated), which scored a near-zero correlation (r ≈ −0.10): it credited
 topically-plausible claims even when the fact wasn't retrieved. Moving to `gpt-oss-120b` (forced by

@@ -40,9 +40,9 @@ class Settings(BaseSettings):
 
     # ---------------------------------------------------------------- Secrets
     # These use the provider SDKs' own env var names (no SENTINEL_ prefix).
-    nvidia_api_key: str = Field(default="", alias="NVIDIA_API_KEY")
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     google_api_key: str = Field(default="", alias="GOOGLE_API_KEY")
+    nvidia_api_key: str = Field(default="", alias="NVIDIA_API_KEY")
     # build.nvidia.com's OpenAI-compatible endpoint (used by the "nvidia" provider).
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
     jwt_secret: str = Field(default="dev-insecure-change-me", validation_alias="SENTINEL_JWT_SECRET")

@@ -5,12 +5,28 @@ returns a `BaseChatModel`, so callers stay provider-agnostic: only `config` pick
 provider + model, and this factory builds it.
 
 Providers:
-  "nvidia" — build.nvidia.com, OpenAI-compatible. Free tier is per-model (40 RPM each), so
-             generation, judge, and (v2) a guardrails classifier get INDEPENDENT quota instead
-             of sharing one pool. Hosts very large judges (nemotron-ultra-253b) that Groq's free
-             tier doesn't.
-  "groq"   — free tier, fast, but one shared quota pool across roles.
+  "groq"   — DEFAULT. Free tier shares one quota pool across roles (hence the pacing constants
+             in config), but it is enormously faster per call, which is what actually bounds a
+             run (see the measurement below).
+  "nvidia" — build.nvidia.com, OpenAI-compatible. Free tier is metered per model (40 RPM each),
+             so roles get independent quota. Kept wired as a fallback / for long offline runs.
   "google" — Gemini; free tier is ~20 requests/DAY/model, so it's an alternate, not a default.
+
+Provider choice is measured, not assumed (probed 2026-09-02, same trivial JSON prompt, warm):
+
+    model                                   Groq            NVIDIA
+    openai/gpt-oss-120b (judge)             0.45-0.79s      12.6-40.8s
+    openai/gpt-oss-20b  (generation)        0.31-0.41s      -
+    nvidia/nemotron-3.5-lightning-30b       -               26-57s
+    nvidia/nemotron-3-ultra-550b-a55b       -               13.4s + 2/3 InternalServerError
+
+Groq is ~30-60x faster on the *identical* model. That reverses the case for switching: NVIDIA's
+per-model 40 RPM is unreachable when a single call takes ~25s (that is ~2.4 RPM sequential), so
+latency, not quota, is the binding constraint. Several large NVIDIA judges are also unusable:
+nemotron-ultra-253b / nemotron-70b / nemotron-4-340b return 404 (listed but not deployed for the
+account), and nemotron-3-super-120b leaks raw reasoning into content — the exact pollution the
+judge must avoid. Hence: Groq stays the default; NVIDIA stays wired because the abstraction makes
+it free to keep, and it is the escape hatch if Groq's terms change.
 
 `max_retries=0` is the right default here — the callers (service SSE, eval loop) own their own
 backoff, and stacking the SDK's retries on top only amplifies free-tier throttling.
