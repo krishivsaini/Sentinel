@@ -1,0 +1,67 @@
+{
+  "faithfulness_threshold": 0.8,
+  "judge_model": "openai/gpt-oss-120b",
+  "generation_model": "openai/gpt-oss-20b",
+  "runs": [
+    {
+      "run_id": "f6a3fc79d6a9",
+      "git_sha": "6e91cd1",
+      "timestamp": "2026-07-13T03:39:04.191727+00:00",
+      "faithfulness": 0.9204,
+      "answer_relevance": 0.9385,
+      "context_recall": 0.9402,
+      "retrieval_fail": 0,
+      "generation_fail": 1,
+      "items": 18,
+      "gate_pass": true
+    },
+    {
+      "run_id": "c1cef030a046",
+      "git_sha": "6e91cd1",
+      "timestamp": "2026-07-13T09:53:28.229944+00:00",
+      "faithfulness": 0.9045,
+      "answer_relevance": 0.9431,
+      "context_recall": 0.9511,
+      "retrieval_fail": 0,
+      "generation_fail": 2,
+      "items": 22,
+      "gate_pass": true
+    },
+    {
+      "run_id": "2da76324b004",
+      "git_sha": "d0c59e4",
+      "timestamp": "2026-09-02T15:43:30.219490+00:00",
+      "faithfulness": 0.926,
+      "answer_relevance": 0.8839,
+      "context_recall": 0.8632,
+      "retrieval_fail": 4,
+      "generation_fail": 3,
+      "items": 42,
+      "gate_pass": true
+    },
+    {
+      "run_id": "a4307da83ca0",
+      "git_sha": "d0c59e4",
+      "timestamp": "2026-09-02T16:04:23.622193+00:00",
+      "faithfulness": 0.9294,
+      "answer_relevance": 0.8875,
+      "context_recall": 0.8751,
+      "retrieval_fail": 4,
+      "generation_fail": 3,
+      "items": 46,
+      "gate_pass": true
+    },
+    {
+      "run_id": "2a219fdec859",
+      "git_sha": "d0c59e4",
+      "timestamp": "2026-09-03T04:53:44.904918+00:00",
+      "faithfulness": 0.9323,
+      "answer_relevance": 0.8899,
+      "context_recall": 0.8803,
+      "retrieval_fail": 4,
+      "generation_fail": 3,
+      "items": 48,
+      "gate_pass": true
+    }
+  ]
+}

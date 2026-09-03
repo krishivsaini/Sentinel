@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens ported verbatim from the Sentinel dashboard mockup — light is the default,
+   dark overrides on [data-theme="dark"]. Every Tailwind color maps to one of these. */
+:root {
+  --bg: #fafafa;
+  --panel: #ffffff;
+  --panel-2: #fcfcfc;
+  --panel-3: #fbfbfb;
+  --border: #ededed;
+  --border-2: #ececec;
+  --border-soft: #f6f6f6;
+  --border-hair: #f0f0f0;
+  --text: #171717;
+  --text-1: #262626;
+  --text-2: #525252;
+  --text-3: #8a8a8a;
+  --text-4: #a3a3a3;
+  --text-5: #b0b0b0;
+  --accent: #4f46e5;
+  --accent-2: #4338ca;
+  --accent-soft: #eef0fe;
+  --chip: #f2f2f2;
+  --ok-fg: #15803d;
+  --ok-bg: #e9f7ee;
+  --ok-bd: #cdeed7;
+  --bad-fg: #b91c1c;
+  --bad-bg: #fdecec;
+  --warn-fg: #d97706;
+  --warn-bg: #fdf3e3;
+  --ret-fg: #c2410c;
+  --ret-bg: #fdeee4;
+  --ret-solid: #ea7a3c;
+  --gen-fg: #7c3aed;
+  --gen-bg: #f2ecfe;
+  --gen-solid: #8b5cf6;
+  --mark: #171717;
+  --input-bd: #e2e2e2;
+  --dash: #e0a800;
+  --grid: #f2f2f2;
+  --line-faith: #4f46e5;
+  --line-rel: #0891b2;
+  --line-rec: #16a34a;
+  --cu-bd: #dbe0fb;
+  --cu-bg: #f7f8ff;
+  --cu-chip-bg: #e4e7fb;
+  --cu-chip-fg: #4338ca;
+  --btn-bg: #171717;
+  --btn-fg: #ffffff;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b0c0f;
+  --panel: #151619;
+  --panel-2: #17181c;
+  --panel-3: #141519;
+  --border: #26272c;
+  --border-2: #26272c;
+  --border-soft: #202128;
+  --border-hair: #212227;
+  --text: #f2f2f3;
+  --text-1: #e6e6e8;
+  --text-2: #c2c3c7;
+  --text-3: #8b8d94;
+  --text-4: #6c6e75;
+  --text-5: #585a61;
+  --accent: #818cf8;
+  --accent-2: #a5b0ff;
+  --accent-soft: #20223a;
+  --chip: #212227;
+  --ok-fg: #4ade80;
+  --ok-bg: #122019;
+  --ok-bd: #1f3d2b;
+  --bad-fg: #f87171;
+  --bad-bg: #2a1618;
+  --warn-fg: #fbbf24;
+  --warn-bg: #2a2113;
+  --ret-fg: #fb923c;
+  --ret-bg: #271811;
+  --ret-solid: #ea7a3c;
+  --gen-fg: #a78bfa;
+  --gen-bg: #1c1630;
+  --gen-solid: #8b5cf6;
+  --mark: #26272c;
+  --input-bd: #2a2b31;
+  --dash: #d4a017;
+  --grid: #212227;
+  --line-faith: #818cf8;
+  --line-rel: #22d3ee;
+  --line-rec: #4ade80;
+  --cu-bd: #2f3352;
+  --cu-bg: #181a26;
+  --cu-chip-bg: #262a45;
+  --cu-chip-fg: #a5b0ff;
+  --btn-bg: #818cf8;
+  --btn-fg: #0b0c0f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: rgba(129, 140, 248, 0.28);
+}
+
+/* details/summary carets + scrollbar, matching the mockup */
+summary {
+  list-style: none;
+  cursor: pointer;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+details[open] .sc-caret {
+  transform: rotate(90deg);
+}
+.sc-caret {
+  transition: transform 0.15s ease;
+}
+input:focus {
+  outline: none;
+}
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 140, 150, 0.28);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 140, 150, 0.45);
+}
+
+/* shared card shadow */
+.card-shadow {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+:root[data-theme="dark"] .card-shadow {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}

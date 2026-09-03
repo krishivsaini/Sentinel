@@ -24,7 +24,11 @@ dashboard/node_modules/
 node_modules/
 .next/
 
-# --- Eval JSON exports consumed by the dashboard ---
+# --- Eval JSON exports ---
+# dashboard/data/ is the working export dir the pipeline writes to (regenerable — ignored).
+# dashboard/public/data/ IS committed: it's the snapshot the deployed dashboard serves, so a
+# clone/Vercel build renders real numbers without needing an API key or a local eval run.
+# Refresh it with `npm run sync-data` after an eval.
 dashboard/data/*.json
 
 # --- OS / editor noise ---
