@@ -98,9 +98,9 @@ class Settings(BaseSettings):
 
     # ---------------------------------------------------------------- Eval + gate (§12/§13)
     faithfulness_threshold: float = 0.80   # CI gate fails below this
-    # Representative subset run in CI. Kept small on purpose: the free-tier judge is per-minute
-    # token-limited and the endpoint degrades under sustained load (see plan §5), so a big subset
-    # throttles and flakes. 10 completes reliably in a PR run; a paid judge key lifts this freely.
+    # Representative subset run in CI (faithfulness only — see run_eval.run). Kept small on
+    # purpose: the free-tier judge is capped at 8K tokens/min, so a big subset throttles into
+    # per-item timeouts. With all three metrics even 10 items overran a 45-min job.
     ci_eval_subset_size: int = 10
     # A gate needs enough data to mean something: if fewer than this many items actually score
     # (throttle/skip), the gate fails as "insufficient coverage" rather than passing on thin data.

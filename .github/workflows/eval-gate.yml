@@ -7,8 +7,8 @@
 # shows directly in the PR's checks (FR-CI3). The full eval runs locally/on-demand.
 #
 # Requires the GROQ_API_KEY repository secret (Settings > Secrets and variables > Actions), FR-CI4.
-# The free-tier judge is per-minute token-limited and the endpoint degrades under sustained load,
-# so the subset is deliberately small; a paid judge key makes this fast and fully reliable.
+# The free-tier judge is capped at 8K tokens/min, so CI scores faithfulness only (the gate metric;
+# relevance + recall would triple the token spend) over a deliberately small subset.
 
 name: eval-gate
 
@@ -27,7 +27,7 @@ concurrency:
 jobs:
   faithfulness-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -46,12 +46,22 @@ jobs:
           path: ~/.cache/huggingface
           key: hf-models-${{ hashFiles('sentinel/config.py') }}
 
-      # Indexes are gitignored (rebuilt from source, §16.6); build them from the committed corpus.
+      # Indexes are gitignored (rebuilt from source, §16.6). Building them embeds the whole corpus on
+      # CPU (~9 min), so cache them keyed on everything that determines their contents — the
+      # corpus, the chunker/embedder code, and the config naming the models and chunk sizes.
+      - name: Cache indexes
+        id: index-cache
+        uses: actions/cache@v4
+        with:
+          path: indexes
+          key: indexes-${{ hashFiles('data/corpus/**', 'sentinel/ingest.py', 'sentinel/schema.py', 'sentinel/config.py') }}
+
       - name: Build indexes from corpus
+        if: steps.index-cache.outputs.cache-hit != 'true'
         run: uv run python -m sentinel.ingest
 
-      # --ci runs config.ci_eval_subset_size items and exits non-zero below the gate; the run
-      # writes its Markdown summary to $GITHUB_STEP_SUMMARY (set automatically by Actions).
+      # --ci scores faithfulness only over config.ci_eval_subset_size items and exits non-zero below
+      # the gate; it writes its Markdown summary to $GITHUB_STEP_SUMMARY (set by Actions).
       - name: Faithfulness gate (eval subset)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}

@@ -263,28 +263,39 @@ def _coerce(raw: float) -> float:
 # --------------------------------------------------------------------------- run
 
 
-def run(subset_n: int | None = None, resume: bool = True) -> EvalResult:
+def run(subset_n: int | None = None, resume: bool = True, gate_only: bool = False) -> EvalResult:
+    """gate_only scores faithfulness alone — the one metric the CI gate reads. Answer relevance
+    and context recall are ~2/3 of the judge's token spend, and the free-tier judge is capped at
+    8K tokens/min, so a full-metric CI run throttles into timeouts. A gate-only run is never
+    checkpointed or exported: its NaN relevance/recall must not reach a resumed full eval or the
+    dashboard."""
     configure_logging()
     git_sha = _git_sha()
     run_id = uuid.uuid4().hex[:12]
     items = _subset(load_ground_truth(), subset_n)
 
-    log.info("eval.start", run_id=run_id, git_sha=git_sha, n=len(items), resume=resume)
+    log.info(
+        "eval.start", run_id=run_id, git_sha=git_sha, n=len(items), resume=resume,
+        gate_only=gate_only,
+    )
     warmup()  # load retrieval index + local models once, before the timed loop
 
     # The whole scoring loop runs in ONE event loop (see _score_async) so the judge client's
     # async transport stays bound to a live loop for the entire run.
-    per_item = asyncio.run(_score_items(items, git_sha, run_id, resume))
+    per_item = asyncio.run(_score_items(items, git_sha, run_id, resume, gate_only))
 
     result = _aggregate(run_id, git_sha, per_item)
-    json_path = store.save(result)
+    json_path = None if gate_only else store.save(result)
     _print_summary(result, json_path)
     return result
 
 
-async def _score_one(gt: GroundTruthItem, faithfulness, answer_relevancy, context_recall):
+async def _score_one(
+    gt: GroundTruthItem, faithfulness, answer_relevancy, context_recall, gate_only: bool = False
+):
     """Retrieve -> generate -> score one item. Returns (answer, abstained, retrieved, faith,
-    arel, crec). Wrapped in a wall-clock timeout by the caller so a hang can't stall the run."""
+    arel, crec); arel/crec are NaN when gate_only. Wrapped in a wall-clock timeout by the caller
+    so a hang can't stall the run."""
     retrieved = hybrid_retrieve(gt.question)
     # Generation is sync (streams via the sync client); run it off the loop in a worker thread.
     # retry=False so _with_backoff owns the retry budget (no SDK amplification).
@@ -299,16 +310,18 @@ async def _score_one(gt: GroundTruthItem, faithfulness, answer_relevancy, contex
         reference=gt.reference_answer,
     )
     faith = _coerce_faithfulness(await _score_async(faithfulness, sample), abstained)
+    if gate_only:
+        return answer, abstained, retrieved, faith, math.nan, math.nan
     arel = _coerce(await _score_async(answer_relevancy, sample))
     crec = _coerce(await _score_async(context_recall, sample))
     return answer, abstained, retrieved, faith, arel, crec
 
 
 async def _score_items(
-    items: list[GroundTruthItem], git_sha: str, run_id: str, resume: bool
+    items: list[GroundTruthItem], git_sha: str, run_id: str, resume: bool, gate_only: bool = False
 ) -> list[EvalItemResult]:
     faithfulness, answer_relevancy, context_recall = _build_metrics()
-    done = store.load_scored_items(git_sha) if resume else {}
+    done = store.load_scored_items(git_sha) if resume and not gate_only else {}
     per_item: list[EvalItemResult] = []
 
     for i, gt in enumerate(items, start=1):
@@ -322,14 +335,14 @@ async def _score_items(
             # closing) has no other timeout on the generation path and would otherwise stall the
             # entire run indefinitely. wait_for turns that into a skip -> resume retries the item.
             answer, abstained, retrieved, faith, arel, crec = await asyncio.wait_for(
-                _score_one(gt, faithfulness, answer_relevancy, context_recall),
+                _score_one(gt, faithfulness, answer_relevancy, context_recall, gate_only),
                 timeout=settings.eval_item_timeout,
             )
         except Exception as e:
             # One item's unrecoverable failure (a never-parseable judge, a hang) must not sink the
             # run. Skip it — it is NOT checkpointed, so a later resume retries it (a fresh
-            # stochastic call often succeeds).
-            log.warning("eval.item.error", i=i, question=gt.question[:70], error=str(e)[:180])
+            # stochastic call often succeeds). repr: a wait_for timeout's str() is empty.
+            log.warning("eval.item.error", i=i, question=gt.question[:70], error=repr(e)[:180])
             continue
 
         item = EvalItemResult(
@@ -340,8 +353,10 @@ async def _score_items(
             generated_answer=answer,
             retrieved=retrieved,
         )
-        item.attribution = attribution.classify(item)
-        store.upsert_item(git_sha, run_id, item)  # checkpoint before the next item
+        # Attribution needs context recall, which a gate-only run doesn't score.
+        if not gate_only:
+            item.attribution = attribution.classify(item)
+            store.upsert_item(git_sha, run_id, item)  # checkpoint before the next item
         per_item.append(item)
 
         log.info(
@@ -392,12 +407,12 @@ def _print_summary(result: EvalResult, json_path) -> None:
     print("  " + "-" * 74)
     for x in result.per_item:
         print(
-            f"  {x.faithfulness:6.2f} {x.answer_relevance:6.2f} {x.context_recall:6.2f}  "
+            f"  {_fmt(x.faithfulness)} {_fmt(x.answer_relevance)} {_fmt(x.context_recall)}  "
             f"{(x.attribution or ''):13} {x.question[:34]}"
         )
     print("  " + "-" * 74)
     m = result.means
-    print(f"  {m.faithfulness:6.2f} {m.answer_relevance:6.2f} {m.context_recall:6.2f}   MEANS")
+    print(f"  {_fmt(m.faithfulness)} {_fmt(m.answer_relevance)} {_fmt(m.context_recall)}   MEANS")
     print()
 
     gate = settings.faithfulness_threshold
@@ -407,8 +422,13 @@ def _print_summary(result: EvalResult, json_path) -> None:
         f"  attribution: {result.attribution_counts.retrieval_fail} retrieval_fail, "
         f"{result.attribution_counts.generation_fail} generation_fail"
     )
-    print(f"  exported: {json_path}")
+    print(f"  exported: {json_path or '(gate-only run — not exported)'}")
     print("=" * 78 + "\n")
+
+
+def _fmt(v: float) -> str:
+    """6-wide score cell; a metric a gate-only run didn't score shows as a dash, not 'nan'."""
+    return f"{'—':>6}" if math.isnan(v) else f"{v:6.2f}"
 
 
 def _ci_gate(result: EvalResult) -> bool:
@@ -438,11 +458,12 @@ def _ci_gate(result: EvalResult) -> bool:
             "| metric | value |",
             "|---|---|",
             f"| mean faithfulness | **{m.faithfulness:.3f}** (gate >= {gate:.2f}) |",
-            f"| answer relevance | {m.answer_relevance:.3f} |",
-            f"| context recall | {m.context_recall:.3f} |",
-            f"| items scored | {n} (min {settings.ci_min_items}) |",
-            f"| attribution | {result.attribution_counts.retrieval_fail} retrieval_fail, "
-            f"{result.attribution_counts.generation_fail} generation_fail |",
+            f"| items scored | {n} of {settings.ci_eval_subset_size} "
+            f"(min {settings.ci_min_items}) |",
+            "",
+            "_Answer relevance, context recall and failure attribution are not scored in CI —"
+            " the gate reads faithfulness only, and the free-tier judge's token budget can't"
+            " cover all three per PR. The full eval runs locally and feeds the dashboard._",
             "",
             f"_judge `{settings.judge_model}` · generation `{settings.generation_model}` · "
             f"git `{result.git_sha}`_",
@@ -462,13 +483,14 @@ def main() -> None:
     ap.add_argument(
         "--ci",
         action="store_true",
-        help=f"CI gate mode: subset of config.ci_eval_subset_size ({settings.ci_eval_subset_size})",
+        help=f"CI gate mode: faithfulness only, over config.ci_eval_subset_size "
+        f"({settings.ci_eval_subset_size}) items; never checkpointed or exported",
     )
     ap.add_argument("--no-resume", action="store_true", help="ignore checkpoints; re-score all")
     args = ap.parse_args()
 
     subset_n = settings.ci_eval_subset_size if args.ci else args.subset
-    result = run(subset_n=subset_n, resume=not args.no_resume)
+    result = run(subset_n=subset_n, resume=not args.no_resume, gate_only=args.ci)
 
     if args.ci and not _ci_gate(result):
         raise SystemExit(1)  # the gate: a red build below threshold / on thin coverage (§13)

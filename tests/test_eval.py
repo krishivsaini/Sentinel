@@ -174,6 +174,45 @@ def test_ci_gate_writes_github_step_summary(tmp_path, monkeypatch) -> None:
     assert "Faithfulness gate" in text and "PASS" in text and "mean faithfulness" in text
 
 
+def test_gate_only_run_scores_faithfulness_alone_and_persists_nothing(tmp_store, monkeypatch):
+    """--ci must call the judge for faithfulness only (the free-tier token budget can't cover all
+    three metrics per PR) and must never checkpoint or export: its NaN relevance/recall would
+    poison a resumed full eval and the dashboard's latest.json."""
+    import asyncio
+
+    from sentinel.schema import GroundTruthItem
+
+    judged: list[str] = []
+
+    class _Metric:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        async def single_turn_ascore(self, sample) -> float:
+            judged.append(self.name)
+            return 0.9
+
+    monkeypatch.setattr(
+        run_eval, "_build_metrics",
+        lambda: (_Metric("faith"), _Metric("arel"), _Metric("crec")),
+    )
+    monkeypatch.setattr(
+        run_eval, "hybrid_retrieve",
+        lambda q: [RetrievedChunk(chunk_id="rfc1035#0021", text="body", rerank_score=1.0)],
+    )
+    monkeypatch.setattr(run_eval, "collect_answer", lambda *a, **k: ("an answer", [], 1.0))
+    monkeypatch.setattr(settings, "eval_item_pause_seconds", 0.0)
+
+    items = [GroundTruthItem(question=f"q{i}", reference_answer="a") for i in range(2)]
+    per_item = asyncio.run(run_eval._score_items(items, "sha", "run", False, gate_only=True))
+
+    assert judged == ["faith", "faith"]
+    assert [x.faithfulness for x in per_item] == [0.9, 0.9]
+    assert all(math.isnan(x.answer_relevance) and math.isnan(x.context_recall) for x in per_item)
+    assert all(x.attribution is None for x in per_item)
+    assert store.load_scored_items("sha") == {}
+
+
 # --------------------------------------------------------------------------- run_eval helpers
 
 
