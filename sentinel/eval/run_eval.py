@@ -139,7 +139,7 @@ def _build_metrics() -> tuple[Faithfulness, ResponseRelevancy, LLMContextRecall]
     via tenacity so a 429 is one real hit, not N (the RPD trap)."""
     from langchain_huggingface import HuggingFaceEmbeddings
 
-    from sentinel.llm import chat_model
+    from sentinel.llm import accepts_temperature, chat_model
 
     rc = RunConfig(
         timeout=int(settings.judge_call_timeout),
@@ -151,7 +151,14 @@ def _build_metrics() -> tuple[Faithfulness, ResponseRelevancy, LLMContextRecall]
     )
     # bypass_n=True: some metrics (answer relevancy) ask the judge for n>1 completions in one
     # call; Groq models reject n>1, so the wrapper issues n separate single-completion calls.
-    llm = LangchainLLMWrapper(judge, run_config=rc, bypass_n=True)
+    # bypass_temperature: Ragas otherwise sets temperature=0.01 per call, which OpenAI reasoning
+    # models reject outright (see sentinel.llm.accepts_temperature).
+    llm = LangchainLLMWrapper(
+        judge,
+        run_config=rc,
+        bypass_n=True,
+        bypass_temperature=not accepts_temperature(settings.judge_provider, settings.judge_model),
+    )
     emb = LangchainEmbeddingsWrapper(
         HuggingFaceEmbeddings(model_name=settings.embedding_model), run_config=rc
     )

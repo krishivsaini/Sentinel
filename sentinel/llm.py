@@ -8,6 +8,12 @@ Providers:
   "groq"   — DEFAULT. Free tier shares one quota pool across roles (hence the pacing constants
              in config), but it is enormously faster per call, which is what actually bounds a
              run (see the measurement below).
+  "openai" — paid. Intended for the Ragas judge (gpt-6-luna, flex tier). Its reasoning models
+             reject temperature=0, so they're configured via reasoning_effort instead — see below.
+  "deepseek" — paid, direct DeepSeek API (OpenAI-compatible). Intended for the Ragas judge:
+             cheap (off-peak rates are half of peak), no free-tier throttling, and a different
+             lab from the gpt-oss generator, so the judge never grades its own family's output.
+             Thinking mode is forced off — see the branch below.
   "nvidia" — build.nvidia.com, OpenAI-compatible. Free tier is metered per model (40 RPM each),
              so roles get independent quota. Kept wired as a fallback / for long offline runs.
   "google" — Gemini; free tier is ~20 requests/DAY/model, so it's an alternate, not a default.
@@ -41,21 +47,70 @@ from langchain_core.language_models import BaseChatModel
 from sentinel.config import settings
 
 
+_OPENAI_REASONING_PREFIXES = ("gpt-5", "gpt-6", "o1", "o3", "o4")
+
+
+def accepts_temperature(provider: str, model: str) -> bool:
+    """Whether per-call `temperature` may be sent to this model.
+
+    Matters for Ragas: its LLM wrapper sets temperature=0.01 on EVERY judge call unless told not
+    to (`bypass_temperature=True`). OpenAI reasoning models reject any non-default temperature once
+    reasoning is enabled — a hard 400 (verified 2026-09-28 on gpt-6-luna) — but accept it at
+    reasoning_effort="none". Every Ragas caller consults this so eval, CI and calibration agree."""
+    if provider == "openai" and model.startswith(_OPENAI_REASONING_PREFIXES):
+        return settings.openai_reasoning_effort == "none"
+    return True
+
+
 @lru_cache(maxsize=8)
 def chat_model(
     provider: str, model: str, *, temperature: float = 0.0, max_retries: int = 0
 ) -> BaseChatModel:
     """Build (and cache) a chat model for the given provider + model id.
 
-    provider: "nvidia" | "groq" | "google". Cached by (provider, model, temperature,
-    max_retries) so each distinct configuration loads once."""
+    provider: "openai" | "deepseek" | "nvidia" | "groq" | "google". Cached by (provider, model,
+    temperature, max_retries) so each distinct configuration loads once."""
+    if provider == "openai":
+        from langchain_openai import ChatOpenAI
+
+        kwargs: dict = {}
+        if model.startswith(_OPENAI_REASONING_PREFIXES):
+            # Reasoning models: `temperature` other than the default is a hard 400 error
+            # (verified 2026-09-28 on gpt-6-luna), so it is deliberately NOT sent. Output is
+            # steered with reasoning_effort instead; run-to-run repeatability is measured
+            # rather than assumed (scripts/judge_calibration.py --repeat).
+            kwargs["reasoning_effort"] = settings.openai_reasoning_effort
+        else:
+            kwargs["temperature"] = temperature
+        return ChatOpenAI(
+            model=model,
+            max_retries=max_retries,
+            api_key=settings.openai_api_key or "not-set",
+            service_tier=settings.openai_service_tier,
+            **kwargs,
+        )
+    if provider == "deepseek":
+        from langchain_openai import ChatOpenAI
+
+        # DeepSeek models run in thinking mode by default. That's wrong for both of our roles:
+        # the chain-of-thought is billed as output, it's the same failure class that broke Ragas
+        # parsing with gpt-oss, and in thinking mode the API ignores `temperature` — the judge
+        # needs temperature=0 for repeatable scores. So thinking is always disabled here.
+        return ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            max_retries=max_retries,
+            api_key=settings.deepseek_api_key or "not-set",
+            base_url=settings.deepseek_base_url,
+            extra_body={"thinking": {"type": "disabled"}},
+        )
     if provider == "nvidia":
         from langchain_openai import ChatOpenAI
 
         # build.nvidia.com speaks the OpenAI API, so a ChatOpenAI pointed at its base URL is the
         # whole integration — no extra SDK. Only the gpt-oss family needs the reasoning-effort
-        # clamp (see below); nemotron models are asked to run at their default effort so we can
-        # test whether a larger judge produces valid Ragas structured output without the hack.
+        # clamp (same reason as the groq branch below); nemotron models run at default effort,
+        # which probe_judge.py confirmed is safe for the two that work.
         return ChatOpenAI(
             model=model,
             temperature=temperature,
@@ -90,5 +145,6 @@ def chat_model(
             google_api_key=settings.google_api_key or None,
         )
     raise ValueError(
-        f"unknown LLM provider: {provider!r} (expected 'nvidia', 'groq', or 'google')"
+        f"unknown LLM provider: {provider!r} "
+        "(expected 'openai', 'deepseek', 'nvidia', 'groq', or 'google')"
     )

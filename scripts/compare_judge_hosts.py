@@ -36,7 +36,7 @@ from ragas.run_config import RunConfig  # noqa: E402
 
 from sentinel.config import settings  # noqa: E402
 from sentinel.eval import store  # noqa: E402
-from sentinel.llm import chat_model  # noqa: E402
+from sentinel.llm import accepts_temperature, chat_model  # noqa: E402
 
 
 def load_samples(git_sha: str | None, n: int) -> list[SingleTurnSample]:
@@ -78,7 +78,10 @@ def build_metrics(provider: str, model: str):
 
     rc = RunConfig(timeout=180, max_retries=1, max_workers=1)
     llm = LangchainLLMWrapper(
-        chat_model(provider, model, temperature=0.0, max_retries=1), run_config=rc, bypass_n=True
+        chat_model(provider, model, temperature=0.0, max_retries=1),
+        run_config=rc,
+        bypass_n=True,
+        bypass_temperature=not accepts_temperature(provider, model),
     )
     emb = LangchainEmbeddingsWrapper(
         HuggingFaceEmbeddings(model_name=settings.embedding_model), run_config=rc

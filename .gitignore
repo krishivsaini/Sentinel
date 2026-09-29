@@ -40,3 +40,4 @@ dashboard/data/*.json
 # Regenerable review aids (rebuilt from the index / a scored eval run)
 data/ground_truth.review.jsonl
 data/judge_calibration.review.jsonl
+data/judge_calibration.blind.jsonl

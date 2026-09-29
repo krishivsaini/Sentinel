@@ -43,8 +43,17 @@ class Settings(BaseSettings):
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     google_api_key: str = Field(default="", alias="GOOGLE_API_KEY")
     nvidia_api_key: str = Field(default="", alias="NVIDIA_API_KEY")
-    # build.nvidia.com's OpenAI-compatible endpoint (used by the "nvidia" provider).
+    deepseek_api_key: str = Field(default="", alias="DEEPSEEK_API_KEY")
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    # OpenAI-compatible endpoints used by the "nvidia" and "deepseek" providers.
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
+    deepseek_base_url: str = "https://api.deepseek.com"
+    # OpenAI reasoning models (gpt-5.x / gpt-6.x) reject temperature=0, so their behaviour is set
+    # with these instead. "none" = no hidden reasoning tokens: cheapest, and nothing to leak into
+    # output the Ragas parser must read. "flex" = half-price, higher-latency tier; fine for the
+    # judge (offline eval + CI), never used for user-facing generation.
+    openai_reasoning_effort: str = "none"
+    openai_service_tier: str = "flex"
     jwt_secret: str = Field(default="dev-insecure-change-me", validation_alias="SENTINEL_JWT_SECRET")
     demo_user: str = "demo"
     demo_password: str = "change-me"
@@ -57,8 +66,8 @@ class Settings(BaseSettings):
     # against the API 2026-07-09 (do not invent IDs): EVERY Gemini free model here caps at
     # ~20 requests/DAY (gemini-3.5-flash, -2.5-flash-lite) or 0 (gemini-2.0-flash) — far too few
     # for a 48-item eval (~300 judge calls) or the per-PR CI gate. Groq's free tier gives
-    # llama-3.3-70b ~1,000 req/day, which covers both. So generation + judge run on Groq; Gemini
-    # stays wired as an alternate provider (sentinel/llm.py) for anyone who enables billing.
+    # llama-3.3-70b ~1,000 req/day, which covers both. So generation + judge run on Groq; NVIDIA
+    # and Gemini stay wired as alternate providers (sentinel/llm.py).
     # Generator and judge are DIFFERENT models (separate Groq free-tier quota pools) so the judge
     # never grades its own model's output (self-preference bias; calibrated Day 10). Both are
     # non-deprecated GPT-OSS on Groq's free tier, run with reasoning_effort="low" (set in
@@ -67,9 +76,10 @@ class Settings(BaseSettings):
     # can't parse (judge); "low" makes them terse and reliable.
     #   generation = openai/gpt-oss-20b  — clean cited answers, fast.
     #   judge      = openai/gpt-oss-120b — larger; produces valid Ragas structured output.
-    # (The provider-agnostic factory also allows a paid openai gpt-4o-mini judge via one config
-    # line — the Ragas-native default — if a stronger/faster judge is wanted.)
-    generation_provider: str = "groq"          # "groq" | "google"
+    # Do NOT swap judge_provider without re-running scripts/judge_calibration.py: calibration is
+    # host-specific, not just model-specific. Serving this same judge from NVIDIA drops it from
+    # r=+0.90 to r=+0.54 (see data/ground_truth_audit.md and sentinel/llm.py for the measurements).
+    generation_provider: str = "groq"          # "groq" | "deepseek" | "nvidia" | "google"
     generation_model: str = "openai/gpt-oss-20b"
     judge_provider: str = "groq"
     judge_model: str = "openai/gpt-oss-120b"

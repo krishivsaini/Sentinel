@@ -110,6 +110,44 @@ topically-plausible claims even when the fact wasn't retrieved. Moving to `gpt-o
 Scout's deprecation, enabled by `reasoning_effort="low"`) is what produced a judge that actually
 tracks grounding — a reminder that the calibration step is load-bearing, not ceremony.
 
+### Blind re-calibration and the OpenAI candidate
+
+The 18 labels above were written with the judge's score visible beside each answer, which can
+anchor a labeller toward that judge. To check, the **30 answers from run `d0c59e4` not in that
+set** were dumped with every judge score stripped (`judge_calibration.py --dump-blind`) and labelled
+from question + answer + retrieved passages alone (`BLIND_SCORES`). Every candidate judge then
+scored those identical stored answers (`--rejudge … --labels blind`), so answer drift can't
+confound the comparison.
+
+| Judge (faithfulness, n = 27 non-abstentions) | Pearson r | Spearman ρ | MAE |
+|---|---|---|---|
+| **Groq `gpt-oss-120b`** (the gate judge) | **+0.78** | **+0.80** | **0.065** |
+| NVIDIA-hosted `gpt-oss-120b` (stored scores) | +0.69 | +0.70 | 0.082 |
+| OpenAI `gpt-6-luna` (`reasoning_effort=none`), run 1 / run 2 | +0.48 / +0.51 | +0.58 / +0.60 | 0.205 / 0.184 |
+
+Abstentions (3 of 30) are excluded from the table: every judge's score is coerced to 1.0 for them,
+so they agree with the labels by construction and inflate all judges equally.
+
+**Reading it.** The ranking from the anchored labels survives blind labelling — the Groq-hosted
+judge is still the best-calibrated, and the NVIDIA host still trails it. `gpt-6-luna` was evaluated
+as a paid replacement and **rejected**: it is repeatable (8/30 scores moved between two runs, mean
+|Δ| 0.037) but systematically over-strict, scoring cleanly grounded answers as hallucinations —
+NXDOMAIN **0.00**, X.509 Subject **0.00**, TCP receive window **0.40** — which would fail the gate
+on good answers. It does catch one flaw the Groq judge misses (SNI's unsupported "server must use
+this value", 0.20–0.60 vs 1.00), but its false negatives outweigh that. The same pattern held on
+the original 18 labels (r = +0.29 to +0.40 across effort levels), so it is not an artifact of
+anchoring.
+
+**Residual judge error (Groq).** The largest miss is the TCP three-way-handshake answer (hand 0.5,
+judge 0.87): it misstates Peer A's state transition from Figure 6 — an error in *reading* a
+retrieved diagram, which every judge tested scored ≥ 0.75. Claim-decomposition judges are weakest
+exactly there.
+
+**Caveats.** The labels come from one careful labeller, not an inter-annotator panel. Blindness is
+near-total rather than perfect: the NVIDIA scores for three of these items (SNI, PKCE, JWT
+registered claims) were seen during earlier debugging; excluding them does not change the
+ranking. The Groq row is a single run — its repeatability was not re-measured here.
+
 > Provenance note: hand-scores + judge scores are on the shipped `gpt-oss-120b` run. The headline
 > means below come from the same run and are re-exported to `dashboard/data/` on every run.
 
