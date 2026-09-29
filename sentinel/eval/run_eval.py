@@ -99,6 +99,11 @@ _PARSE_SIGNATURES = (
     "nonetype",          # a reasoning model occasionally returns None content; a re-call fixes it
 )
 
+# A *daily* quota (Groq: "... tokens per day (TPD): Limit 200000 ...") won't clear inside any
+# backoff window, so retrying only burns the item's wall-clock timeout — five of those overran the
+# CI job. It is excluded from retry and ends the run early; the gate then fails fast on coverage.
+_DAILY_QUOTA = ("per day", "(tpd)", "(rpd)")
+
 
 # --------------------------------------------------------------------------- helpers
 
@@ -169,9 +174,14 @@ def _build_metrics() -> tuple[Faithfulness, ResponseRelevancy, LLMContextRecall]
     )
 
 
+def _is_daily_quota(exc: BaseException) -> bool:
+    s = f"{type(exc).__name__} {exc}".lower()
+    return any(t in s for t in _DAILY_QUOTA)
+
+
 def _is_transient(exc: BaseException) -> bool:
     s = f"{type(exc).__name__} {exc}".lower()
-    return any(t in s for t in _TRANSIENT)
+    return any(t in s for t in _TRANSIENT) and not _is_daily_quota(exc)
 
 
 def _is_parse_error(exc: BaseException) -> bool:
@@ -181,13 +191,16 @@ def _is_parse_error(exc: BaseException) -> bool:
 
 def _is_retryable(exc: BaseException) -> bool:
     """Retry rate-limit/timeout bursts AND transient judge parse failures (a re-call often parses)."""
-    return _is_transient(exc) or _is_parse_error(exc)
+    return _is_transient(exc) or (_is_parse_error(exc) and not _is_daily_quota(exc))
 
 
 # 429s carry the exact wait the server wants — Gemini as prose ("Please retry in 45.2s") and
-# RetryInfo ('retryDelay': '45s'); Groq as "Please try again in 2.4s". Honoring it beats a blind
-# exponential: we wake right after the window clears instead of guessing and 429-ing again.
-_RETRY_PROSE_RE = re.compile(r"(?:retry|try again) in ([\d.]+)s", re.IGNORECASE)
+# RetryInfo ('retryDelay': '45s'); Groq as "Please try again in 2.4s", or "in 7m12.5s" once the
+# wait passes a minute. Honoring it beats a blind exponential: we wake right after the window
+# clears instead of guessing and 429-ing again.
+_RETRY_PROSE_RE = re.compile(
+    r"(?:retry|try again) in (?:(\d+)h)?(?:(\d+)m)?([\d.]+)s", re.IGNORECASE
+)
 _RETRY_INFO_RE = re.compile(r"retryDelay'?:?\s*'?(\d+)s")
 
 
@@ -195,8 +208,24 @@ def _server_retry_delay(exc: BaseException | None) -> float | None:
     if exc is None:
         return None
     s = str(exc)
-    m = _RETRY_PROSE_RE.search(s) or _RETRY_INFO_RE.search(s)
-    return float(m.group(1)) if m else None
+    if m := _RETRY_PROSE_RE.search(s):
+        h, mins, secs = m.groups()
+        return int(h or 0) * 3600 + int(mins or 0) * 60 + float(secs)
+    if m := _RETRY_INFO_RE.search(s):
+        return float(m.group(1))
+    return None
+
+
+def _log_retry(retry_state) -> None:
+    """tenacity before_sleep: record each backoff, so a throttled run is diagnosable from its log
+    (a CI run once spent an hour in silent retries with nothing to show why)."""
+    exc = retry_state.outcome.exception() if retry_state.outcome else None
+    log.warning(
+        "eval.retry",
+        attempt=retry_state.attempt_number,
+        wait_s=round(retry_state.next_action.sleep, 1) if retry_state.next_action else None,
+        error=str(exc)[:240],
+    )
 
 
 def _gemini_wait(retry_state) -> float:
@@ -221,6 +250,7 @@ def _with_backoff(fn, *args, **kwargs):
         wait=_gemini_wait,
         stop=tenacity.stop_after_attempt(settings.judge_max_retries),
         retry=tenacity.retry_if_exception(_is_transient),
+        before_sleep=_log_retry,
         reraise=True,
     )
     return retryer(fn, *args, **kwargs)
@@ -239,6 +269,7 @@ async def _score_async(metric, sample: SingleTurnSample) -> float:
         wait=_gemini_wait,
         stop=tenacity.stop_after_attempt(settings.judge_max_retries),
         retry=tenacity.retry_if_exception(_is_retryable),
+        before_sleep=_log_retry,
         reraise=True,
     )
     return float(await retryer(metric.single_turn_ascore, sample))
@@ -339,6 +370,11 @@ async def _score_items(
                 timeout=settings.eval_item_timeout,
             )
         except Exception as e:
+            if _is_daily_quota(e):
+                # Every later item would hit the same wall; stop now with what's scored. The
+                # CI gate then fails on coverage in minutes rather than timing out item by item.
+                log.error("eval.quota_exhausted", i=i, scored=len(per_item), error=str(e)[:240])
+                break
             # One item's unrecoverable failure (a never-parseable judge, a hang) must not sink the
             # run. Skip it — it is NOT checkpointed, so a later resume retries it (a fresh
             # stochastic call often succeeds). repr: a wait_for timeout's str() is empty.

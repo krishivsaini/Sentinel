@@ -241,6 +241,43 @@ def test_server_retry_delay_parses_all_forms() -> None:
     assert run_eval._server_retry_delay(Exception("Please try again in 2.4s")) == 2.4    # Groq prose
     assert run_eval._server_retry_delay(Exception("'retryDelay': '21s'")) == 21.0        # RetryInfo
     assert run_eval._server_retry_delay(Exception("no delay here")) is None
+    assert run_eval._server_retry_delay(Exception("Please try again in 7m12.5s.")) == 432.5
+    assert run_eval._server_retry_delay(Exception("Please try again in 1h2m3s")) == 3723.0
+
+
+_GROQ_TPD = (
+    "Error code: 429 - Rate limit reached for model `openai/gpt-oss-120b` on tokens per day "
+    "(TPD): Limit 200000, Used 199100, Requested 3600. Please try again in 7m12.5s."
+)
+
+
+def test_daily_quota_is_not_retried() -> None:
+    """A per-day limit can't clear inside a backoff window: retrying it only burns the item's
+    timeout. A per-minute 429 is still transient."""
+    assert run_eval._is_daily_quota(Exception(_GROQ_TPD))
+    assert not run_eval._is_transient(Exception(_GROQ_TPD))
+    assert not run_eval._is_retryable(Exception(_GROQ_TPD))
+    tpm = _GROQ_TPD.replace("tokens per day (TPD)", "tokens per minute (TPM)")
+    assert run_eval._is_transient(Exception(tpm))
+
+
+def test_daily_quota_ends_the_run_early(tmp_store, monkeypatch) -> None:
+    import asyncio
+
+    from sentinel.schema import GroundTruthItem
+
+    calls = 0
+
+    async def _boom(*a, **k):
+        nonlocal calls
+        calls += 1
+        raise RuntimeError(_GROQ_TPD)
+
+    monkeypatch.setattr(run_eval, "_build_metrics", lambda: (None, None, None))
+    monkeypatch.setattr(run_eval, "_score_one", _boom)
+    items = [GroundTruthItem(question=f"q{i}", reference_answer="a") for i in range(5)]
+    per_item = asyncio.run(run_eval._score_items(items, "sha", "run", False, gate_only=True))
+    assert per_item == [] and calls == 1
 
 
 class _FakeRetryState:
