@@ -9,6 +9,11 @@ Pipeline:
 Every returned RetrievedChunk carries all four scores (dense/sparse/fused/rerank) so eval and
 the dashboard can inspect *why* a chunk was selected (FR-R5).
 
+Access control (v2-R1, v2-R4): every search takes an `Access` — the document scopes the caller
+may see, and whether injection-quarantined chunks are excluded (they are, by default). It is
+applied inside the dense and sparse searches themselves, not as a post-filter, so a blocked
+chunk can't occupy a candidate slot, reach the reranker, or be cited.
+
 Deliberate LangChain use: the dense and sparse stages are LangChain `BaseRetriever`
 subclasses, and `build_ensemble_retriever()` composes them with a real `EnsembleRetriever`
 (the framework's orchestration primitive, exercised in tests). The scored path here computes
@@ -26,11 +31,13 @@ import pickle
 import time
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
+import numpy as np
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 
-from sentinel.config import BM25_PATH, CHUNKS_PATH, FAISS_DIR, settings
+from sentinel.config import IndexPaths, settings
 from sentinel.ingest import bm25_tokenize
 from sentinel.schema import Chunk, RetrievedChunk
 
@@ -45,6 +52,7 @@ RERANK_POOL_SIZE = max(settings.dense_top_n, settings.sparse_top_n)
 
 @dataclass
 class _Index:
+    root: Path
     chunks: list[Chunk]
     id2chunk: dict[str, Chunk]
     chunk_ids: list[str]      # canonical order; FAISS row i and BM25 doc i both map here
@@ -52,21 +60,25 @@ class _Index:
     bm25: object              # rank_bm25.BM25Okapi
 
 
-@lru_cache(maxsize=1)
-def _load_index() -> _Index:
-    # torch must load before faiss: on macOS each bundles its own OpenMP runtime, and with faiss's
-    # loaded first, multithreaded CPU inference in the embedder/reranker segfaults (exit 139).
-    import torch  # noqa: F401
-    import faiss
+def _load_index(index_dir: Path | None = None) -> _Index:
+    """The index at `index_dir` (default config.index_dir), loaded once per process."""
+    return _load_index_at((index_dir or settings.index_dir).resolve())
 
-    chunks = [Chunk.model_validate_json(line) for line in CHUNKS_PATH.open(encoding="utf-8")]
-    with BM25_PATH.open("rb") as fh:
+
+@lru_cache(maxsize=4)
+def _load_index_at(root: Path) -> _Index:
+    import faiss  # duplicate-libomp handling on macOS: see sentinel/__init__.py
+
+    paths = IndexPaths(root)
+    chunks = [Chunk.model_validate_json(line) for line in paths.chunks.open(encoding="utf-8")]
+    with paths.bm25.open("rb") as fh:
         bm = pickle.load(fh)
     idx = _Index(
+        root=root,
         chunks=chunks,
         id2chunk={c.chunk_id: c for c in chunks},
         chunk_ids=[c.chunk_id for c in chunks],
-        faiss=faiss.read_index(str(FAISS_DIR / "index.faiss")),
+        faiss=faiss.read_index(str(paths.faiss)),
         bm25=bm["bm25"],
     )
     # FR-I2 guard: the persisted BM25 order must match the canonical chunk order, or fusion
@@ -74,6 +86,40 @@ def _load_index() -> _Index:
     if bm["chunk_ids"] != idx.chunk_ids:
         raise RuntimeError("BM25 chunk order != canonical chunk order — re-run ingestion.")
     return idx
+
+
+@lru_cache(maxsize=16)
+def _allowed_rows(root: Path, scopes: frozenset[str], include_quarantined: bool) -> np.ndarray:
+    """Row numbers a caller may retrieve: in an allowed scope and, unless explicitly asked for,
+    not quarantined by injection screening. Applied INSIDE both first-stage searches, so a
+    blocked chunk never takes a candidate slot, never reaches fusion or rerank, and so can never
+    reach the generator (v2-R1, v2-R4)."""
+    chunks = _load_index_at(root).chunks
+    return np.array(
+        [
+            i for i, c in enumerate(chunks)
+            if c.scope in scopes and (include_quarantined or not c.quarantined)
+        ],
+        dtype="int64",
+    )
+
+
+@dataclass(frozen=True)
+class Access:
+    """What one retrieval call may see. Defaults: config.default_scopes, quarantine enforced."""
+
+    scopes: frozenset[str] | None = None
+    include_quarantined: bool = False   # only the guardrail eval's "no defence" baseline sets this
+
+    def rows(self, idx: _Index) -> np.ndarray | None:
+        """Allowed row numbers, or None when every row is allowed (the unfiltered fast path)."""
+        allowed = _allowed_rows(
+            idx.root, self.scopes or frozenset(settings.default_scopes), self.include_quarantined
+        )
+        return None if len(allowed) == len(idx.chunks) else allowed
+
+
+DEFAULT_ACCESS = Access()
 
 
 @lru_cache(maxsize=1)
@@ -102,23 +148,46 @@ def warmup() -> None:
 # --------------------------------------------------------------------------- base searches
 
 
-def dense_search(query: str, top_n: int | None = None) -> list[tuple[str, float]]:
-    """FAISS top-N by cosine similarity. Returns (chunk_id, dense_score) best-first."""
+def dense_search(
+    query: str,
+    top_n: int | None = None,
+    *,
+    index_dir: Path | None = None,
+    access: Access = DEFAULT_ACCESS,
+) -> list[tuple[str, float]]:
+    """FAISS top-N by cosine similarity among the rows `access` allows. Returns
+    (chunk_id, dense_score) best-first."""
+    import faiss
+
     top_n = top_n or settings.dense_top_n
-    idx = _load_index()
+    idx = _load_index(index_dir)
     vec = _embedder().encode(
         [QUERY_INSTRUCTION + query], normalize_embeddings=True, convert_to_numpy=True
     ).astype("float32")
-    sims, rows = idx.faiss.search(vec, top_n)
+    allowed = access.rows(idx)
+    if allowed is None:
+        sims, rows = idx.faiss.search(vec, top_n)
+    else:
+        params = faiss.SearchParameters(sel=faiss.IDSelectorBatch(allowed))
+        sims, rows = idx.faiss.search(vec, top_n, params=params)
     return [(idx.chunk_ids[r], float(s)) for s, r in zip(sims[0], rows[0]) if r != -1]
 
 
-def sparse_search(query: str, top_n: int | None = None) -> list[tuple[str, float]]:
-    """BM25 top-N over the same chunks. Returns (chunk_id, sparse_score) best-first."""
+def sparse_search(
+    query: str,
+    top_n: int | None = None,
+    *,
+    index_dir: Path | None = None,
+    access: Access = DEFAULT_ACCESS,
+) -> list[tuple[str, float]]:
+    """BM25 top-N among the rows `access` allows. Returns (chunk_id, sparse_score) best-first."""
     top_n = top_n or settings.sparse_top_n
-    idx = _load_index()
-    scores = idx.bm25.get_scores(bm25_tokenize(query))
-    ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_n]
+    idx = _load_index(index_dir)
+    scores = np.asarray(idx.bm25.get_scores(bm25_tokenize(query)))
+    allowed = access.rows(idx)
+    candidates = np.arange(len(scores)) if allowed is None else allowed
+    # Stable sort, best first: ties keep canonical order, as the unfiltered sort always did.
+    ranked = candidates[np.argsort(-scores[candidates], kind="stable")][:top_n]
     return [(idx.chunk_ids[i], float(scores[i])) for i in ranked]
 
 
@@ -187,17 +256,22 @@ def rrf_fuse(ranked_lists: list[list[str]], k: int | None = None) -> dict[str, f
 
 
 def hybrid_retrieve_timed(
-    question: str, top_k: int | None = None
+    question: str,
+    top_k: int | None = None,
+    *,
+    index_dir: Path | None = None,
+    access: Access = DEFAULT_ACCESS,
 ) -> tuple[list[RetrievedChunk], float, float]:
     """Full pipeline, returning (results, retrieve_ms, rerank_ms) so the service can report
     per-stage latency in isolation (never blended, NFR-3). 'retrieve' covers dense + sparse +
-    RRF; 'rerank' covers the cross-encoder pass."""
+    RRF; 'rerank' covers the cross-encoder pass. `access` filters scope and quarantine inside
+    both first-stage searches, so nothing it excludes can reach fusion, rerank or the answer."""
     top_k = top_k or settings.rerank_top_k
-    idx = _load_index()
+    idx = _load_index(index_dir)
 
     t0 = time.perf_counter()
-    dense = dense_search(question)
-    sparse = sparse_search(question)
+    dense = dense_search(question, index_dir=index_dir, access=access)
+    sparse = sparse_search(question, index_dir=index_dir, access=access)
     dense_map = dict(dense)
     sparse_map = dict(sparse)
     fused_map = rrf_fuse([[c for c, _ in dense], [c for c, _ in sparse]])
@@ -223,9 +297,15 @@ def hybrid_retrieve_timed(
     return results, retrieve_ms, rerank_ms
 
 
-def hybrid_retrieve(question: str, top_k: int | None = None) -> list[RetrievedChunk]:
+def hybrid_retrieve(
+    question: str,
+    top_k: int | None = None,
+    *,
+    index_dir: Path | None = None,
+    access: Access = DEFAULT_ACCESS,
+) -> list[RetrievedChunk]:
     """Full pipeline: dense + sparse -> RRF -> cross-encoder rerank -> top-K, all four scores."""
-    results, _, _ = hybrid_retrieve_timed(question, top_k)
+    results, _, _ = hybrid_retrieve_timed(question, top_k, index_dir=index_dir, access=access)
     return results
 
 

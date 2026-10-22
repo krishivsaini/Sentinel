@@ -21,9 +21,10 @@ export function docName(chunkId: string): string {
 }
 
 // Which retrieved chunk ids the answer actually cited (inline [rfc..#..] or unicode-bracket forms).
+// Mirrors sentinel/generate.py's _CITATION_RE: any "<doc_id>#<ordinal>".
 export function citedChunkIds(item: ItemResult): Set<string> {
   const ids = new Set<string>();
-  const re = /[[【]\s*(rfc\d+#\d+)\s*[\]】]/gi;
+  const re = /[[【]\s*([a-z][a-z0-9]*#\d+)\s*[\]】]/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(item.generated_answer)) !== null) ids.add(m[1].toLowerCase());
   return ids;

@@ -110,3 +110,23 @@ def test_rerank_improves_context_recall_vs_fusion_only() -> None:
 
     fusion, hybrid = sum(fusion_recall) / len(fusion_recall), sum(hybrid_recall) / len(hybrid_recall)
     assert hybrid >= fusion + 0.05, f"rerank recall@{k} {hybrid:.3f} vs fusion {fusion:.3f}"
+
+
+def test_faiss_and_torch_coexist_in_any_import_order() -> None:
+    """On macOS faiss and torch each bundle a libomp; importing faiss first used to segfault the
+    embedder, and a second runtime initializing aborted the process. sentinel/__init__.py fixes
+    both. Run in a fresh interpreter, since a crash here would take pytest down with it."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sentinel, faiss, numpy as np\n"
+        "from sentinel.retrieve import _embedder, _load_index, hybrid_retrieve\n"
+        "idx = _load_index()\n"
+        "vec = _embedder().encode(['q'], normalize_embeddings=True).astype('float32')\n"
+        "sel = faiss.IDSelectorBatch(np.arange(0, idx.faiss.ntotal, 2, dtype='int64'))\n"
+        "idx.faiss.search(vec, 5, params=faiss.SearchParameters(sel=sel))\n"
+        "assert len(hybrid_retrieve('What is a QUIC stateless reset?')) == 5\n"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr[-2000:]

@@ -29,8 +29,9 @@ ABSTAIN_MESSAGE = "I don't have enough information in the provided context to an
 # Inline citation marker the model is told to use, e.g. "[rfc9110#0007]". Some models emit the
 # CJK fullwidth brackets 【…】 instead (observed in ~23% of gpt-oss-20b answers) — accepting both
 # keeps those citations from being silently dropped, which would report a correctly-grounded
-# answer as uncited (FR-G2).
-_CITATION_RE = re.compile(r"[\[【]\s*(rfc\d+#\d+)\s*[\]】]")
+# answer as uncited (FR-G2). Any "<doc_id>#<ordinal>" is recognised (RFCs are "rfc9110#0007",
+# the adversarial corpus "adv03#0000"); only IDs in the retrieved set survive parse_citations.
+_CITATION_RE = re.compile(r"[\[【]\s*([a-z][a-z0-9]*#\d+)\s*[\]】]")
 
 SYSTEM_PROMPT = f"""You are Sentinel, a precise question-answering assistant for IETF \
 web-protocol RFCs (HTTP, TLS, TCP, DNS, URIs, cookies, OAuth/JWT/JOSE, and related standards).

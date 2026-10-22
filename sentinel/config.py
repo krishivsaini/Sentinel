@@ -10,22 +10,54 @@ tuning constants have sensible defaults but can be overridden with SENTINEL_* en
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# --- Paths (repo-root relative; indexes/ and *.db are gitignored) ---
+# --- Paths (repo-root relative; indexes*/ and *.db are gitignored) ---
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data"
 CORPUS_DIR = DATA_DIR / "corpus"
 GROUND_TRUTH_PATH = DATA_DIR / "ground_truth.jsonl"
+# The service's index: the real RFC corpus only.
 INDEXES_DIR = REPO_ROOT / "indexes"
-FAISS_DIR = INDEXES_DIR / "faiss"
-BM25_PATH = INDEXES_DIR / "bm25.pkl"
-CHUNKS_PATH = INDEXES_DIR / "chunks.jsonl"          # canonical chunk store (shared chunk IDs)
+# Real corpus + the labelled adversarial documents, for the guardrail eval only. A sibling of
+# indexes/, not a subdirectory, so rebuilding or caching the service index can never touch it
+# and nothing that reads indexes/ can ever see a poisoned chunk.
+ADVERSARIAL_INDEX_DIR = REPO_ROOT / "indexes_adversarial"
+ADVERSARIAL_DIR = DATA_DIR / "adversarial"          # poisoned docs + attack questions (labelled)
+GUARDRAILS_DIR = DATA_DIR / "guardrails"            # screening cache, PII labels, eval reports
 EVAL_DB_PATH = REPO_ROOT / "eval_runs.db"           # SQLite, gitignored
 DASHBOARD_DATA_DIR = REPO_ROOT / "dashboard" / "data"
+
+
+@dataclass(frozen=True)
+class IndexPaths:
+    """Where one index's files live. Every index directory has the same layout."""
+
+    root: Path
+
+    @property
+    def chunks(self) -> Path:
+        return self.root / "chunks.jsonl"   # canonical chunk store (shared chunk IDs)
+
+    @property
+    def faiss(self) -> Path:
+        return self.root / "faiss" / "index.faiss"
+
+    @property
+    def bm25(self) -> Path:
+        return self.root / "bm25.pkl"
+
+    @property
+    def meta(self) -> Path:
+        return self.root / "meta.json"
+
+
+# Back-compat aliases for the service index.
+CHUNKS_PATH = IndexPaths(INDEXES_DIR).chunks
 
 
 class Settings(BaseSettings):
@@ -100,6 +132,11 @@ class Settings(BaseSettings):
     chunk_overlap_pct: float = 0.12        # ~10–15% overlap
 
     # ---------------------------------------------------------------- Retrieval (§9)
+    # Which index retrieval reads. The adversarial eval points this at ADVERSARIAL_INDEX_DIR.
+    index_dir: Path = INDEXES_DIR
+    # Document scopes a caller may retrieve when none are given (v2-R4). Every real RFC chunk is
+    # "public"; the adversarial corpus is "adversarial" and only its eval asks for it.
+    default_scopes: tuple[str, ...] = ("public",)
     dense_top_n: int = 50                  # FAISS first-stage
     sparse_top_n: int = 50                 # BM25 first-stage
     rrf_k: int = 60                        # Reciprocal Rank Fusion constant

@@ -9,15 +9,23 @@ identical chunk_ids (FR-I2 — both are built over one canonical, ordered chunk 
 of FAISS and doc i of BM25 both map to chunks[i]); the chunking strategy + models are recorded
 on the index (FR-I4) in indexes/meta.json.
 
-Persisted under indexes/ (gitignored):
+Persisted under an index directory (gitignored; layout in config.IndexPaths):
   chunks.jsonl   canonical ordered Chunk store — the single source of truth for chunk IDs
   faiss/index.faiss   IndexFlatIP over L2-normalized bge embeddings (row order == chunks.jsonl)
   bm25.pkl       pickled BM25Okapi + chunk_ids (same order) for the sparse index
   meta.json      strategy, params, models, counts, corpus provenance, build timestamp
 
-Run:  python -m sentinel.ingest              # full rebuild
-      python -m sentinel.ingest --limit 3    # first 3 RFCs (fast smoke test)
-      python -m sentinel.ingest --dry-run    # clean + chunk only, no embed/index
+Two indexes are built, and they never share a directory:
+  indexes/              the real RFC corpus — what the service and the normal eval read
+  indexes_adversarial/  the same RFC chunks plus the labelled adversarial corpus, for the
+                        guardrail eval only. Built FROM indexes/: the RFC chunks and their
+                        vectors are copied, not re-embedded, so they are identical in both and
+                        only the adversarial passages are embedded.
+
+Run:  python -m sentinel.ingest                  # full rebuild of indexes/
+      python -m sentinel.ingest --limit 3        # first 3 RFCs (fast smoke test)
+      python -m sentinel.ingest --dry-run        # clean + chunk only, no embed/index
+      python -m sentinel.ingest --adversarial    # build indexes_adversarial/ from indexes/
 """
 
 from __future__ import annotations
@@ -28,21 +36,23 @@ import pickle
 import re
 import shutil
 import time
+from collections import Counter
 from hashlib import sha256
+from pathlib import Path
 
 from sentinel.config import (
-    BM25_PATH,
-    CHUNKS_PATH,
+    ADVERSARIAL_DIR,
+    ADVERSARIAL_INDEX_DIR,
     CORPUS_DIR,
     DATA_DIR,
-    FAISS_DIR,
     INDEXES_DIR,
+    IndexPaths,
     settings,
 )
 from sentinel.schema import Chunk, SourceDoc
 
 MANIFEST_PATH = DATA_DIR / "corpus_manifest.json"
-META_PATH = INDEXES_DIR / "meta.json"
+ADVERSARIAL_CORPUS_PATH = ADVERSARIAL_DIR / "corpus.jsonl"
 TIKTOKEN_ENCODING = "cl100k_base"  # only used to *measure* chunk length in tokens
 MIN_CHUNK_TOKENS = 5               # drop degenerate fragments (stray letters, page artifacts)
 
@@ -137,52 +147,59 @@ def chunk_documents(docs: list[SourceDoc]) -> list[Chunk]:
                     text=piece,
                     token_count=n_tok,
                     ordinal=ordinal,
+                    scope=doc.scope,
                 )
             )
     return chunks
 
 
-def _write_chunks(chunks: list[Chunk]) -> None:
-    with CHUNKS_PATH.open("w", encoding="utf-8") as fh:
+def _write_chunks(chunks: list[Chunk], paths: IndexPaths) -> None:
+    with paths.chunks.open("w", encoding="utf-8") as fh:
         for chunk in chunks:
             fh.write(chunk.model_dump_json() + "\n")
 
 
-def _build_faiss(chunks: list[Chunk]) -> int:
-    """Embed chunk texts with the local bge model and build a cosine (IP) FAISS index.
-    Returns the embedding dimension. Row order matches `chunks` exactly."""
-    import torch  # noqa: F401  (before faiss: see sentinel.retrieve._load_index)
-    import faiss
+def _embed(chunks: list[Chunk]):
+    """L2-normalized bge embeddings, one row per chunk, in chunk order (float32 ndarray)."""
     from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer(settings.embedding_model, device=settings.torch_device)
     # bge-v1.5 wants no instruction prefix on the passage side (only queries get one).
-    embeddings = model.encode(
+    return model.encode(
         [c.text for c in chunks],
         batch_size=64,
         normalize_embeddings=True,   # unit vectors -> inner product == cosine
         show_progress_bar=True,
         convert_to_numpy=True,
     ).astype("float32")
+
+
+def _write_faiss(embeddings, paths: IndexPaths) -> int:
+    """Persist a cosine (IP) FAISS index over `embeddings`; returns the dimension. Row order is
+    the caller's chunk order."""
+    import faiss
+
     dim = int(embeddings.shape[1])
     index = faiss.IndexFlatIP(dim)
     index.add(embeddings)
-    FAISS_DIR.mkdir(parents=True, exist_ok=True)
-    faiss.write_index(index, str(FAISS_DIR / "index.faiss"))
+    paths.faiss.parent.mkdir(parents=True, exist_ok=True)
+    faiss.write_index(index, str(paths.faiss))
     return dim
 
 
-def _build_bm25(chunks: list[Chunk]) -> None:
+def _build_bm25(chunks: list[Chunk], paths: IndexPaths) -> None:
     """Build a BM25 index over the SAME ordered chunks; persist it with its chunk_id order."""
     from rank_bm25 import BM25Okapi
 
     tokenized = [bm25_tokenize(c.text) for c in chunks]
     bm25 = BM25Okapi(tokenized)
-    with BM25_PATH.open("wb") as fh:
+    with paths.bm25.open("wb") as fh:
         pickle.dump({"bm25": bm25, "chunk_ids": [c.chunk_id for c in chunks]}, fh)
 
 
-def _write_meta(docs: list[SourceDoc], chunks: list[Chunk], dim: int | None) -> None:
+def _write_meta(
+    docs: list[SourceDoc], chunks: list[Chunk], dim: int | None, paths: IndexPaths
+) -> None:
     manifest_sha = sha256(MANIFEST_PATH.read_bytes()).hexdigest()
     meta = {
         "built_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -196,17 +213,24 @@ def _write_meta(docs: list[SourceDoc], chunks: list[Chunk], dim: int | None) -> 
         "doc_ids": [d.doc_id for d in docs],
         "corpus_manifest_sha256": manifest_sha,
         "bm25_tokenizer": "hyphen_underscore_lower",
+        "scopes": dict(Counter(c.scope for c in chunks)),
+        "quarantined": sum(c.quarantined for c in chunks),
     }
-    META_PATH.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+    paths.meta.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
 
 
-def ingest(limit: int | None = None, dry_run: bool = False) -> None:
+def _reset_dir(root: Path) -> IndexPaths:
+    """Idempotent (FR-I3): wipe and recreate one index directory, never anything outside it."""
+    if root.exists():
+        shutil.rmtree(root)
+    root.mkdir(parents=True, exist_ok=True)
+    return IndexPaths(root)
+
+
+def ingest(
+    limit: int | None = None, dry_run: bool = False, index_dir: Path = INDEXES_DIR
+) -> None:
     t0 = time.perf_counter()
-
-    # Idempotent (FR-I3): wipe and rebuild the whole indexes/ tree from scratch.
-    if INDEXES_DIR.exists():
-        shutil.rmtree(INDEXES_DIR)
-    INDEXES_DIR.mkdir(parents=True, exist_ok=True)
 
     manifest = load_manifest()
     docs = load_source_docs(manifest, limit=limit)
@@ -222,26 +246,88 @@ def ingest(limit: int | None = None, dry_run: bool = False) -> None:
         print("[dry-run] skipping embed + index build")
         return
 
-    _write_chunks(chunks)
-    print(f"[write] {CHUNKS_PATH.relative_to(INDEXES_DIR.parent)} ({len(chunks)} chunks)")
+    paths = _reset_dir(index_dir)
+    _write_chunks(chunks, paths)
+    print(f"[write] {paths.chunks} ({len(chunks)} chunks)")
 
-    dim = _build_faiss(chunks)
+    dim = _write_faiss(_embed(chunks), paths)
     print(f"[faiss] IndexFlatIP dim={dim} vectors={len(chunks)}")
 
-    _build_bm25(chunks)
+    _build_bm25(chunks, paths)
     print(f"[bm25]  BM25Okapi over {len(chunks)} chunks")
 
-    _write_meta(docs, chunks, dim)
-    print(f"[meta]  {META_PATH.relative_to(INDEXES_DIR.parent)}")
+    _write_meta(docs, chunks, dim, paths)
+    print(f"[meta]  {paths.meta}")
     print(f"[done]  {time.perf_counter() - t0:.1f}s — {len(docs)} docs, {len(chunks)} chunks")
+
+
+def load_adversarial_docs() -> list[SourceDoc]:
+    """The labelled adversarial corpus (data/adversarial/corpus.jsonl). Every doc is forced into
+    the "adversarial" scope here, whatever its record says, so a labelling slip can't leak a
+    poisoned passage into the public scope."""
+    docs = []
+    for line in ADVERSARIAL_CORPUS_PATH.open(encoding="utf-8"):
+        if line.strip():
+            rec = json.loads(line)
+            docs.append(
+                SourceDoc(
+                    doc_id=rec["doc_id"],
+                    title=rec["title"],
+                    source_uri=f"adversarial://{rec['doc_id']}",
+                    text=rec["text"],
+                    scope="adversarial",
+                )
+            )
+    return docs
+
+
+def ingest_adversarial(
+    base_dir: Path = INDEXES_DIR, out_dir: Path = ADVERSARIAL_INDEX_DIR
+) -> None:
+    """Build the guardrail-eval index: every chunk of the real index (copied verbatim, vectors
+    included) followed by the chunked + embedded adversarial corpus."""
+    import faiss
+    import numpy as np
+
+    if out_dir.resolve() == base_dir.resolve():
+        raise ValueError("the adversarial index must not overwrite the base index")
+    t0 = time.perf_counter()
+    base = IndexPaths(base_dir)
+    base_chunks = [Chunk.model_validate_json(line) for line in base.chunks.open(encoding="utf-8")]
+    base_index = faiss.read_index(str(base.faiss))
+    base_vectors = base_index.reconstruct_n(0, base_index.ntotal)
+    if len(base_vectors) != len(base_chunks):
+        raise RuntimeError(f"{base_dir} is inconsistent — rebuild it with `sentinel.ingest`")
+
+    adv_docs = load_adversarial_docs()
+    adv_chunks = chunk_documents(adv_docs)
+    clash = {c.chunk_id for c in adv_chunks} & {c.chunk_id for c in base_chunks}
+    if clash:
+        raise ValueError(f"adversarial chunk ids collide with the real corpus: {sorted(clash)}")
+    print(f"[load]  {len(base_chunks)} chunks from {base_dir.name}/ + "
+          f"{len(adv_docs)} adversarial docs -> {len(adv_chunks)} chunks")
+
+    chunks = base_chunks + adv_chunks
+    paths = _reset_dir(out_dir)
+    _write_chunks(chunks, paths)
+    dim = _write_faiss(np.vstack([base_vectors, _embed(adv_chunks)]), paths)
+    _build_bm25(chunks, paths)
+    _write_meta(load_source_docs(load_manifest()) + adv_docs, chunks, dim, paths)
+    print(f"[done]  {time.perf_counter() - t0:.1f}s — {out_dir.name}/: {len(chunks)} chunks "
+          f"({len(adv_chunks)} adversarial)")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Build the FAISS + BM25 indexes from the corpus.")
     ap.add_argument("--limit", type=int, default=None, help="ingest only the first N RFCs")
     ap.add_argument("--dry-run", action="store_true", help="clean + chunk only; no embed/index")
+    ap.add_argument("--adversarial", action="store_true",
+                    help="build indexes_adversarial/ (real index + adversarial corpus)")
     args = ap.parse_args()
-    ingest(limit=args.limit, dry_run=args.dry_run)
+    if args.adversarial:
+        ingest_adversarial()
+    else:
+        ingest(limit=args.limit, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

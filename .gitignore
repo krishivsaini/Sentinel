@@ -17,6 +17,7 @@ __pycache__/
 *.sqlite
 *.sqlite3
 indexes/
+indexes_adversarial/
 
 # --- Dashboard (Next.js) ---
 dashboard/.next/

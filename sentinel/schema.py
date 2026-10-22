@@ -20,6 +20,7 @@ class SourceDoc(BaseModel):
     title: str
     source_uri: str
     text: str
+    scope: str = "public"  # inherited by every chunk of this doc
 
 
 class Chunk(BaseModel):
@@ -31,6 +32,12 @@ class Chunk(BaseModel):
     text: str
     token_count: int
     ordinal: int  # position of this chunk within its source doc
+    # Access scope (v2-R4): retrieval only ever returns chunks whose scope the caller is allowed.
+    # Real RFC text is "public"; the labelled adversarial corpus is "adversarial".
+    scope: str = "public"
+    # Set at index build when injection screening flags the chunk (v2-R1). A quarantined chunk is
+    # kept in the index, so the screen's decisions stay auditable, but is never retrieved.
+    quarantined: bool = False
 
 
 # --------------------------------------------------------------------------- Retrieval
