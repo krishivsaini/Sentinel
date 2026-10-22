@@ -8,6 +8,15 @@ Endpoints:
 Production hygiene: JWT auth (FR-S3), slowapi per-IP rate limit (FR-S4, a test proves it
 fires), structured per-stage-latency logging (FR-S5), Pydantic validation everywhere (FR-S6).
 
+Guardrails (v2), applied here in the service layer so every engine gets them:
+  * retrieval is scoped to the document scopes in the caller's JWT (v2-R4), and quarantined
+    chunks are never retrieved (v2-R1);
+  * PII is redacted from retrieved passages before generation (v2-R2);
+  * the generation prompt fences passages as untrusted data (sentinel.generate, v2-R1);
+  * the token stream passes through the output sanitiser — untrusted links, images and PII
+    never reach the client — and citations are checked at the end (v2-R3). The `done` event
+    carries a GuardrailReport of everything that was changed or flagged.
+
 The retrieval+generation pipeline is injected as a `QueryEngine` dependency so tests can swap
 in an instant fake — that keeps the auth/rate-limit/contract tests hermetic (no models, no API).
 
@@ -34,10 +43,13 @@ from sse_starlette.sse import EventSourceResponse
 
 from sentinel.config import settings
 from sentinel.generate import generate, is_abstention, parse_citations
+from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_citations
+from sentinel.guardrails.pii import redact_chunks
 from sentinel.logging_config import configure_logging, log
-from sentinel.retrieve import hybrid_retrieve_timed
+from sentinel.retrieve import Access, hybrid_retrieve_timed
 from sentinel.schema import (
     Answer,
+    GuardrailReport,
     LatencyMs,
     QueryRequest,
     RetrievedChunk,
@@ -53,9 +65,9 @@ class QueryEngine:
     """The real pipeline. Injected via Depends(get_engine) so tests can override it."""
 
     def retrieve(
-        self, question: str, top_k: int | None
+        self, question: str, top_k: int | None, access: Access
     ) -> tuple[list[RetrievedChunk], float, float]:
-        return hybrid_retrieve_timed(question, top_k)
+        return hybrid_retrieve_timed(question, top_k, access=access)
 
     def generate_tokens(self, question: str, chunks: list[RetrievedChunk]) -> Iterator[str]:
         return generate(question, chunks)
@@ -73,15 +85,23 @@ def get_engine() -> QueryEngine:
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-def create_access_token(subject: str) -> str:
+@dataclass(frozen=True)
+class Principal:
+    """An authenticated caller: who, and which document scopes they may retrieve (v2-R4)."""
+
+    subject: str
+    scopes: frozenset[str]
+
+
+def create_access_token(subject: str, scopes: tuple[str, ...] | None = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expiry_minutes)
-    return jwt.encode(
-        {"sub": subject, "exp": expire}, settings.jwt_secret, algorithm=settings.jwt_algorithm
-    )
+    claims = {"sub": subject, "exp": expire, "scopes": list(scopes or settings.default_scopes)}
+    return jwt.encode(claims, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
-    """Decode + validate the bearer JWT; 401 on anything wrong (FR-S3)."""
+def get_current_user(token: str = Depends(oauth2_scheme)) -> Principal:
+    """Decode + validate the bearer JWT; 401 on anything wrong (FR-S3). The scopes come from the
+    signed token; one without a scopes claim gets the default scopes, never more."""
     credentials_error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -92,19 +112,29 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     except JWTError as exc:
         raise credentials_error from exc
     subject = payload.get("sub")
-    if not subject:
+    scopes = payload.get("scopes", list(settings.default_scopes))
+    if not subject or not isinstance(scopes, list) or not all(isinstance(s, str) for s in scopes):
         raise credentials_error
-    return subject
+    return Principal(subject=subject, scopes=frozenset(scopes))
 
 
 # --------------------------------------------------------------------------- SSE query stream
 
 
-def _query_events(engine: QueryEngine, user: str, req: QueryRequest) -> Iterator[dict]:
+def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> Iterator[dict]:
     """Sync generator of SSE events: retrieved -> token* -> done. Runs in a threadpool (the
     LLM stream is sync), so it never blocks the event loop."""
     latency: dict[str, float] = {}
-    chunks, latency["retrieve"], latency["rerank"] = engine.retrieve(req.question, req.top_k)
+    chunks, latency["retrieve"], latency["rerank"] = engine.retrieve(
+        req.question, req.top_k, Access(scopes=user.scopes)
+    )
+    guard_s = 0.0
+    t = time.perf_counter()
+    redactions: dict[str, int] = {}
+    if settings.redact_context_pii:
+        chunks, counts = redact_chunks(chunks)
+        redactions = dict(counts)
+    guard_s += time.perf_counter() - t
 
     # Up-front sources so a client can render citations context before tokens arrive.
     yield {
@@ -124,31 +154,51 @@ def _query_events(engine: QueryEngine, user: str, req: QueryRequest) -> Iterator
         ),
     }
 
+    report = OutputReport()
+    sanitizer = StreamSanitizer(report) if settings.output_guard else None
     parts: list[str] = []
+    stream_guard_s = 0.0   # sanitising time inside the stream, reported as guard, not generate
     t0 = time.perf_counter()
     for token in engine.generate_tokens(req.question, chunks):
-        parts.append(token)
-        yield {"event": "token", "data": token}
-    latency["generate"] = (time.perf_counter() - t0) * 1000.0
+        if sanitizer is not None:
+            t = time.perf_counter()
+            token = sanitizer.feed(token)
+            stream_guard_s += time.perf_counter() - t
+        if token:
+            parts.append(token)
+            yield {"event": "token", "data": token}
+    if sanitizer is not None and (tail := sanitizer.finish()):
+        parts.append(tail)
+        yield {"event": "token", "data": tail}
+    latency["generate"] = (time.perf_counter() - t0 - stream_guard_s) * 1000.0
+    guard_s += stream_guard_s
 
     text = "".join(parts)
+    t = time.perf_counter()
+    check_citations(text, chunks, report)
+    guard_s += time.perf_counter() - t
+    latency["guard"] = guard_s * 1000.0
     abstained = is_abstention(text)
     citations = [] if abstained else parse_citations(text, chunks)
+    guardrails = GuardrailReport(context_redactions=redactions, **report.as_dict())
     answer = Answer(
         question=req.question,
         text=text,
         citations=citations,
         retrieved=chunks,
         latency_ms=LatencyMs(**latency),
+        guardrails=guardrails,
     )
 
     log.info(
         "query",
-        user=user,
+        user=user.subject,
+        scopes=sorted(user.scopes),
         chunk_ids=[c.chunk_id for c in chunks],
         latency_ms={k: round(v, 1) for k, v in latency.items()},
         n_citations=len(citations),
         outcome="abstained" if abstained else "answered",
+        guardrails_flagged=guardrails.flagged or bool(redactions),
     )
     yield {"event": "done", "data": answer.model_dump_json()}
 
@@ -202,7 +252,7 @@ def create_app() -> FastAPI:
     async def query(
         request: Request,
         body: QueryRequest,
-        user: str = Depends(get_current_user),
+        user: Principal = Depends(get_current_user),
         engine: QueryEngine = Depends(get_engine),
     ) -> EventSourceResponse:
         return EventSourceResponse(_query_events(engine, user, body))

@@ -43,10 +43,8 @@ dependencies = [
     "tiktoken>=0.8",                       # approximate token counting for chunking
     "structlog>=25.1",                     # structured logging + per-stage latency
     "numpy>=2.0",
+    "httpx>=0.28",                         # guardrail classifiers (Groq REST, sentinel.guardrails)
 ]
-
-[project.optional-dependencies]
-# Nothing here yet — reserved for the v2 guardrail layer (PII/injection deps).
 
 [dependency-groups]
 dev = [

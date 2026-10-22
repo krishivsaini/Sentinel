@@ -1,15 +1,17 @@
-# Faithfulness gate (§13) — engineering-signal #3 — Phase 4, Day 11.
+# Quality and safety gates (§13, v2-R5).
 #
-# On every PR to main: build the FAISS + BM25 indexes from the committed corpus, run a
-# representative SUBSET of the Ragas eval (config.ci_eval_subset_size), and FAIL the check if
-# mean faithfulness drops below config.faithfulness_threshold — or if too few items score to
-# trust the mean (config.ci_min_items). The metric summary is written to the job summary so it
-# shows directly in the PR's checks (FR-CI3). The full eval runs locally/on-demand.
+# On every PR to main, three checks run against indexes built from the committed corpus:
+#   tests              the full pytest suite (hermetic; retrieval tests use the real indexes)
+#   faithfulness-gate  a Ragas faithfulness eval over half the ground truth; fails below
+#                      config.faithfulness_threshold, or if too few items score (config.ci_min_items)
+#   injection-gate     the 40 labelled prompt-injection attacks run through the full pipeline with
+#                      every defence on; fails if more than config.injection_asr_threshold succeed
+# Both gates write a Markdown summary into the PR's checks (FR-CI3). The full three-metric eval
+# and the full guardrail report run locally (sentinel.eval.run_eval, sentinel.eval.run_guardrails).
 #
-# Requires the GROQ_API_KEY repository secret (Settings > Secrets and variables > Actions), FR-CI4.
-# CI scores faithfulness only (the gate metric; relevance + recall would triple the token spend)
-# over half the ground truth. The repo's key is on Groq's paid tier; a free-tier key works but is
-# capped at about two runs a day (200K tokens/day) and should use a smaller subset.
+# Requires the GROQ_API_KEY repository secret (FR-CI4); the repo's key is on Groq's paid tier.
+# Injection-screening verdicts for the corpus are committed (data/guardrails/screening_cache.jsonl),
+# so building the indexes makes no API calls unless the corpus or the screening policy changed.
 
 name: eval-gate
 
@@ -26,44 +28,122 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  faithfulness-gate:
+  indexes:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The cache keys are computed once here and handed to the other jobs, so all four use the
+    # identical key (hashFiles needs the checked-out workspace, so it can't live in workflow env).
+    outputs:
+      index_key: ${{ steps.keys.outputs.index }}
+      hf_key: ${{ steps.keys.outputs.hf }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      # Everything that determines the indexes' contents: corpus, adversarial corpus, chunking and
+      # embedding code, schema, config, and the injection screening policy and its verdicts.
+      - id: keys
+        run: |
+          echo "index=indexes-${{ hashFiles('data/corpus/**', 'data/adversarial/**', 'data/guardrails/screening_cache.jsonl', 'sentinel/ingest.py', 'sentinel/schema.py', 'sentinel/config.py', 'sentinel/guardrails/injection.py') }}" >> "$GITHUB_OUTPUT"
+          echo "hf=hf-models-${{ hashFiles('sentinel/config.py') }}" >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-
-      - name: Sync dependencies
-        run: uv sync --frozen
-
-      # bge embeddings + the cross-encoder reranker download on first use; cache them across runs.
+      - run: uv sync --frozen
       - name: Cache HuggingFace models
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: hf-models-${{ hashFiles('sentinel/config.py') }}
-
-      # Indexes are gitignored (rebuilt from source, §16.6). Building them embeds the whole corpus on
-      # CPU (~9 min), so cache them keyed on everything that determines their contents — the
-      # corpus, the chunker/embedder code, and the config naming the models and chunk sizes.
+          key: ${{ steps.keys.outputs.hf }}
+      # Indexes are gitignored (rebuilt from source, §16.6). The service index embeds the whole
+      # corpus on CPU (~9 min); the adversarial index copies it and embeds only 40 passages.
       - name: Cache indexes
         id: index-cache
         uses: actions/cache@v4
         with:
-          path: indexes
-          key: indexes-${{ hashFiles('data/corpus/**', 'sentinel/ingest.py', 'sentinel/schema.py', 'sentinel/config.py') }}
-
-      - name: Build indexes from corpus
+          path: |
+            indexes
+            indexes_adversarial
+          key: ${{ steps.keys.outputs.index }}
+      - name: Build indexes
         if: steps.index-cache.outputs.cache-hit != 'true'
-        run: uv run python -m sentinel.ingest
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}   # only used for chunks not already screened
+        run: |
+          uv run python -m sentinel.ingest
+          uv run python -m sentinel.ingest --adversarial
 
-      # --ci scores faithfulness only over config.ci_eval_subset_size items and exits non-zero below
-      # the gate; it writes its Markdown summary to $GITHUB_STEP_SUMMARY (set by Actions).
+  tests:
+    needs: indexes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ needs.indexes.outputs.hf_key }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            indexes
+            indexes_adversarial
+          key: ${{ needs.indexes.outputs.index_key }}
+          fail-on-cache-miss: true
+      - run: uv run pytest -q
+
+  faithfulness-gate:
+    needs: indexes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ needs.indexes.outputs.hf_key }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            indexes
+            indexes_adversarial
+          key: ${{ needs.indexes.outputs.index_key }}
+          fail-on-cache-miss: true
+      # --ci scores faithfulness only over config.ci_eval_subset_size items, through the same
+      # guardrails the service applies, and exits non-zero below the gate.
       - name: Faithfulness gate (eval subset)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: uv run python -m sentinel.eval.run_eval --ci --no-resume
+
+  injection-gate:
+    needs: indexes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ needs.indexes.outputs.hf_key }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            indexes
+            indexes_adversarial
+          key: ${{ needs.indexes.outputs.index_key }}
+          fail-on-cache-miss: true
+      - name: Injection gate (40 adversarial attacks, every defence on)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: uv run python -m sentinel.eval.run_guardrails --ci

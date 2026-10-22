@@ -1,10 +1,11 @@
 """Retrieval access control (v2-R1, v2-R4) — the adversarial index.
 
 The adversarial index holds every real RFC chunk ("public") plus the labelled poisoned corpus
-("adversarial"). These tests prove the scope filter, not luck: the same queries that DO surface
-poisoned chunks when the adversarial scope is granted surface none at all under the default
-scope — through dense, sparse, and the full hybrid pipeline. They also prove that a
-quarantined chunk is unreachable unless a caller explicitly opts in.
+("adversarial"), most of it also quarantined by injection screening. Each test isolates one
+mechanism. The scope tests switch quarantine off, so the scope filter alone stands between the
+caller and the poisoned chunks: the same queries that DO surface them when the adversarial scope
+is granted surface none under the public scope — through dense, sparse, and the full hybrid
+pipeline. The quarantine test does the converse.
 
 The index is built from indexes/ on first use (~10 s: only the adversarial passages are
 embedded). No API calls.
@@ -21,15 +22,16 @@ from sentinel.config import ADVERSARIAL_DIR, ADVERSARIAL_INDEX_DIR, IndexPaths
 from sentinel.retrieve import Access, dense_search, hybrid_retrieve, sparse_search
 from sentinel.schema import Chunk
 
-BOTH = Access(scopes=frozenset({"public", "adversarial"}))
-PUBLIC = Access()  # config.default_scopes
+# Quarantine off in both, so these isolate the scope filter.
+BOTH = Access(scopes=frozenset({"public", "adversarial"}), include_quarantined=True)
+PUBLIC = Access(include_quarantined=True)  # config.default_scopes
 
 
 @pytest.fixture(scope="module")
 def adv_index():
-    if not IndexPaths(ADVERSARIAL_INDEX_DIR).chunks.exists():
-        from sentinel.ingest import ingest_adversarial
+    from sentinel.ingest import adversarial_index_is_current, ingest_adversarial
 
+    if not adversarial_index_is_current():
         ingest_adversarial()
     return ADVERSARIAL_INDEX_DIR
 
@@ -76,8 +78,16 @@ def test_adversarial_scope_is_never_retrieved_by_default(adv_index, attacks) -> 
 
 def test_exact_canary_query_cannot_reach_a_poisoned_chunk(adv_index, attacks) -> None:
     """BM25 matches a canary token exactly, and only one chunk contains it — the worst case for
-    leakage. Granted, it's the top hit; under the default scope it can't appear at all."""
-    for a in attacks:
+    leakage. Granted, it's the top hit; under the default scope it can't appear at all. (Attacks
+    whose canary is encoded or obfuscated in the passage — base64, zero-width characters — can't be
+    matched verbatim, so they're skipped.)"""
+    texts = {
+        json.loads(line)["doc_id"]: json.loads(line)["text"]
+        for line in (ADVERSARIAL_DIR / "corpus.jsonl").open(encoding="utf-8")
+    }
+    verbatim = [a for a in attacks if a["markers"][0] in texts[a["target_doc"]]]
+    assert len(verbatim) >= 30
+    for a in verbatim:
         canary = a["markers"][0]
         assert sparse_search(canary, index_dir=adv_index, access=BOTH)[0][0].startswith(a["target_doc"])
         assert not _adversarial(c for c, _ in sparse_search(canary, index_dir=adv_index, access=PUBLIC))
@@ -99,5 +109,6 @@ def test_quarantined_chunk_is_excluded_unless_explicitly_included(adv_index, tmp
 
     canary = "GANNET-4083"  # adv07's canary
     hits = lambda access: [c for c, _ in sparse_search(canary, index_dir=root, access=access)]  # noqa: E731
-    assert not [c for c in hits(BOTH) if c.startswith(target)]
-    assert hits(Access(scopes=BOTH.scopes, include_quarantined=True))[0].startswith(target)
+    enforced = Access(scopes=BOTH.scopes)            # quarantine enforced: the default
+    assert not [c for c in hits(enforced) if c.startswith(target)]
+    assert hits(BOTH)[0].startswith(target)          # only an explicit opt-in reaches it

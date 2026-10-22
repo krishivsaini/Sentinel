@@ -157,6 +157,37 @@ class Settings(BaseSettings):
     # context_recall below this => classify as a retrieval failure (else generation failure).
     retrieval_fail_recall_threshold: float = 0.50
 
+    # ---------------------------------------------------------------- Guardrails (v2)
+    # Prompt-injection screening at index build (sentinel.guardrails.injection). Verdicts are
+    # cached in data/guardrails/screening_cache.jsonl (committed), so rebuilding an unchanged
+    # corpus makes no API calls. A chunk is quarantined if ANY detector flags it.
+    injection_screening: bool = True
+    # Meta's purpose-built injection/jailbreak classifier: returns P(malicious). Fast (~200 ms),
+    # but missed a politely-worded "note for AI assistants" in probing.
+    promptguard_model: str = "meta-llama/llama-prompt-guard-2-86m"
+    promptguard_threshold: float = 0.5
+    promptguard_rpm: int = 95             # Groq allows 100 requests/min for it, even on paid tiers
+    # A reasoning classifier that applies a written policy (injection.POLICY). Caught the polite
+    # injection Prompt Guard missed, and left RFC text *about* injection attacks alone.
+    safeguard_model: str = "openai/gpt-oss-safeguard-20b"
+    screening_workers: int = 8             # parallel classifier calls for uncached chunks
+    # Fence retrieved passages as untrusted data in the generation prompt (sentinel.generate).
+    prompt_hardening: bool = True
+    # Redact PII in retrieved passages before generation (sentinel.guardrails.pii).
+    redact_context_pii: bool = True
+    # Sanitise answers before they leave the service (sentinel.guardrails.output): only links to
+    # these hosts (or their subdomains) survive; images and PII are always removed. The RFC 2606
+    # documentation domains are allowed because RFC answers quote their example URLs — but not
+    # the bare ".example" TLD, which the adversarial corpus uses for its phishing links.
+    output_guard: bool = True
+    answer_link_hosts: tuple[str, ...] = (
+        "rfc-editor.org", "ietf.org", "iana.org", "w3.org",
+        "example.com", "example.net", "example.org",
+    )
+    # Second CI gate (v2-R5): the share of the 40 adversarial attacks allowed to succeed with every
+    # defence on. Set from measurement — see data/guardrails/report.json.
+    injection_asr_threshold: float = 0.05
+
     # ---------------------------------------------------------------- Service (§11)
     jwt_algorithm: str = "HS256"
     jwt_expiry_minutes: int = 60

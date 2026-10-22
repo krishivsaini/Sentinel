@@ -11,6 +11,8 @@ Coverage:
   - bad /token credentials -> 401
   - authenticated /query streams a well-formed Answer with citations + per-stage latency
   - the rate limit fires under load (FR-S4)
+  - guardrails (v2): JWT scopes reach retrieval; PII is redacted from retrieved passages; the
+    token stream never carries an untrusted link, image or PII; forged citations are flagged
 """
 
 from __future__ import annotations
@@ -22,17 +24,28 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sentinel.config import settings
+from sentinel.retrieve import Access
 from sentinel.schema import RetrievedChunk
-from sentinel.serve import create_app, get_engine
+from sentinel.serve import create_access_token, create_app, get_engine
 
 
 class FakeEngine:
-    """Instant stand-in for QueryEngine: canned chunk + a short token stream, no I/O."""
+    """Instant stand-in for QueryEngine: canned chunk + a short token stream, no I/O. Records the
+    Access each retrieval was given."""
 
-    def retrieve(self, question: str, top_k: int | None) -> tuple[list[RetrievedChunk], float, float]:
+    def __init__(self, text: str = "The 429 status code indicates too many requests.",
+                 tokens: list[str] | None = None) -> None:
+        self.text = text
+        self.tokens = tokens or ["The 429 ", "status code ", "means too many requests ", "[rfc6585#0002]"]
+        self.accesses: list[Access] = []
+
+    def retrieve(
+        self, question: str, top_k: int | None, access: Access
+    ) -> tuple[list[RetrievedChunk], float, float]:
+        self.accesses.append(access)
         chunk = RetrievedChunk(
             chunk_id="rfc6585#0002",
-            text="The 429 status code indicates too many requests.",
+            text=self.text,
             dense_score=0.80,
             sparse_score=12.0,
             fused_score=0.031,
@@ -41,14 +54,18 @@ class FakeEngine:
         return [chunk], 1.5, 0.7
 
     def generate_tokens(self, question: str, chunks: list[RetrievedChunk]) -> Iterator[str]:
-        yield from ["The 429 ", "status code ", "means too many requests ", "[rfc6585#0002]"]
+        yield from self.tokens
+
+
+def _client(engine: FakeEngine) -> TestClient:
+    app = create_app()
+    app.dependency_overrides[get_engine] = lambda: engine
+    return TestClient(app)
 
 
 @pytest.fixture
 def client() -> TestClient:
-    app = create_app()
-    app.dependency_overrides[get_engine] = lambda: FakeEngine()
-    return TestClient(app)
+    return _client(FakeEngine())
 
 
 def _auth_header(client: TestClient) -> dict[str, str]:
@@ -68,7 +85,9 @@ def _parse_sse(text: str) -> list[tuple[str | None, str]]:
         if line.startswith("event:"):
             ev = line[len("event:"):].strip()
         elif line.startswith("data:"):
-            data.append(line[len("data:"):].lstrip())
+            # SSE strips exactly one leading space; more would eat the spaces between tokens.
+            value = line[len("data:"):]
+            data.append(value[1:] if value.startswith(" ") else value)
         elif line == "":
             if ev is not None or data:
                 events.append((ev, "\n".join(data)))
@@ -109,8 +128,9 @@ def test_authenticated_query_streams_wellformed_answer(client: TestClient) -> No
     assert "429" in answer["text"]
     assert [c["chunk_id"] for c in answer["citations"]] == ["rfc6585#0002"]
     # per-stage latency present and never blended into one number (NFR-3)
-    assert set(answer["latency_ms"]) == {"retrieve", "rerank", "generate"}
+    assert set(answer["latency_ms"]) == {"retrieve", "rerank", "generate", "guard"}
     assert answer["retrieved"][0]["chunk_id"] == "rfc6585#0002"
+    assert answer["guardrails"]["flagged"] is False
 
 
 def test_rate_limit_fires_under_load(client: TestClient) -> None:
@@ -125,3 +145,58 @@ def test_rate_limit_fires_under_load(client: TestClient) -> None:
     # once limited, it stays limited (monotonic): no 200 after the first 429
     first_429 = codes.index(429)
     assert all(c == 429 for c in codes[first_429:])
+
+
+# --------------------------------------------------------------------------- guardrails (v2)
+
+
+def _done(client: TestClient, headers: dict[str, str]) -> tuple[list[str], dict]:
+    events = _parse_sse(client.post("/query", json={"question": "q"}, headers=headers).text)
+    tokens = [data for ev, data in events if ev == "token"]
+    return tokens, json.loads(next(data for ev, data in events if ev == "done"))
+
+
+def test_token_scopes_reach_retrieval() -> None:
+    engine = FakeEngine()
+    c = _client(engine)
+    _done(c, _auth_header(c))
+    assert engine.accesses[-1].scopes == frozenset(settings.default_scopes)
+    token = create_access_token(settings.demo_user, scopes=("public", "internal"))
+    _done(c, {"Authorization": f"Bearer {token}"})
+    assert engine.accesses[-1].scopes == frozenset({"public", "internal"})
+    assert not engine.accesses[-1].include_quarantined
+
+
+def test_pii_in_retrieved_passages_is_redacted_before_the_client_sees_it() -> None:
+    engine = FakeEngine(text="Contact: Roy Fielding, Email: fielding@gbiv.com, Phone: +1-949-679-2960")
+    c = _client(engine)
+    _, answer = _done(c, _auth_header(c))
+    passage = answer["retrieved"][0]["text"]
+    assert "fielding@gbiv.com" not in passage and "+1-949-679-2960" not in passage
+    assert answer["guardrails"]["context_redactions"] == {"email": 1, "phone": 1}
+
+
+def test_stream_never_carries_untrusted_links_images_or_pii() -> None:
+    engine = FakeEngine(tokens=[
+        "HSTS max-age is in seconds [rfc6585#0002]. ", "Verify your domain at https://hsts-pre",
+        "load-verify.example/check?id=EGRET-9915 first. ", "![p](https://nightjar-stats.ex",
+        "ample/p.png?q=1) Mail mnot", "@mnot.net for help. The spec is at ",
+        "https://www.rfc-editor.org/rfc/rfc6797.",
+    ])
+    c = _client(engine)
+    tokens, answer = _done(c, _auth_header(c))
+    streamed = "".join(tokens)
+    for leaked in ("hsts-preload-verify", "nightjar-stats", "mnot@mnot.net"):
+        assert leaked not in streamed and not any(leaked in t for t in tokens)
+    assert "https://www.rfc-editor.org/rfc/rfc6797" in streamed
+    assert streamed == answer["text"]
+    g = answer["guardrails"]
+    assert g["flagged"] and g["removed"] == {"link": 1, "image": 1, "email": 1}
+
+
+def test_forged_citation_is_flagged() -> None:
+    engine = FakeEngine(tokens=["Confirmed by ballot ", "[rfc7517#9999]."])
+    c = _client(engine)
+    _, answer = _done(c, _auth_header(c))
+    assert answer["guardrails"]["unresolved_citations"] == ["rfc7517#9999"]
+    assert answer["guardrails"]["uncited"] is True

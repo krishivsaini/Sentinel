@@ -42,3 +42,4 @@ dashboard/data/*.json
 data/ground_truth.review.jsonl
 data/judge_calibration.review.jsonl
 data/judge_calibration.blind.jsonl
+*.tsbuildinfo

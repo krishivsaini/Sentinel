@@ -73,6 +73,18 @@ class LatencyMs(BaseModel):
     retrieve: float
     rerank: float
     generate: float
+    guard: float = 0.0  # context redaction + output sanitising + checks (v2)
+
+
+class GuardrailReport(BaseModel):
+    """What the guardrails did to one answer (v2). Empty when nothing needed changing."""
+
+    context_redactions: dict[str, int] = Field(default_factory=dict)  # PII kind -> count
+    removed: dict[str, int] = Field(default_factory=dict)             # from the answer, by kind
+    removed_links: list[str] = Field(default_factory=list)
+    unresolved_citations: list[str] = Field(default_factory=list)
+    uncited: bool = False
+    flagged: bool = False
 
 
 class Answer(BaseModel):
@@ -83,6 +95,7 @@ class Answer(BaseModel):
     citations: list[Citation] = Field(default_factory=list)
     retrieved: list[RetrievedChunk] = Field(default_factory=list)
     latency_ms: LatencyMs
+    guardrails: GuardrailReport | None = None
 
 
 # --------------------------------------------------------------------------- API I/O

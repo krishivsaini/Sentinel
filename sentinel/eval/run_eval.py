@@ -26,7 +26,6 @@ import argparse
 import asyncio
 import math
 import os
-import re
 import subprocess
 import uuid
 import warnings
@@ -57,8 +56,17 @@ import tenacity
 from sentinel.config import GROUND_TRUTH_PATH, REPO_ROOT, settings
 from sentinel.eval import attribution, store
 from sentinel.generate import collect_answer, is_abstention
+from sentinel.guardrails.output import guard_answer
+from sentinel.guardrails.pii import redact_chunks
 from sentinel.logging_config import configure_logging, log
 from sentinel.retrieve import hybrid_retrieve, warmup
+from sentinel.retry import (
+    backoff_wait,
+    is_daily_quota,
+    is_transient,
+    log_retry,
+    server_retry_delay,
+)
 from sentinel.schema import (
     AttributionCounts,
     EvalItemResult,
@@ -67,26 +75,13 @@ from sentinel.schema import (
     GroundTruthItem,
 )
 
-# Error-message fragments that mark a *transient* judge failure worth backing off and retrying
-# (rate limits, quota, timeouts, transient 5xx). Anything else re-raises immediately — we don't
-# want to spin on a real bug.
-_TRANSIENT = (
-    "429",
-    "rate limit",
-    "resourceexhausted",
-    "resource exhausted",
-    "quota",
-    "deadline",
-    "timeout",
-    "timed out",
-    "503",
-    "unavailable",
-    "500",
-    "internal error",
-    "connection error",   # Groq drops connections under sustained load — transient, retry it
-    "connection reset",
-    "connection aborted",
-)
+# The retry policy is shared with generation and the guardrail classifiers (sentinel.retry);
+# these aliases keep the eval's long-standing private names.
+_is_transient = is_transient
+_is_daily_quota = is_daily_quota
+_server_retry_delay = server_retry_delay
+_gemini_wait = backoff_wait
+_log_retry = log_retry
 
 # A judge occasionally emits structured output ragas can't parse (esp. smaller models). It's not
 # a rate-limit, but a fresh call is often well-formed (LLMs are stochastic), so it's worth a
@@ -98,12 +93,6 @@ _PARSE_SIGNATURES = (
     "validation error",
     "nonetype",          # a reasoning model occasionally returns None content; a re-call fixes it
 )
-
-# A *daily* quota (Groq: "... tokens per day (TPD): Limit 200000 ...") won't clear inside any
-# backoff window, so retrying only burns the item's wall-clock timeout — five of those overran the
-# CI job. It is excluded from retry and ends the run early; the gate then fails fast on coverage.
-_DAILY_QUOTA = ("per day", "(tpd)", "(rpd)")
-
 
 # --------------------------------------------------------------------------- helpers
 
@@ -178,16 +167,6 @@ def _build_metrics() -> tuple[Faithfulness, ResponseRelevancy, LLMContextRecall]
     )
 
 
-def _is_daily_quota(exc: BaseException) -> bool:
-    s = f"{type(exc).__name__} {exc}".lower()
-    return any(t in s for t in _DAILY_QUOTA)
-
-
-def _is_transient(exc: BaseException) -> bool:
-    s = f"{type(exc).__name__} {exc}".lower()
-    return any(t in s for t in _TRANSIENT) and not _is_daily_quota(exc)
-
-
 def _is_parse_error(exc: BaseException) -> bool:
     s = f"{type(exc).__name__} {exc}".lower()
     return any(t in s for t in _PARSE_SIGNATURES)
@@ -196,52 +175,6 @@ def _is_parse_error(exc: BaseException) -> bool:
 def _is_retryable(exc: BaseException) -> bool:
     """Retry rate-limit/timeout bursts AND transient judge parse failures (a re-call often parses)."""
     return _is_transient(exc) or (_is_parse_error(exc) and not _is_daily_quota(exc))
-
-
-# 429s carry the exact wait the server wants — Gemini as prose ("Please retry in 45.2s") and
-# RetryInfo ('retryDelay': '45s'); Groq as "Please try again in 2.4s", or "in 7m12.5s" once the
-# wait passes a minute. Honoring it beats a blind exponential: we wake right after the window
-# clears instead of guessing and 429-ing again.
-_RETRY_PROSE_RE = re.compile(
-    r"(?:retry|try again) in (?:(\d+)h)?(?:(\d+)m)?([\d.]+)s", re.IGNORECASE
-)
-_RETRY_INFO_RE = re.compile(r"retryDelay'?:?\s*'?(\d+)s")
-
-
-def _server_retry_delay(exc: BaseException | None) -> float | None:
-    if exc is None:
-        return None
-    s = str(exc)
-    if m := _RETRY_PROSE_RE.search(s):
-        h, mins, secs = m.groups()
-        return int(h or 0) * 3600 + int(mins or 0) * 60 + float(secs)
-    if m := _RETRY_INFO_RE.search(s):
-        return float(m.group(1))
-    return None
-
-
-def _log_retry(retry_state) -> None:
-    """tenacity before_sleep: record each backoff, so a throttled run is diagnosable from its log
-    (a CI run once spent an hour in silent retries with nothing to show why)."""
-    exc = retry_state.outcome.exception() if retry_state.outcome else None
-    log.warning(
-        "eval.retry",
-        attempt=retry_state.attempt_number,
-        wait_s=round(retry_state.next_action.sleep, 1) if retry_state.next_action else None,
-        error=str(exc)[:240],
-    )
-
-
-def _gemini_wait(retry_state) -> float:
-    """tenacity wait: use the server-requested retryDelay (+1s cushion) when present, else fall
-    back to exponential. Capped at judge_backoff_max_seconds so a stuck daily-quota can't hang."""
-    exc = retry_state.outcome.exception() if retry_state.outcome else None
-    server = _server_retry_delay(exc)
-    if server is not None:
-        wait = server + 1.0
-    else:
-        wait = settings.judge_backoff_seconds * (2 ** max(retry_state.attempt_number - 1, 0))
-    return min(wait, settings.judge_backoff_max_seconds)
 
 
 def _with_backoff(fn, *args, **kwargs):
@@ -328,15 +261,20 @@ def run(subset_n: int | None = None, resume: bool = True, gate_only: bool = Fals
 async def _score_one(
     gt: GroundTruthItem, faithfulness, answer_relevancy, context_recall, gate_only: bool = False
 ):
-    """Retrieve -> generate -> score one item. Returns (answer, abstained, retrieved, faith,
-    arel, crec); arel/crec are NaN when gate_only. Wrapped in a wall-clock timeout by the caller
-    so a hang can't stall the run."""
+    """Retrieve -> generate -> score one item, through the same guardrails the service applies
+    (context PII redaction, hardened prompt, output sanitising), so the gate measures what ships.
+    Returns (answer, abstained, retrieved, faith, arel, crec); arel/crec are NaN when gate_only.
+    Wrapped in a wall-clock timeout by the caller so a hang can't stall the run."""
     retrieved = hybrid_retrieve(gt.question)
+    if settings.redact_context_pii:
+        retrieved, _ = redact_chunks(retrieved)
     # Generation is sync (streams via the sync client); run it off the loop in a worker thread.
     # retry=False so _with_backoff owns the retry budget (no SDK amplification).
     answer, _citations, _gen_ms = await asyncio.to_thread(
         _with_backoff, partial(collect_answer, gt.question, retrieved, retry=False)
     )
+    if settings.output_guard:
+        answer, _ = guard_answer(answer, retrieved)
     abstained = is_abstention(answer)
     sample = SingleTurnSample(
         user_input=gt.question,

@@ -26,6 +26,11 @@ Run:  python -m sentinel.ingest                  # full rebuild of indexes/
       python -m sentinel.ingest --limit 3        # first 3 RFCs (fast smoke test)
       python -m sentinel.ingest --dry-run        # clean + chunk only, no embed/index
       python -m sentinel.ingest --adversarial    # build indexes_adversarial/ from indexes/
+      python -m sentinel.ingest --no-screen      # skip prompt-injection screening
+
+Every chunk is screened for prompt injection before indexing (sentinel.guardrails.injection);
+flagged chunks are written with quarantined=true and never retrieved. Verdicts come from the
+committed cache when the text is unchanged, so an unchanged corpus rebuilds without API calls.
 """
 
 from __future__ import annotations
@@ -227,10 +232,25 @@ def _reset_dir(root: Path) -> IndexPaths:
     return IndexPaths(root)
 
 
+def _screen(chunks: list[Chunk], label: str) -> list[Chunk]:
+    """Injection screening (v2-R1): quarantine every chunk a detector flags. Cached verdicts
+    are reused; without GROQ_API_KEY, uncached chunks are an error rather than silently
+    unscreened (pass --no-screen to build without screening)."""
+    from sentinel.guardrails.injection import screen_chunks
+
+    chunks, _ = screen_chunks(chunks, offline=not settings.groq_api_key)
+    print(f"[screen] {label}: {sum(c.quarantined for c in chunks)} of {len(chunks)} quarantined")
+    return chunks
+
+
 def ingest(
-    limit: int | None = None, dry_run: bool = False, index_dir: Path = INDEXES_DIR
+    limit: int | None = None,
+    dry_run: bool = False,
+    index_dir: Path = INDEXES_DIR,
+    screen: bool | None = None,
 ) -> None:
     t0 = time.perf_counter()
+    screen = settings.injection_screening if screen is None else screen
 
     manifest = load_manifest()
     docs = load_source_docs(manifest, limit=limit)
@@ -246,6 +266,8 @@ def ingest(
         print("[dry-run] skipping embed + index build")
         return
 
+    if screen:
+        chunks = _screen(chunks, "corpus")
     paths = _reset_dir(index_dir)
     _write_chunks(chunks, paths)
     print(f"[write] {paths.chunks} ({len(chunks)} chunks)")
@@ -281,11 +303,25 @@ def load_adversarial_docs() -> list[SourceDoc]:
     return docs
 
 
+def adversarial_index_is_current(index_dir: Path = ADVERSARIAL_INDEX_DIR) -> bool:
+    """True when index_dir exists and holds exactly the documents of the adversarial corpus file —
+    so an eval or test never runs attacks against a stale index."""
+    paths = IndexPaths(index_dir)
+    if not paths.chunks.exists():
+        return False
+    chunks = (Chunk.model_validate_json(line) for line in paths.chunks.open(encoding="utf-8"))
+    indexed = {c.doc_id for c in chunks if c.scope == "adversarial"}
+    return indexed == {d.doc_id for d in load_adversarial_docs()}
+
+
 def ingest_adversarial(
-    base_dir: Path = INDEXES_DIR, out_dir: Path = ADVERSARIAL_INDEX_DIR
+    base_dir: Path = INDEXES_DIR,
+    out_dir: Path = ADVERSARIAL_INDEX_DIR,
+    screen: bool | None = None,
 ) -> None:
     """Build the guardrail-eval index: every chunk of the real index (copied verbatim, vectors
-    included) followed by the chunked + embedded adversarial corpus."""
+    and quarantine verdicts included) followed by the chunked, screened, embedded adversarial
+    corpus."""
     import faiss
     import numpy as np
 
@@ -306,6 +342,8 @@ def ingest_adversarial(
         raise ValueError(f"adversarial chunk ids collide with the real corpus: {sorted(clash)}")
     print(f"[load]  {len(base_chunks)} chunks from {base_dir.name}/ + "
           f"{len(adv_docs)} adversarial docs -> {len(adv_chunks)} chunks")
+    if settings.injection_screening if screen is None else screen:
+        adv_chunks = _screen(adv_chunks, "adversarial")
 
     chunks = base_chunks + adv_chunks
     paths = _reset_dir(out_dir)
@@ -323,11 +361,14 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true", help="clean + chunk only; no embed/index")
     ap.add_argument("--adversarial", action="store_true",
                     help="build indexes_adversarial/ (real index + adversarial corpus)")
+    ap.add_argument("--no-screen", action="store_true",
+                    help="skip prompt-injection screening (nothing is quarantined)")
     args = ap.parse_args()
+    screen = False if args.no_screen else None
     if args.adversarial:
-        ingest_adversarial()
+        ingest_adversarial(screen=screen)
     else:
-        ingest(limit=args.limit, dry_run=args.dry_run)
+        ingest(limit=args.limit, dry_run=args.dry_run, screen=screen)
 
 
 if __name__ == "__main__":
