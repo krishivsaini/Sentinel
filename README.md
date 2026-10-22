@@ -9,7 +9,7 @@
 > or a generation failure. **Security guardrails** — prompt-injection defence, PII redaction,
 > and citation validation, enforced as a second CI gate — are **in progress**.
 >
-> [Architecture →](docs/architecture.md) · [Eval gate →](.github/workflows/eval-gate.yml) · [Dashboard →](dashboard/) · [Judge calibration →](data/ground_truth_audit.md) · [Guardrails roadmap →](#roadmap)
+> [Results →](#results) · [Architecture →](docs/architecture.md) · [Eval gate →](.github/workflows/eval-gate.yml) · [Dashboard →](dashboard/) · [Judge calibration →](data/ground_truth_audit.md) · [Guardrails roadmap →](#roadmap)
 
 ---
 
@@ -30,6 +30,93 @@ Sentinel treats answer quality as a **tested property of the codebase**, not a v
   problem). Those need completely different fixes, and most RAG setups can't tell them apart.
 - The judge that does the scoring is itself **checked against human judgment**, because an
   automated grader nobody has validated is just a number generator.
+
+---
+
+## Results
+
+Every number below was produced by a script in this repo and can be re-run; none are targets.
+
+### The gate catches a regression that every unit test passes
+
+[PR #2](https://github.com/krishivsaini/Sentinel/pull/2) changes one thing: the generation prompt
+now invites the model to answer from its own knowledge and treat the retrieved RFC text as
+optional. Every unit test still passes. The faithfulness gate does not:
+
+| Branch | Mean faithfulness | Items scored | Gate (≥ 0.80) |
+|---|---|---|---|
+| `main` | **0.967** | 24 / 24 | ✅ [pass](https://github.com/krishivsaini/Sentinel/actions/runs/39724557013) |
+| PR #2 — loosened grounding prompt | **0.746** | 24 / 24 | ❌ [fail, merge blocked](https://github.com/krishivsaini/Sentinel/actions/runs/39724569826) |
+
+CI scores faithfulness on every other ground-truth question (24 of 48) and takes about 15 minutes.
+
+### Full evaluation — all 48 ground-truth questions
+
+| Metric | Mean |
+|---|---|
+| **Faithfulness** | **0.951** |
+| Answer relevance | 0.867 |
+| Context recall | 0.905 |
+| Failure attribution | 42 pass · 3 retrieval failures · 3 generation failures |
+
+All three retrieval failures ended in a correct "I don't have enough information", not a guess.
+Each of the six failures is described in
+[`data/ground_truth_audit.md`](data/ground_truth_audit.md).
+
+### Does each retrieval stage earn its place?
+
+Top-5 passages handed to the generator, over the same 48 questions. Every gold passage in the
+ground truth is the exact text of an indexed chunk, so the first three columns need no LLM judge
+([`scripts/retrieval_ablation.py`](scripts/retrieval_ablation.py)).
+
+| Retrieval | Hit@5 | Recall@5 | MRR | Context recall (judge) |
+|---|---|---|---|---|
+| Dense only | 0.729 | 0.615 | 0.547 | — |
+| BM25 only | 0.729 | 0.569 | 0.447 | — |
+| Dense + BM25, RRF fusion | 0.833 | 0.708 | 0.572 | 0.904 |
+| **+ cross-encoder rerank** (shipped) | **0.896** | **0.816** | **0.759** | 0.898 |
+
+- **Hybrid earns its complexity.** On 6 questions BM25 retrieves the gold passage and dense search
+  misses it; fusing the two lifts hit@5 from 0.73 to 0.83.
+- **The reranker earns its latency.** It lifts recall@5 by 0.11 and moves the first gold passage
+  much nearer the top (MRR 0.57 → 0.76): 6 questions rescued, 3 lost.
+- **The judged metric can't see it.** Ragas context recall barely moves (0.904 vs 0.898), because
+  it credits *any* passage that supports the reference answer, and fusion's top-5 often holds a
+  different RFC that says the same thing. That is why the ablation also reports judge-free
+  ranking metrics.
+
+### Is the judge trustworthy?
+
+The judge (`gpt-oss-120b` on Groq) was compared with hand labels, the second time with every
+judge score hidden while labelling, to rule out anchoring:
+
+| Labels | n | Pearson r | Spearman ρ | Mean abs. error |
+|---|---|---|---|---|
+| Original (judge score visible) | 18 | +0.90 | +0.98 | 0.047 |
+| **Blind** | 27 | **+0.78** | **+0.80** | **0.065** |
+
+On the same blind set, the identical model served by NVIDIA scored r = +0.69, and OpenAI's
+`gpt-6-luna` r ≈ +0.50 — it scored cleanly grounded answers as hallucinations. Details and
+caveats are in [`data/ground_truth_audit.md`](data/ground_truth_audit.md).
+
+### Latency, per stage
+
+Apple M3, 8 GB, local models on CPU; generation on Groq `gpt-oss-20b`
+([`data/latency_report.json`](data/latency_report.json)).
+
+| Stage | Samples | p50 | p95 | p99 |
+|---|---|---|---|---|
+| Retrieve — dense + BM25 + RRF | 200 | 10.5 ms | 13.7 ms | 19.0 ms |
+| Rerank — cross-encoder over 50 candidates | 200 | 954 ms | 1,021 ms | 1,129 ms |
+| Generate — full streamed answer | 50 | 1,047 ms | 2,457 ms | 4,273 ms |
+
+Reranking is the bottleneck: it scores all 50 fused candidates. Shrinking that pool is the
+obvious next optimisation, and has to be re-checked against the ablation above before it ships.
+
+### Corpus
+
+48 current RFCs → **2,888 chunks** (~512 tokens each, ~12% overlap), indexed twice: FAISS dense
+and BM25 sparse, over the same chunk IDs.
 
 ---
 
@@ -107,11 +194,17 @@ cost — no API is ever involved in retrieval.
 
 #### Why hybrid, concretely
 
-Ask *"What does the `invalid_grant` error mean?"* The passage in RFC 6749 that defines it is
-BM25's top hit — it matches the literal token — but pure dense search buries it far down the
-list, because in embedding space `invalid_grant` is just a generic "OAuth error" neighbour of
-a dozen other error codes. Fusion plus reranking brings it back into the top-5. That single
-query is the whole argument for hybrid retrieval, and it's covered by a test.
+Ask *"How is a JWS Compact Serialization structured?"* Dense search doesn't return the defining
+passage of RFC 7515 in its top 5. BM25 does, at rank 5, by matching the exact term
+`Compact Serialization`. Fusion lifts it to rank 4, and the cross-encoder puts it **first**. Six
+of the 48 ground-truth questions follow this pattern — dense misses, BM25 finds — and they are
+the measured case for hybrid retrieval ([Results](#does-each-retrieval-stage-earn-its-place)).
+
+Exact-token queries aren't solved, though. The defining passage for *"What does the
+`invalid_grant` error mean in OAuth 2.0?"* reaches rank 4 after fusion, then the reranker drops
+it: it's one of the three questions reranking loses, and the eval correctly flags it as a
+retrieval failure. Tests cover both the hybrid recovery of an exact-match query and the
+reranker's aggregate gain over fusion alone.
 
 #### Why LangChain for retrieval orchestration
 
@@ -168,10 +261,11 @@ result: low context recall → **retrieval failure** (the passage was never retr
 prompt could have saved it); good recall but low faithfulness or relevance → **generation
 failure** (the right passage was there and the answer still went wrong).
 
-**Built to survive free-tier APIs.** The eval scores item by item and **checkpoints every result
-to SQLite keyed by git SHA**, so an interrupted run resumes instead of starting over. Retries
-honour the server's own `retry-after` hint instead of guessing, connection drops are retried,
-and a per-item timeout turns a hung request into a skip rather than a frozen run.
+**Built to survive rate-limited APIs.** The eval scores item by item and **checkpoints every
+result to SQLite keyed by git SHA**, so an interrupted run resumes instead of starting over.
+Retries honour the server's own `retry-after` hint instead of guessing, connection drops are
+retried, a per-item timeout turns a hung request into a skip rather than a frozen run, and a
+**daily** quota ends the run immediately instead of retrying into timeouts.
 
 **Abstentions are scored fairly.** A correct "I don't have enough information" makes no factual
 claim, so it can't be unfaithful. It's scored as faithful — while its failure to answer still
@@ -205,18 +299,18 @@ On every pull request to `main`:
 1. Install dependencies with `uv`.
 2. Restore the indexes from cache, or build them from the committed corpus when the corpus,
    chunker, or config has changed.
-3. Score **faithfulness** over a representative subset of the ground truth. Answer relevance
-   and context recall are left to the full local eval: they would triple the judge's token
-   spend, and the free-tier judge is capped per minute.
-4. **Fail the check** if mean faithfulness is below threshold — **or** if too few items scored
-   to trust the mean (a coverage floor, so a run crippled by rate limits can't pass on thin data).
+3. Score **faithfulness** on every other ground-truth question (24 of 48). Answer relevance and
+   context recall are left to the full local eval: they would triple the judge's token spend
+   per PR without changing the gate's verdict.
+4. **Fail the check** if mean faithfulness is below 0.80 — **or** if fewer than 18 items scored
+   (a coverage floor, so a run crippled by rate limits can't pass on thin data).
 5. Write a metric summary to the job summary, visible directly in the PR's checks.
 
-The LLM key is a repository secret. The branch
-`demo/prompt-regression-breaks-grounding` carries a deliberately harmful change — it loosens
+The LLM key is a repository secret, on Groq's paid tier; the free tier's 200K tokens/day covers
+only about two gate runs. [PR #2](https://github.com/krishivsaini/Sentinel/pull/2) (branch
+`demo/prompt-regression-breaks-grounding`) carries a deliberately harmful change — it loosens
 the grounding prompt so the model answers from general knowledge — which passes every unit test
-but erodes faithfulness. It exists to show the gate catching exactly the kind of regression
-tests can't.
+but erodes faithfulness. The gate blocks it ([Results](#the-gate-catches-a-regression-that-every-unit-test-passes)).
 
 ### 9 · Dashboard — [`dashboard/`](dashboard/)
 
@@ -248,11 +342,18 @@ A few choices that shaped the project, each made after measuring rather than ass
   text. The result is a reproducible artifact with no API dependency.
 - **Provider-agnostic model factory** ([`sentinel/llm.py`](sentinel/llm.py)). Generation and the
   judge are configured independently by provider and model; switching is a config change. Groq,
-  NVIDIA, and Google are wired. Provider choice was **benchmarked**, and the measurements are
-  recorded in the module docstring.
+  OpenAI, DeepSeek, NVIDIA, and Google are wired. Provider choice was **benchmarked**, and the
+  measurements are recorded in the module docstring — but the judge is pinned to the one that
+  calibrated best, not the fastest or cheapest.
 - **Reasoning models needed taming.** The open-weight GPT-OSS models, at their default reasoning
   effort, sometimes spent their whole budget "thinking" and returned empty answers, or returned
-  output the Ragas parser couldn't read. Lowering reasoning effort fixed both.
+  output the Ragas parser couldn't read. Lowering reasoning effort fixed both. Groq also caps
+  their output at 3,072 tokens unless asked for more, which cut off the judge's verdicts on long
+  answers; the cap is now set explicitly.
+- **CPU over the Mac GPU, on measurement.** On Apple MPS the local models' memory grew across a
+  long run until the eval and the latency benchmark both died out of memory. On CPU the rerank
+  p95 was 1.0 s, against 1.9 s in the last MPS benchmark that completed, so CPU is the default. Moving to CPU then exposed a macOS segfault —
+  FAISS and PyTorch each bundle an OpenMP runtime — fixed by loading PyTorch first.
 - **Coverage changes the diagnosis.** Throttled runs only scored part of the ground truth; a
   complete run surfaced retrieval failures that were invisible in the partial one. Partial
   evaluation doesn't just add noise — it can hide a whole failure class.
@@ -282,7 +383,9 @@ Sentinel/
 │   ├── corpus/              # the 48 RFCs, verbatim
 │   ├── corpus_manifest.json # pinned RFC list + clusters
 │   ├── ground_truth.jsonl   # hand-built eval set
-│   └── ground_truth_audit.md# second-pass review + judge calibration
+│   ├── ground_truth_audit.md# second-pass review + judge calibration
+│   ├── retrieval_ablation.json # dense / BM25 / fusion / rerank, per question
+│   └── latency_report.json  # per-stage p50/p95/p99
 ├── scripts/
 │   ├── fetch_corpus.py              # download the corpus
 │   ├── build_ground_truth.py        # surface candidate passages (--assist)
@@ -290,6 +393,7 @@ Sentinel/
 │   ├── judge_calibration.py         # correlate the judge with hand labels
 │   ├── probe_judge.py               # does a candidate judge produce parseable output?
 │   ├── compare_judge_hosts.py       # same judge, two providers, identical inputs
+│   ├── retrieval_ablation.py        # does each retrieval stage earn its place?
 │   ├── bench_latency.py             # per-stage p50/p95/p99
 │   └── export_dashboard_data.py     # cross-run history for the dashboard
 ├── dashboard/               # Next.js + Tailwind eval dashboard
@@ -302,8 +406,13 @@ Sentinel/
 
 ## Running it
 
-**Prerequisites:** Python 3.11+ with [`uv`](https://docs.astral.sh/uv/), and a free
+**Prerequisites:** Python 3.11+ with [`uv`](https://docs.astral.sh/uv/), and a
 [Groq API key](https://console.groq.com/keys). Node 18+ only if you want the dashboard.
+
+A free Groq key runs everything, slowly: it allows about two CI-sized eval runs a day. On it, set
+`SENTINEL_EVAL_ITEM_PAUSE_SECONDS=25` and `SENTINEL_CI_EVAL_SUBSET_SIZE=10` (with
+`SENTINEL_CI_MIN_ITEMS=6`); [`.env.example`](.env.example) explains each. On Groq's pay-as-you-go tier
+a CI gate run costs a few cents and a full 48-question eval well under a dollar.
 
 ```bash
 git clone https://github.com/krishivsaini/Sentinel.git && cd Sentinel
@@ -380,8 +489,9 @@ threshold, CI subset size, and the provider and model for each role.
 | `GROQ_API_KEY` | yes | Generation and the Ragas judge (default provider) |
 | `SENTINEL_JWT_SECRET` | yes | Signs API tokens |
 | `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | The single demo account |
-| `NVIDIA_API_KEY` | no | Alternate provider |
-| `GOOGLE_API_KEY` | no | Alternate provider |
+| `OPENAI_API_KEY` | no | Alternate provider (evaluated as judge; reserved for the v2 injection classifier) |
+| `DEEPSEEK_API_KEY` / `NVIDIA_API_KEY` / `GOOGLE_API_KEY` | no | Alternate providers |
+| `SENTINEL_TORCH_DEVICE` | no | Device for the local models — `cpu` (default), `mps`, or `cuda` |
 
 Retrieval (embeddings and reranking) never needs a key.
 
@@ -396,12 +506,19 @@ These are deliberate scope choices, stated plainly:
 - **A modest ground-truth set.** 48 hand-built items, balanced across 16 topics. Every item is
   verified by hand, which is the point — but it's smaller than a production eval set would be.
 - **LLM-as-judge.** Ragas scores are produced by a model, not a person. That's why the judge is
-  calibrated against hand labels and why the calibration is published rather than assumed.
+  calibrated against hand labels and why the calibration is published rather than assumed. The
+  blind calibration (r = +0.78) is weaker than the first one (r = +0.90) and comes from a single
+  labeller, not a panel.
+- **Judged context recall is coarse.** It credits any passage that supports the reference answer,
+  so it can't distinguish fusion from reranking (0.904 vs 0.898). The judge-free recall@5 and MRR
+  in the ablation can.
+- **The CI gate sees half the ground truth.** 24 of 48 questions per PR, faithfulness only; the
+  full three-metric eval runs locally.
+- **Reranking dominates latency** at ~1 s per query on CPU, because it scores 50 candidates.
 - **FAISS, not a managed vector database.** A flat in-memory index is the right tool at this
   corpus size; it isn't a claim about scaling to millions of documents.
-- **Free-tier friendly, not free-tier optimal.** The default setup runs at zero cost, which
-  imposes rate limits. The eval is built to survive them, but a paid judge key makes CI faster
-  and lets every run cover the full ground truth.
+- **A paid judge key for CI.** Everything runs on Groq's free tier, but its daily token cap allows
+  about two gate runs a day, so the repo's CI key is on the pay-as-you-go tier.
 - **Single-tenant auth.** One demo account behind JWT. Multi-tenancy is out of scope.
 - **No adversarial-safety layer yet** — that's the next milestone, below.
 

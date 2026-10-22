@@ -16,8 +16,6 @@ the ground-truth set exists; it needs labeled relevance, not available here.
 
 from __future__ import annotations
 
-import pytest
-
 from sentinel.config import settings
 from sentinel.retrieve import (
     _load_index,
@@ -90,5 +88,25 @@ def test_ensemble_retriever_orchestration() -> None:
     assert all(d.metadata.get("chunk_id") in idx.id2chunk for d in docs)
 
 
-@pytest.mark.skip(reason="FR-R6 (rerank improves context recall) needs ground truth — Phase 3.")
-def test_rerank_improves_context_recall_vs_fusion_only() -> None: ...
+def test_rerank_improves_context_recall_vs_fusion_only() -> None:
+    """FR-R6: over the whole ground truth, the cross-encoder puts more of the gold passages into
+    the final top-K than RRF fusion alone. Judge-free: every relevant_context is the exact text of
+    an indexed chunk. Measured 0.708 -> 0.816 (scripts/retrieval_ablation.py); the margin guards
+    against a change that quietly makes the reranker dead weight."""
+    from sentinel.eval.run_eval import load_ground_truth
+    from sentinel.retrieve import RERANK_POOL_SIZE, rrf_fuse
+
+    idx = _load_index()
+    text2id = {c.text: cid for cid, c in idx.id2chunk.items()}
+    k = settings.rerank_top_k
+    fusion_recall, hybrid_recall = [], []
+    for gt in load_ground_truth():
+        gold = {text2id[t] for t in gt.relevant_contexts}
+        fused = rrf_fuse([_ids(dense_search(gt.question)), _ids(sparse_search(gt.question))])
+        pool = sorted(fused, key=lambda c: fused[c], reverse=True)[:RERANK_POOL_SIZE]
+        hybrid = {rc.chunk_id for rc in hybrid_retrieve(gt.question)}
+        fusion_recall.append(len(gold & set(pool[:k])) / len(gold))
+        hybrid_recall.append(len(gold & hybrid) / len(gold))
+
+    fusion, hybrid = sum(fusion_recall) / len(fusion_recall), sum(hybrid_recall) / len(hybrid_recall)
+    assert hybrid >= fusion + 0.05, f"rerank recall@{k} {hybrid:.3f} vs fusion {fusion:.3f}"

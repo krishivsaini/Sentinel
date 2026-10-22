@@ -68,8 +68,8 @@ class Settings(BaseSettings):
     # Device for the local embedder + reranker; None = sentence-transformers' pick (CUDA, else
     # Apple MPS, else CPU). Defaults to CPU: on a Mac, MPS memory grew across a long eval and a
     # 200-query latency benchmark until both died "MPS backend out of memory" — a long-running
-    # service would too — and CPU was no slower (rerank p50 954 vs 879 ms, p95 1,021 vs 1,928 ms;
-    # retrieve p95 14 vs 379 ms). CI runs on CPU as well. Override with SENTINEL_TORCH_DEVICE.
+    # service would too. CPU held up against the last MPS benchmark that completed (rerank p50 954
+    # vs 879 ms, p95 1,021 vs 1,928 ms; retrieve p95 14 vs 379 ms). CI runs on CPU as well. Override with SENTINEL_TORCH_DEVICE.
     torch_device: str | None = "cpu"
     # LLM providers for product generation + the Ragas judge. Live free-tier quotas were probed
     # against the API 2026-07-09 (do not invent IDs): EVERY Gemini free model here caps at
