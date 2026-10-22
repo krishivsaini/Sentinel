@@ -151,18 +151,27 @@ ranking. The Groq row is a single run — its repeatability was not re-measured 
 > Provenance note: hand-scores + judge scores are on the shipped `gpt-oss-120b` run. The headline
 > means below come from the same run and are re-exported to `dashboard/data/` on every run.
 
-### Headline means (this run)
+### Headline means — full ground truth (run `d39e3d46dc2f` @ `ce5f455`)
 
-Free-tier per-minute token limits + connection drops under sustained load capped a single run at
-**22 of 48** items (documented in §5 of the plan; a paid key or repeated resume closes the gap).
-Over those 22:
+All **48 of 48** items, generation `gpt-oss-20b` and judge `gpt-oss-120b`, both Groq-hosted:
 
 | Metric | Mean | Gate |
 |---|---|---|
-| **Faithfulness** | **0.905** | ≥ 0.80 → **PASS** |
-| Answer relevance | 0.939 | — |
-| Context recall | 0.951 | — |
-| Attribution | 20 pass / 2 generation_fail / 0 retrieval_fail | — |
+| **Faithfulness** | **0.951** | ≥ 0.80 → **PASS** |
+| Answer relevance | 0.867 | — |
+| Context recall | 0.905 | — |
+| Attribution | 42 pass / 3 retrieval_fail / 3 generation_fail | — |
 
-Faithfulness held **0.85–0.92 across every sample size** (8 → 12 → 18 → 22), so the figure is
-stable, not an artifact of which items happened to complete.
+The six failures, read individually:
+
+- **Retrieval failures** (context recall 0.00, correct abstention): *invalid_grant*, *JWT registered
+  claim names*, *DNS A record*. The defining passage wasn't in the top 5, so the generator said it
+  didn't know rather than guessing — the abstention policy working as intended.
+- **Generation failures:** *PKCE* (context recalled, but the model abstained anyway);
+  *MUST/SHOULD/MAY* (faithfulness 0.57) and *DNS over HTTPS* (0.33), where the answer added
+  claims the retrieved passages don't support.
+
+Earlier free-tier runs were capped at 22 of 48 items by per-minute token limits; this run used
+Groq's paid tier. 30 of its items were scored with the local models on Apple MPS and 18 on CPU
+(the run was resumed after MPS ran out of memory); the device affects only floating-point
+rounding in the local embedder/reranker scores, not the models or their inputs.

@@ -11,9 +11,12 @@ history to `dashboard/data/history.json` (newest last) so the dashboard stays a 
 from __future__ import annotations
 
 import json
+import shutil
 import sqlite3
 
-from sentinel.config import DASHBOARD_DATA_DIR, EVAL_DB_PATH, settings
+from sentinel.config import DASHBOARD_DATA_DIR, DATA_DIR, EVAL_DB_PATH, settings
+
+LATENCY_REPORT_PATH = DATA_DIR / "latency_report.json"
 
 
 def main() -> None:
@@ -70,6 +73,12 @@ def main() -> None:
         encoding="utf-8",
     )
     print(f"wrote {len(history)} runs to {out}")
+
+    # The latency benchmark writes its report to data/; the dashboard's latency card reads it from
+    # here. Copy it on every export so the card can't silently go stale behind a newer benchmark.
+    if LATENCY_REPORT_PATH.exists():
+        shutil.copyfile(LATENCY_REPORT_PATH, DASHBOARD_DATA_DIR / LATENCY_REPORT_PATH.name)
+        print(f"copied {LATENCY_REPORT_PATH.name} into {DASHBOARD_DATA_DIR}")
 
 
 if __name__ == "__main__":

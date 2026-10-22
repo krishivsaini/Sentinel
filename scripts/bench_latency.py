@@ -1,13 +1,14 @@
 """Honest per-stage latency benchmark (§11, NFR-3) — Phase 2, Day 7.
 
 Measures retrieve / rerank / generate latency PER STAGE, never blended. The two local stages
-(retrieve, rerank) are free and fast, so they get a few hundred samples; generation hits the
-Gemini free tier (~10 RPM), so it gets a smaller, honestly-reported sample. Models are warmed
-first so no one-time load/first-inference cost leaks into the timings.
+(retrieve, rerank) are free and fast, so they get a few hundred samples; generation is an API
+call to config.generation_provider, so it gets a smaller sample, with retries OFF so a throttled
+call is skipped rather than backoff-inflated. Models are warmed first so no one-time
+load/first-inference cost leaks into the timings.
 
 Writes data/latency_report.json (committable artifact for the README) and prints a table.
 
-Run:  python scripts/bench_latency.py                       # 200 local, 25 generate
+Run:  python scripts/bench_latency.py                       # 200 local, 50 generate
       python scripts/bench_latency.py --local-iters 120 --gen-samples 15
       python scripts/bench_latency.py --no-generate         # local stages only (no API)
 """
@@ -86,8 +87,8 @@ def _summary(name: str, samples_ms: list[float]) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Per-stage latency benchmark.")
     ap.add_argument("--local-iters", type=int, default=200, help="retrieve+rerank samples")
-    ap.add_argument("--gen-samples", type=int, default=20, help="generation samples (API-bound)")
-    ap.add_argument("--gen-spacing", type=float, default=3.0, help="seconds between gen calls (RPM)")
+    ap.add_argument("--gen-samples", type=int, default=50, help="generation samples (API-bound)")
+    ap.add_argument("--gen-spacing", type=float, default=0.5, help="seconds between gen calls")
     ap.add_argument("--gen-timeout", type=float, default=25.0, help="per-call timeout; skip if over")
     ap.add_argument("--no-generate", action="store_true", help="skip the API-bound generate stage")
     ap.add_argument("--out", default="data/latency_report.json")
@@ -121,6 +122,7 @@ def main() -> None:
             "measured_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "platform": platform.platform(),
             "device": device,
+            "generation_provider": settings.generation_provider,
             "generation_model": settings.generation_model,
             "config": {
                 "embedding_model": settings.embedding_model,
@@ -132,8 +134,9 @@ def main() -> None:
             },
             "generate_throttled_skipped": gen_failed,
             "note": "Per-stage, never blended (NFR-3). retrieve/rerank are local; generate is "
-                    "Gemini free-tier measured with retries OFF (throttled calls are skipped, "
-                    "not backoff-inflated). Measured on the platform/device above.",
+                    "the full streamed answer from generation_provider, measured with retries "
+                    "OFF (throttled calls are skipped, not backoff-inflated). Measured on the "
+                    "platform/device above.",
             "stages": stages,
         }
         out_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -154,7 +157,7 @@ def main() -> None:
         from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 
         generate_ms: list[float] = []
-        print(f"generate stage: up to {args.gen_samples} samples (Gemini free tier)...")
+        print(f"generate stage: up to {args.gen_samples} samples ({settings.generation_provider})...")
         with ThreadPoolExecutor(max_workers=1) as pool:
             for i in range(args.gen_samples):
                 q = QUERIES[i % len(QUERIES)]
@@ -168,7 +171,7 @@ def main() -> None:
                 except (FutureTimeout, Exception) as exc:  # throttle/disconnect/timeout -> skip
                     gen_failed += 1
                     print(f"  {i + 1}/{args.gen_samples}  SKIP ({type(exc).__name__})")
-                time.sleep(args.gen_spacing)  # stay under ~10 RPM
+                time.sleep(args.gen_spacing)
         if generate_ms:
             stages.append(_summary("generate", generate_ms))
         write_report(stages, gen_failed)
