@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     # judge (offline eval + CI), never used for user-facing generation.
     openai_reasoning_effort: str = "none"
     openai_service_tier: str = "flex"
+    # Output cap sent on every Groq call. Groq's own default for gpt-oss is 3,072, which truncated
+    # judge verdicts on long answers (see sentinel.llm). The model allows far more.
+    groq_max_output_tokens: int = 16384
     jwt_secret: str = Field(default="dev-insecure-change-me", validation_alias="SENTINEL_JWT_SECRET")
     demo_user: str = "demo"
     demo_password: str = "change-me"

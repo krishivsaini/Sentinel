@@ -133,6 +133,11 @@ def chat_model(
             temperature=temperature,
             max_retries=max_retries,
             api_key=settings.groq_api_key or None,
+            # Unset, Groq caps gpt-oss output at 3,072 tokens. Judging a long answer's claims
+            # (reasoning + one verdict per statement) overran that with finish_reason="length",
+            # and Ragas raised LLMDidNotFinishException — 4 of 24 items in a CI run. A higher cap
+            # only changes calls that were being cut off.
+            max_tokens=settings.groq_max_output_tokens,
             **extra,
         )
     if provider == "google":
