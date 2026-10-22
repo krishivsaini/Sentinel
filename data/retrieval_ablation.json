@@ -1,0 +1,3180 @@
+{
+  "k": 5,
+  "n": 48,
+  "summary": {
+    "dense": {
+      "hit": 0.729,
+      "recall": 0.615,
+      "rr": 0.547
+    },
+    "bm25": {
+      "hit": 0.729,
+      "recall": 0.569,
+      "rr": 0.447
+    },
+    "fusion": {
+      "hit": 0.833,
+      "recall": 0.708,
+      "rr": 0.572,
+      "context_recall": 0.904
+    },
+    "hybrid": {
+      "hit": 0.896,
+      "recall": 0.816,
+      "rr": 0.759,
+      "context_recall": 0.898
+    }
+  },
+  "bm25_hit_dense_miss": [
+    {
+      "question": "How does a URI Template expand a simple string variable such as {var}?",
+      "relevant": [
+        "rfc6570#0004",
+        "rfc6570#0024",
+        "rfc6570#0027"
+      ],
+      "bm25_top_k": [
+        "rfc6570#0031",
+        "rfc6570#0022",
+        "rfc6570#0004",
+        "rfc6570#0033",
+        "rfc6570#0028"
+      ]
+    },
+    {
+      "question": "What is the maximum segment lifetime (MSL) in TCP and why does it matter?",
+      "relevant": [
+        "rfc9293#0028",
+        "rfc9293#0071"
+      ],
+      "bm25_top_k": [
+        "rfc9293#0024",
+        "rfc9293#0027",
+        "rfc9293#0095",
+        "rfc9293#0026",
+        "rfc9293#0028"
+      ]
+    },
+    {
+      "question": "What is the purpose of the TCP receive window?",
+      "relevant": [
+        "rfc9293#0009",
+        "rfc9293#0056"
+      ],
+      "bm25_top_k": [
+        "rfc9293#0022",
+        "rfc9293#0095",
+        "rfc9293#0021",
+        "rfc9293#0009",
+        "rfc9293#0096"
+      ]
+    },
+    {
+      "question": "How is a JWS Compact Serialization structured?",
+      "relevant": [
+        "rfc7515#0008"
+      ],
+      "bm25_top_k": [
+        "rfc7515#0023",
+        "rfc7515#0007",
+        "rfc7515#0025",
+        "rfc7515#0019",
+        "rfc7515#0008"
+      ]
+    },
+    {
+      "question": "What structured data types does JSON define per RFC 8259?",
+      "relevant": [
+        "rfc8259#0004"
+      ],
+      "bm25_top_k": [
+        "rfc8259#0012",
+        "rfc8259#0000",
+        "rfc8259#0011",
+        "rfc8259#0004",
+        "rfc8555#0095"
+      ]
+    },
+    {
+      "question": "What is the format of an Internet date-time timestamp per RFC 3339?",
+      "relevant": [
+        "rfc3339#0007"
+      ],
+      "bm25_top_k": [
+        "rfc3339#0007",
+        "rfc3339#0002",
+        "rfc3339#0000",
+        "rfc9110#0048",
+        "rfc1035#0046"
+      ]
+    }
+  ],
+  "rerank_rescues": [
+    "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?",
+    "How does QUIC detect lost packets?",
+    "What is a QUIC connection ID used for?",
+    "What is the purpose of the TCP receive window?",
+    "Which TLS 1.3 handshake message carries the server's certificate?",
+    "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?"
+  ],
+  "rerank_losses": [
+    "How does a TLS client indicate the target server name using Server Name Indication (SNI)?",
+    "What does the invalid_grant error mean in OAuth 2.0?",
+    "What is the format of an Internet date-time timestamp per RFC 3339?"
+  ],
+  "per_item": [
+    {
+      "question": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?",
+      "reference_answer": "In IETF RFCs the key words indicate requirement levels: MUST (equivalently REQUIRED or SHALL) means an absolute requirement of the specification; SHOULD (RECOMMENDED) means there may be valid reasons in particular circumstances to ignore it, but the full implications must be understood and weighed first; and MAY (OPTIONAL) means an item is truly optional, so interoperable implementations may choose to include it or not.",
+      "relevant": [
+        "rfc2119#0000",
+        "rfc2119#0001"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc2119#0000",
+          "rfc8174#0001",
+          "rfc8174#0002",
+          "rfc8174#0000",
+          "rfc9110#0226"
+        ],
+        "bm25": [
+          "rfc8174#0002",
+          "rfc2119#0000",
+          "rfc2818#0006",
+          "rfc7517#0006",
+          "rfc6750#0014"
+        ],
+        "fusion": [
+          "rfc2119#0000",
+          "rfc8174#0002",
+          "rfc7516#0009",
+          "rfc9110#0226",
+          "rfc6749#0066"
+        ],
+        "hybrid": [
+          "rfc2119#0000",
+          "rfc7516#0009",
+          "rfc8174#0002",
+          "rfc9204#0037",
+          "rfc6455#0082"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.5
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?",
+      "reference_answer": "According to RFC 8174, only the \"UPPERCASE\" usage of the key words has the defined special meanings.",
+      "relevant": [
+        "rfc8174#0000"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc8174#0001",
+          "rfc2119#0000",
+          "rfc8174#0000",
+          "rfc6066#0023",
+          "rfc8174#0002"
+        ],
+        "bm25": [
+          "rfc8174#0001",
+          "rfc9111#0041",
+          "rfc8174#0000",
+          "rfc8615#0011",
+          "rfc8174#0002"
+        ],
+        "fusion": [
+          "rfc8174#0001",
+          "rfc8174#0000",
+          "rfc8174#0002",
+          "rfc9204#0037",
+          "rfc8615#0011"
+        ],
+        "hybrid": [
+          "rfc8174#0000",
+          "rfc5789#0009",
+          "rfc8615#0011",
+          "rfc6960#0027",
+          "rfc8446#0118"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does the key word MUST NOT mean in an RFC?",
+      "reference_answer": "The key word \"MUST NOT\", or the phrase \"SHALL NOT\", means that the definition is an absolute prohibition of the specification.",
+      "relevant": [
+        "rfc2119#0000"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc2119#0000",
+          "rfc8174#0001",
+          "rfc7516#0009",
+          "rfc8174#0002",
+          "rfc7636#0006"
+        ],
+        "bm25": [
+          "rfc2119#0000",
+          "rfc2119#0001",
+          "rfc9110#0101",
+          "rfc6455#0017",
+          "rfc6960#0022"
+        ],
+        "fusion": [
+          "rfc2119#0000",
+          "rfc8174#0002",
+          "rfc2119#0001",
+          "rfc6265#0005",
+          "rfc7518#0058"
+        ],
+        "hybrid": [
+          "rfc7516#0009",
+          "rfc9111#0005",
+          "rfc7636#0006",
+          "rfc2119#0000",
+          "rfc7515#0005"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.25
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does the HTTP 429 status code indicate, and what header may the response include?",
+      "reference_answer": "The HTTP 429 status code indicates \"that the user has sent too many requests in a given amount of time (\"rate limiting\")\". \n\nThe response representation may include a `Retry-After` header \"indicating how long to wait before making a new request\".",
+      "relevant": [
+        "rfc6585#0002"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6585#0002",
+          "rfc9110#0181",
+          "rfc9110#0184",
+          "rfc6585#0005",
+          "rfc9110#0193"
+        ],
+        "bm25": [
+          "rfc6585#0002",
+          "rfc9110#0192",
+          "rfc9110#0193",
+          "rfc6585#0004",
+          "rfc6585#0005"
+        ],
+        "fusion": [
+          "rfc6585#0002",
+          "rfc9110#0193",
+          "rfc6585#0005",
+          "rfc9110#0185",
+          "rfc6585#0004"
+        ],
+        "hybrid": [
+          "rfc6585#0002",
+          "rfc6585#0005",
+          "rfc9110#0188",
+          "rfc6585#0003",
+          "rfc6585#0004"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How does HTTP decide whether a stored cached response is still fresh?",
+      "reference_answer": "HTTP determines if a stored cached response is fresh by checking if its age has not yet exceeded its freshness lifetime. \n\nSpecifically, the calculation used to determine freshness is:\n`response_is_fresh = (freshness_lifetime > current_age)`\n\nWhere:\n*   **`freshness_lifetime`** is the length of time between the response's generation by the origin server and its expiration time.\n*   **`current_age`** is the time that has passed since the response was generated by, or successfully validated with, the origin server.",
+      "relevant": [
+        "rfc9111#0015",
+        "rfc9111#0016"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9111#0024",
+          "rfc9111#0004",
+          "rfc9111#0015",
+          "rfc9111#0020",
+          "rfc9111#0016"
+        ],
+        "bm25": [
+          "rfc9111#0004",
+          "rfc9111#0012",
+          "rfc9111#0020",
+          "rfc9111#0015",
+          "rfc9111#0023"
+        ],
+        "fusion": [
+          "rfc9111#0004",
+          "rfc9111#0015",
+          "rfc9111#0020",
+          "rfc9111#0012",
+          "rfc9111#0024"
+        ],
+        "hybrid": [
+          "rfc9111#0004",
+          "rfc9111#0016",
+          "rfc9111#0015",
+          "rfc9111#0024",
+          "rfc9111#0018"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.25
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.5
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 0.8,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does the 308 Permanent Redirect status code mean?",
+      "reference_answer": "The 308 (Permanent Redirect) status code indicates that the target resource has been assigned a new permanent URI and any future references to this resource ought to use one of the enclosed URIs. It is a type of redirect indicating that the resource might be available at a different URI, as provided by the Location header field. \n\nWith a 308 status code, the server suggests that a user agent with link-editing capability can permanently replace references to the target URI with one of the new references sent by the server. However, this suggestion is usually ignored unless:\n* the user agent is actively editing references (e.g., engaged in authoring content),\n* the connection is secured, and\n* the origin server is a trusted authority for the content being edited.",
+      "relevant": [
+        "rfc9110#0173",
+        "rfc9110#0181"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9110#0181",
+          "rfc9110#0174",
+          "rfc9110#0180",
+          "rfc9110#0251",
+          "rfc9110#0178"
+        ],
+        "bm25": [
+          "rfc9110#0180",
+          "rfc9110#0174",
+          "rfc9110#0251",
+          "rfc9110#0177",
+          "rfc9110#0014"
+        ],
+        "fusion": [
+          "rfc9110#0180",
+          "rfc9110#0174",
+          "rfc9110#0251",
+          "rfc9110#0181",
+          "rfc9110#0177"
+        ],
+        "hybrid": [
+          "rfc9110#0180",
+          "rfc9110#0181",
+          "rfc9110#0177",
+          "rfc9110#0178",
+          "rfc9110#0174"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.25
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 0.8571428571428571,
+        "hybrid": 0.8571428571428571
+      }
+    },
+    {
+      "question": "What is the purpose of the dynamic table in HPACK header compression?",
+      "reference_answer": "Based on the provided context, the dynamic table in HPACK serves the following purposes:\n\n* It is used by the encoder to index header fields that are repeated in the encoded header lists.\n* It is maintained by the decoder as a decoding context to decompress header blocks, serving as the only dynamic state needed for decompression.",
+      "relevant": [
+        "rfc7541#0006"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7541#0006",
+          "rfc9113#0015",
+          "rfc7541#0020",
+          "rfc7541#0004",
+          "rfc9204#0011"
+        ],
+        "bm25": [
+          "rfc7541#0006",
+          "rfc9113#0015",
+          "rfc9113#0014",
+          "rfc7541#0020",
+          "rfc7541#0022"
+        ],
+        "fusion": [
+          "rfc7541#0006",
+          "rfc9113#0015",
+          "rfc7541#0020",
+          "rfc9204#0011",
+          "rfc9113#0014"
+        ],
+        "hybrid": [
+          "rfc7541#0020",
+          "rfc7541#0006",
+          "rfc7541#0022",
+          "rfc9113#0015",
+          "rfc9113#0014"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 0.6666666666666666
+      }
+    },
+    {
+      "question": "Why does QPACK use separate encoder and decoder streams in HTTP/3?",
+      "reference_answer": "QPACK uses separate unidirectional streams because QUIC does not provide the guarantee of in-order transmission of compressed field sections. \n\nThese separate streams are used to send instructions from the encoder to the decoder and vice versa to modify and track the dynamic table state, which ensures a total order of updates. This design allows encoded field sections to refer to the state of the table without modifying it.",
+      "relevant": [
+        "rfc9114#0006",
+        "rfc9114#0071",
+        "rfc9204#0005"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9114#0006",
+          "rfc9204#0029",
+          "rfc9204#0034",
+          "rfc9204#0003",
+          "rfc9204#0033"
+        ],
+        "bm25": [
+          "rfc9204#0033",
+          "rfc9204#0004",
+          "rfc9204#0016",
+          "rfc9204#0011",
+          "rfc9204#0005"
+        ],
+        "fusion": [
+          "rfc9204#0033",
+          "rfc9204#0004",
+          "rfc9114#0006",
+          "rfc9204#0034",
+          "rfc9204#0005"
+        ],
+        "hybrid": [
+          "rfc9114#0006",
+          "rfc9204#0033",
+          "rfc9204#0029",
+          "rfc9204#0005",
+          "rfc9204#0013"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.3333333333333333,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.3333333333333333,
+          "rr": 0.2
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 0.3333333333333333
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?",
+      "reference_answer": "In HTTP/2, the `SETTINGS_HEADER_TABLE_SIZE` parameter controls the maximum size that the HPACK encoder is permitted to use for the dynamic table. By setting an appropriate value for this parameter, a decoder can limit the amount of state memory it uses.",
+      "relevant": [
+        "rfc7541#0010",
+        "rfc7541#0024",
+        "rfc9113#0015"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9114#0074",
+          "rfc9113#0106",
+          "rfc9114#0075",
+          "rfc9113#0015",
+          "rfc9114#0018"
+        ],
+        "bm25": [
+          "rfc9114#0074",
+          "rfc9113#0015",
+          "rfc7541#0024",
+          "rfc9113#0005",
+          "rfc7541#0061"
+        ],
+        "fusion": [
+          "rfc9114#0074",
+          "rfc9113#0015",
+          "rfc7541#0024",
+          "rfc7541#0019",
+          "rfc9113#0005"
+        ],
+        "hybrid": [
+          "rfc9114#0074",
+          "rfc7541#0024",
+          "rfc9114#0075",
+          "rfc9113#0015",
+          "rfc9114#0018"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.3333333333333333,
+          "rr": 0.25
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 0.5
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 0.5
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is the HTTP PATCH method used for, and is it idempotent?",
+      "reference_answer": "The HTTP PATCH method is used to request that a set of changes described in the request entity (represented in a format called a \"patch document\") be applied to the resource identified by the Request-URI. It is designed to modify an existing HTTP resource. If the Request-URI does not point to an existing resource, the server MAY create a new resource, depending on the patch document type and permissions.\n\nPATCH is \"neither safe nor idempotent\". However, a PATCH request \"can be issued in such a way as to be idempotent\" to help prevent collisions, such as by using a conditional request with a strong ETag in an `If-Match` header.",
+      "relevant": [
+        "rfc5789#0000",
+        "rfc5789#0002"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc5789#0002",
+          "rfc5789#0000",
+          "rfc9110#0234",
+          "rfc9110#0094",
+          "rfc9110#0191"
+        ],
+        "bm25": [
+          "rfc5789#0002",
+          "rfc9110#0094",
+          "rfc9110#0095",
+          "rfc5789#0001",
+          "rfc5789#0007"
+        ],
+        "fusion": [
+          "rfc5789#0002",
+          "rfc9110#0094",
+          "rfc5789#0000",
+          "rfc5789#0008",
+          "rfc5789#0007"
+        ],
+        "hybrid": [
+          "rfc5789#0002",
+          "rfc9114#0016",
+          "rfc5789#0000",
+          "rfc9110#0095",
+          "rfc9110#0192"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does the 431 Request Header Fields Too Large status code indicate?",
+      "reference_answer": "The 431 (Request Header Fields Too Large) status code indicates that the server is unwilling to process the request because its header fields are too large. \n\nIt can be used both when the total set of request header fields is too large, and when a single header field is at fault. In HTTP/3, a server can send this status code if it receives a larger header section than it is willing to handle.",
+      "relevant": [
+        "rfc6585#0002",
+        "rfc6585#0003",
+        "rfc9114#0018"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6585#0003",
+          "rfc6585#0002",
+          "rfc6585#0005",
+          "rfc9110#0186",
+          "rfc9110#0177"
+        ],
+        "bm25": [
+          "rfc6585#0003",
+          "rfc6585#0005",
+          "rfc6585#0002",
+          "rfc6585#0004",
+          "rfc9110#0185"
+        ],
+        "fusion": [
+          "rfc6585#0003",
+          "rfc6585#0002",
+          "rfc6585#0005",
+          "rfc9110#0186",
+          "rfc9110#0185"
+        ],
+        "hybrid": [
+          "rfc6585#0003",
+          "rfc6585#0005",
+          "rfc6585#0002",
+          "rfc9110#0186",
+          "rfc9110#0185"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 0.6666666666666666,
+        "hybrid": 0.6666666666666666
+      }
+    },
+    {
+      "question": "What does the max-age directive in the HSTS Strict-Transport-Security header specify?",
+      "reference_answer": "The REQUIRED `max-age` directive specifies the number of seconds, after the reception of the STS header field, during which the UA regards the host (from whom the message was received) as a Known HSTS Host. \n\nIt is essentially a \"time to live\" value relative to the reception time of the STS header field. A `max-age` value of zero (i.e., `max-age=0`) signals the UA to cease regarding the host as a Known HSTS Host and delete the entire HSTS Policy associated with that HSTS Host.",
+      "relevant": [
+        "rfc6797#0017",
+        "rfc6797#0018",
+        "rfc6797#0021"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6797#0018",
+          "rfc6797#0017",
+          "rfc6797#0028",
+          "rfc6797#0021",
+          "rfc6797#0036"
+        ],
+        "bm25": [
+          "rfc6797#0018",
+          "rfc6797#0017",
+          "rfc6797#0021",
+          "rfc6797#0016",
+          "rfc6797#0028"
+        ],
+        "fusion": [
+          "rfc6797#0018",
+          "rfc6797#0017",
+          "rfc6797#0021",
+          "rfc6797#0028",
+          "rfc6797#0024"
+        ],
+        "hybrid": [
+          "rfc6797#0018",
+          "rfc6797#0017",
+          "rfc6797#0021",
+          "rfc6797#0028",
+          "rfc6797#0020"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What are the main components of a URI's generic syntax?",
+      "reference_answer": "Based on the provided context, the generic URI syntax consists of a hierarchical sequence of components referred to as the:\n* **scheme**\n* **authority**\n* **path**\n* **query**\n* **fragment**",
+      "relevant": [
+        "rfc3986#0022"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc3986#0010",
+          "rfc3986#0000",
+          "rfc3986#0001",
+          "rfc3986#0022",
+          "rfc3986#0034"
+        ],
+        "bm25": [
+          "rfc3986#0034",
+          "rfc3986#0014",
+          "rfc3986#0010",
+          "rfc3986#0067",
+          "rfc3986#0049"
+        ],
+        "fusion": [
+          "rfc3986#0010",
+          "rfc3986#0034",
+          "rfc3986#0022",
+          "rfc3986#0000",
+          "rfc3986#0014"
+        ],
+        "hybrid": [
+          "rfc3986#0010",
+          "rfc3986#0022",
+          "rfc9110#0027",
+          "rfc3986#0014",
+          "rfc3986#0034"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.25
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "Which characters are allowed in a percent-encoded octet in a URI?",
+      "reference_answer": "Based on the provided context, a percent-encoded octet is represented as a character triplet consisting of:\n* The percent character \"%\", followed by\n* Two hexadecimal digits representing that octet's numeric value.\n\nThe ABNF rule is defined as:\n`pct-encoded = \"%\" HEXDIG HEXDIG`.\n\nThe allowed hexadecimal digits include the uppercase letters 'A' through 'F' and the lowercase letters 'a' through 'f', which are equivalent.",
+      "relevant": [
+        "rfc3986#0017"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc3986#0017",
+          "rfc3986#0020",
+          "rfc3986#0019",
+          "rfc3986#0018",
+          "rfc3986#0029"
+        ],
+        "bm25": [
+          "rfc3986#0018",
+          "rfc3986#0019",
+          "rfc3986#0017",
+          "rfc3986#0020",
+          "rfc3986#0012"
+        ],
+        "fusion": [
+          "rfc3986#0017",
+          "rfc3986#0018",
+          "rfc3986#0019",
+          "rfc3986#0020",
+          "rfc3986#0029"
+        ],
+        "hybrid": [
+          "rfc3986#0017",
+          "rfc3986#0029",
+          "rfc3986#0019",
+          "rfc3986#0020",
+          "rfc3986#0018"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How does a URI Template expand a simple string variable such as {var}?",
+      "reference_answer": "Simple string expansion is the default expression type when no operator is given. It is determined when the first character after the opening brace is not an operator. \n\nTo expand a simple string variable:\n1. The named variable is replaced by its value as a string after pct-encoding any characters that are not in the set of unreserved URI characters.\n2. If the expression contains more than one variable with a defined value, a comma (\",\") is appended to the result string as a separator between the variable expansions.",
+      "relevant": [
+        "rfc6570#0004",
+        "rfc6570#0024",
+        "rfc6570#0027"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6570#0023",
+          "rfc6570#0031",
+          "rfc6570#0003",
+          "rfc6570#0015",
+          "rfc6570#0022"
+        ],
+        "bm25": [
+          "rfc6570#0031",
+          "rfc6570#0022",
+          "rfc6570#0004",
+          "rfc6570#0033",
+          "rfc6570#0028"
+        ],
+        "fusion": [
+          "rfc6570#0031",
+          "rfc6570#0022",
+          "rfc6570#0004",
+          "rfc6570#0003",
+          "rfc6570#0033"
+        ],
+        "hybrid": [
+          "rfc6570#0004",
+          "rfc6570#0003",
+          "rfc6570#0034",
+          "rfc6570#0030",
+          "rfc6570#0027"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.3333333333333333,
+          "rr": 0.3333333333333333
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.3333333333333333,
+          "rr": 0.3333333333333333
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 0.8,
+        "hybrid": 0.6
+      }
+    },
+    {
+      "question": "What does the Secure attribute of an HTTP cookie do?",
+      "reference_answer": "Based on the provided context, the `Secure` attribute of an HTTP cookie does the following:\n\n* **Limits Scope to Secure Channels:** It limits the scope of the cookie to \"secure\" channels (as defined by the user agent). \n* **Restricts Transmission:** The user agent will include the cookie in an HTTP request only if the request is transmitted over a secure channel, typically HTTP over Transport Layer Security (TLS).\n* **Protects Confidentiality (But Not Integrity):** It protects only the cookie's confidentiality. It does not provide integrity in the presence of an active network attacker, who can still overwrite `Secure` cookies from an insecure channel to disrupt their integrity,.\n* **Operates Independently:** It is independent of the `HttpOnly` attribute; a cookie can be set with both attributes.\n* **Is Not Returned to the Server:** The attribute itself is not returned to the origin server in the `Cookie` header, meaning the server cannot determine from the `Cookie` header alone whether the cookie was set with the `Secure` attribute.",
+      "relevant": [
+        "rfc6265#0004",
+        "rfc6265#0013",
+        "rfc6265#0014"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6265#0014",
+          "rfc6265#0032",
+          "rfc6265#0013",
+          "rfc6265#0031",
+          "rfc6265#0034"
+        ],
+        "bm25": [
+          "rfc6265#0013",
+          "rfc6265#0032",
+          "rfc6265#0024",
+          "rfc6265#0022",
+          "rfc6265#0034"
+        ],
+        "fusion": [
+          "rfc6265#0013",
+          "rfc6265#0032",
+          "rfc6265#0014",
+          "rfc6265#0034",
+          "rfc6265#0022"
+        ],
+        "hybrid": [
+          "rfc6265#0014",
+          "rfc6265#0013",
+          "rfc6265#0004",
+          "rfc6265#0032",
+          "rfc6797#0008"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.3333333333333333,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.6666666666666666,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 0.8333333333333334,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is the effect of the HttpOnly attribute on a cookie?",
+      "reference_answer": "The `HttpOnly` attribute has the following effects on a cookie:\n\n* **Limits Scope to HTTP Requests:** It limits the scope of the cookie to HTTP requests.\n* **Restricts Non-HTTP API Access:** It instructs the user agent to omit the cookie when providing access to cookies via \"non-HTTP\" APIs, such as web browser APIs that expose cookies to scripts.\n* **Blocks Non-HTTP API Writes:** If a cookie is received from a \"non-HTTP\" API and its `http-only-flag` is set, the user agent will ignore the cookie entirely.\n* **Independence:** The `HttpOnly` attribute is independent of the `Secure` attribute; a cookie can have both attributes.",
+      "relevant": [
+        "rfc6265#0014",
+        "rfc6265#0024"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6265#0014",
+          "rfc6265#0013",
+          "rfc6265#0022",
+          "rfc6265#0032",
+          "rfc6265#0031"
+        ],
+        "bm25": [
+          "rfc6265#0014",
+          "rfc6265#0022",
+          "rfc6265#0024",
+          "rfc6265#0013",
+          "rfc6265#0012"
+        ],
+        "fusion": [
+          "rfc6265#0014",
+          "rfc6265#0022",
+          "rfc6265#0013",
+          "rfc6265#0024",
+          "rfc6265#0032"
+        ],
+        "hybrid": [
+          "rfc6265#0014",
+          "rfc6265#0013",
+          "rfc6265#0022",
+          "rfc6265#0024",
+          "rfc6265#0012"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How does a user agent decide whether a cookie's domain matches a request host?",
+      "reference_answer": "A cookie is only returned to a host whose name domain-matches the cookie's domain. A string domain-matches a domain string when they are identical, or when the domain string is a suffix of the host, the character in the host immediately before that suffix is \".\", and the host is a name (not an IP address). For example, a cookie with Domain \"example.com\" is sent to foo.example.com, but one with Domain \"bar.example.com\" is not.",
+      "relevant": [
+        "rfc6265#0013",
+        "rfc6265#0018"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6265#0026",
+          "rfc6265#0015",
+          "rfc6265#0018",
+          "rfc6265#0013",
+          "rfc6265#0006"
+        ],
+        "bm25": [
+          "rfc6265#0013",
+          "rfc6265#0026",
+          "rfc6265#0022",
+          "rfc6265#0012",
+          "rfc6265#0007"
+        ],
+        "fusion": [
+          "rfc6265#0026",
+          "rfc6265#0013",
+          "rfc6265#0007",
+          "rfc6265#0006",
+          "rfc6265#0029"
+        ],
+        "hybrid": [
+          "rfc6265#0026",
+          "rfc6265#0018",
+          "rfc6265#0013",
+          "rfc6265#0023",
+          "rfc6265#0022"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.5
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?",
+      "reference_answer": "To compute the `Sec-WebSocket-Accept` header value during the opening handshake, the server performs the following steps:\n\n1. **Extract the Key**: Take the value of the `Sec-WebSocket-Key` header field from the client's handshake, excluding any leading and trailing whitespace.\n2. **Concatenate with GUID**: Concatenate this key value with the Globally Unique Identifier (GUID) string `\"258EAFA5-E914-47DA-95CA-C5AB0DC85B11\"`.\n3. **SHA-1 Hash**: Take the 160-bit SHA-1 hash of this concatenated string.\n4. **Base64 Encode**: Base64-encode the resulting SHA-1 hash. This final value is returned in the server's `Sec-WebSocket-Accept` header field.\n\n**Example**:\n* If the client's `Sec-WebSocket-Key` is `\"dGhlIHNhbXBsZSBub25jZQ==\"`,\n* The concatenated string is `\"dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11\"`.\n* The SHA-1 hash of this string is `0xb3 0x7a 0x4f 0x2c 0xc0 0x62 0x4f 0x16 0x90 0xf6 0x46 0x06 0xcf 0x38 0x59 0x45 0xb2 0xbe 0xc4 0xea`.\n* The base64-encoded result returned in the `Sec-WebSocket-Accept` header is `\"s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\"`.",
+      "relevant": [
+        "rfc6455#0011",
+        "rfc6455#0033"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6455#0072",
+          "rfc6455#0028",
+          "rfc6455#0010",
+          "rfc6455#0030",
+          "rfc6455#0027"
+        ],
+        "bm25": [
+          "rfc6455#0071",
+          "rfc6455#0012",
+          "rfc6455#0027",
+          "rfc6455#0035",
+          "rfc6455#0072"
+        ],
+        "fusion": [
+          "rfc6455#0072",
+          "rfc6455#0012",
+          "rfc6455#0027",
+          "rfc6455#0071",
+          "rfc6455#0028"
+        ],
+        "hybrid": [
+          "rfc6455#0033",
+          "rfc6455#0028",
+          "rfc6455#0071",
+          "rfc6455#0012",
+          "rfc6455#0011"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 0.4444444444444444,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What HTTP status code does a server return to complete the WebSocket opening handshake?",
+      "reference_answer": "The server completes the WebSocket opening handshake by returning HTTP status code 101 (Switching Protocols); any status code other than 101 means the handshake has not completed and normal HTTP semantics still apply.",
+      "relevant": [
+        "rfc6455#0012"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6455#0012",
+          "rfc6455#0055",
+          "rfc6455#0060",
+          "rfc6455#0030",
+          "rfc6455#0028"
+        ],
+        "bm25": [
+          "rfc6455#0012",
+          "rfc6455#0067",
+          "rfc6455#0072",
+          "rfc6455#0071",
+          "rfc6455#0029"
+        ],
+        "fusion": [
+          "rfc6455#0012",
+          "rfc6455#0030",
+          "rfc6455#0028",
+          "rfc6455#0060",
+          "rfc6455#0055"
+        ],
+        "hybrid": [
+          "rfc6455#0012",
+          "rfc6455#0029",
+          "rfc6455#0030",
+          "rfc6455#0072",
+          "rfc6455#0060"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is the purpose of the Sec-WebSocket-Key request header?",
+      "reference_answer": "The Sec-WebSocket-Key request header carries a client-generated nonce. The server proves it received and understood the opening handshake by including in the Sec-WebSocket-Accept response header a hash of that nonce combined with a predefined GUID; any other value must not be interpreted as acceptance of the connection.",
+      "relevant": [
+        "rfc6455#0012"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6455#0027",
+          "rfc6455#0072",
+          "rfc6455#0025",
+          "rfc6455#0071",
+          "rfc6455#0010"
+        ],
+        "bm25": [
+          "rfc6455#0010",
+          "rfc6455#0070",
+          "rfc9110#0115",
+          "rfc9110#0135",
+          "rfc9110#0053"
+        ],
+        "fusion": [
+          "rfc6455#0010",
+          "rfc6455#0070",
+          "rfc6455#0011",
+          "rfc6455#0028",
+          "rfc6455#0033"
+        ],
+        "hybrid": [
+          "rfc6455#0010",
+          "rfc6455#0072",
+          "rfc6455#0071",
+          "rfc6455#0025",
+          "rfc6455#0029"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "hybrid": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is a QUIC stateless reset and when is it used?",
+      "reference_answer": "A stateless reset lets an endpoint that has lost the state for a connection terminate it. It uses a stateless reset token specific to a connection ID (issued in a NEW_CONNECTION_ID frame, or via the stateless_reset_token transport parameter for the connection ID chosen during the handshake). When an endpoint receives packets it cannot process, it sends a packet ending in that token so the peer recognizes the connection cannot continue and tears it down.",
+      "relevant": [
+        "rfc9000#0082"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9000#0083",
+          "rfc9000#0185",
+          "rfc9000#0082",
+          "rfc9000#0084",
+          "rfc9002#0020"
+        ],
+        "bm25": [
+          "rfc9000#0084",
+          "rfc9000#0083",
+          "rfc9000#0082",
+          "rfc9000#0087",
+          "rfc9000#0185"
+        ],
+        "fusion": [
+          "rfc9000#0083",
+          "rfc9000#0084",
+          "rfc9000#0082",
+          "rfc9000#0185",
+          "rfc9000#0087"
+        ],
+        "hybrid": [
+          "rfc9000#0082",
+          "rfc9000#0083",
+          "rfc9000#0038",
+          "rfc9000#0185",
+          "rfc9000#0184"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 0.6666666666666666
+      }
+    },
+    {
+      "question": "How does QUIC detect lost packets?",
+      "reference_answer": "QUIC assigns strictly increasing packet numbers that directly encode transmission order, which simplifies loss detection. A packet is declared lost based on packet number (e.g., when later-sent packets are acknowledged), and the contents of a lost packet are not retransmitted as-is: the information is carried again in new frames in a new packet with a new packet number.",
+      "relevant": [
+        "rfc9000#0107",
+        "rfc9002#0005"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9002#0004",
+          "rfc9002#0003",
+          "rfc9002#0005",
+          "rfc9002#0046",
+          "rfc9000#0009"
+        ],
+        "bm25": [
+          "rfc9000#0110",
+          "rfc9002#0013",
+          "rfc9000#0103",
+          "rfc9002#0012",
+          "rfc9001#0013"
+        ],
+        "fusion": [
+          "rfc9000#0110",
+          "rfc9002#0046",
+          "rfc9002#0012",
+          "rfc9002#0004",
+          "rfc9002#0013"
+        ],
+        "hybrid": [
+          "rfc9002#0005",
+          "rfc9002#0004",
+          "rfc9000#0107",
+          "rfc9002#0013",
+          "rfc9000#0110"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.3333333333333333
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is a QUIC connection ID used for?",
+      "reference_answer": "A connection ID is an identifier used to identify a QUIC connection at an endpoint, independent of the network 4-tuple and opaque to the peer. Each endpoint selects one or more connection IDs for its peer to include in packets sent to it. Because the connection is identified by the connection ID rather than by IP address and port, connections can migrate to a new network path (e.g., after NAT rebinding) without breaking.",
+      "relevant": [
+        "rfc9000#0008",
+        "rfc9000#0010"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9000#0030",
+          "rfc9000#0007",
+          "rfc9000#0084",
+          "rfc9000#0120",
+          "rfc9000#0125"
+        ],
+        "bm25": [
+          "rfc9001#0026",
+          "rfc9000#0174",
+          "rfc9001#0025",
+          "rfc9000#0120",
+          "rfc9000#0084"
+        ],
+        "fusion": [
+          "rfc9000#0174",
+          "rfc9000#0084",
+          "rfc9000#0120",
+          "rfc9000#0125",
+          "rfc9000#0030"
+        ],
+        "hybrid": [
+          "rfc9000#0030",
+          "rfc9000#0008",
+          "rfc9000#0010",
+          "rfc9000#0125",
+          "rfc9000#0174"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is the maximum segment lifetime (MSL) in TCP and why does it matter?",
+      "reference_answer": "The Maximum Segment Lifetime (MSL) is the maximum time a TCP segment can remain in the network before it must be discarded. It matters because TCP relies on old duplicate segments draining from the network within an MSL so that sequence numbers can be reused safely without a wandering duplicate corrupting a later connection; the large sequence space is sized against it. RFC 793 assumed an MSL of two minutes.",
+      "relevant": [
+        "rfc9293#0028",
+        "rfc9293#0071"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9293#0044",
+          "rfc9293#0014",
+          "rfc9293#0027",
+          "rfc9293#0045",
+          "rfc9293#0030"
+        ],
+        "bm25": [
+          "rfc9293#0024",
+          "rfc9293#0027",
+          "rfc9293#0095",
+          "rfc9293#0026",
+          "rfc9293#0028"
+        ],
+        "fusion": [
+          "rfc9293#0027",
+          "rfc9293#0044",
+          "rfc9293#0028",
+          "rfc9293#0030",
+          "rfc9293#0014"
+        ],
+        "hybrid": [
+          "rfc9293#0028",
+          "rfc9293#0071",
+          "rfc9293#0014",
+          "rfc9293#0095",
+          "rfc9293#0044"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.2
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.3333333333333333
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How does the TCP three-way handshake establish a connection?",
+      "reference_answer": "In the three-way handshake the initiating peer sends a SYN carrying its initial sequence number; the other peer replies with its own SYN that also acknowledges the first SYN (a SYN,ACK); and the initiator then sends an ACK of the peer's SYN, after which both peers are ESTABLISHED. Its principal purpose is to synchronize both peers' sequence numbers and prevent old duplicate connection initiations from causing confusion.",
+      "relevant": [
+        "rfc9293#0032",
+        "rfc9293#0033"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9293#0033",
+          "rfc9293#0031",
+          "rfc9293#0032",
+          "rfc9293#0026",
+          "rfc6455#0015"
+        ],
+        "bm25": [
+          "rfc9293#0036",
+          "rfc9293#0030",
+          "rfc9293#0031",
+          "rfc9293#0032",
+          "rfc6455#0015"
+        ],
+        "fusion": [
+          "rfc9293#0031",
+          "rfc9293#0032",
+          "rfc9293#0033",
+          "rfc9293#0026",
+          "rfc6455#0015"
+        ],
+        "hybrid": [
+          "rfc9293#0032",
+          "rfc9293#0031",
+          "rfc9293#0033",
+          "rfc9293#0036",
+          "rfc9293#0026"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.25
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is the purpose of the TCP receive window?",
+      "reference_answer": "The receive window, advertised in the window field of each segment, tells the sender the range of sequence numbers (how much data) the receiver is currently prepared to accept. It provides flow control so the sender does not overrun the receiver's buffer; when the receiver advertises a zero window the sender stops sending data (apart from zero-window probes) until space is advertised again.",
+      "relevant": [
+        "rfc9293#0009",
+        "rfc9293#0056"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc9293#0054",
+          "rfc9293#0062",
+          "rfc9293#0061",
+          "rfc9293#0002",
+          "rfc9293#0005"
+        ],
+        "bm25": [
+          "rfc9293#0022",
+          "rfc9293#0095",
+          "rfc9293#0021",
+          "rfc9293#0009",
+          "rfc9293#0096"
+        ],
+        "fusion": [
+          "rfc9293#0054",
+          "rfc9293#0069",
+          "rfc9293#0068",
+          "rfc9293#0055",
+          "rfc9293#0074"
+        ],
+        "hybrid": [
+          "rfc9293#0056",
+          "rfc9293#0065",
+          "rfc9293#0054",
+          "rfc9293#0055",
+          "rfc9293#0021"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.25
+        },
+        "fusion": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "Which TLS 1.3 handshake message carries the server's certificate?",
+      "reference_answer": "When the server authenticates with a certificate it sends that certificate in the Certificate handshake message, followed by a CertificateVerify message. In TLS 1.3 either a PSK or a certificate is used; a certificate-authenticating server always sends the Certificate and CertificateVerify messages.",
+      "relevant": [
+        "rfc8446#0025"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc8446#0132",
+          "rfc9001#0001",
+          "rfc9113#0080",
+          "rfc8446#0032",
+          "rfc8446#0012"
+        ],
+        "bm25": [
+          "rfc8446#0023",
+          "rfc8446#0029",
+          "rfc8446#0015",
+          "rfc8446#0069",
+          "rfc8446#0154"
+        ],
+        "fusion": [
+          "rfc8446#0029",
+          "rfc8446#0032",
+          "rfc8446#0011",
+          "rfc9113#0080",
+          "rfc6066#0004"
+        ],
+        "hybrid": [
+          "rfc8446#0064",
+          "rfc8446#0029",
+          "rfc8446#0025",
+          "rfc8446#0032",
+          "rfc9113#0080"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        }
+      },
+      "context_recall": {
+        "fusion": 0.5,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?",
+      "reference_answer": "The Application-Layer Protocol Negotiation (ALPN) extension lets the client and server negotiate which application-layer protocol to use over a TLS connection entirely within the ClientHello/ServerHello exchange, adding no extra round-trips. This lets several protocols share one port (such as 443) and lets the server select the protocol, enabling certificate selection or connection routing based on the negotiated protocol.",
+      "relevant": [
+        "rfc7301#0002",
+        "rfc7301#0005"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7301#0002",
+          "rfc7301#0005",
+          "rfc7301#0004",
+          "rfc7301#0001",
+          "rfc9001#0046"
+        ],
+        "bm25": [
+          "rfc9001#0046",
+          "rfc7301#0002",
+          "rfc7301#0005",
+          "rfc9113#0008",
+          "rfc9000#0041"
+        ],
+        "fusion": [
+          "rfc7301#0002",
+          "rfc7301#0005",
+          "rfc9001#0046",
+          "rfc7301#0001",
+          "rfc7301#0000"
+        ],
+        "hybrid": [
+          "rfc7301#0005",
+          "rfc7301#0002",
+          "rfc9001#0046",
+          "rfc7301#0000",
+          "rfc7301#0004"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How does a TLS client indicate the target server name using Server Name Indication (SNI)?",
+      "reference_answer": "To indicate the target server name, the client includes a \"server_name\" extension in its (extended) ClientHello. The extension_data carries a ServerNameList; for a DNS hostname the entry uses name_type \"host_name\" with a HostName holding the fully qualified domain name. This lets a server hosting multiple names select the correct certificate or virtual host.",
+      "relevant": [
+        "rfc6066#0005"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc8446#0059",
+          "rfc6066#0019",
+          "rfc6066#0005",
+          "rfc8446#0130",
+          "rfc9113#0077"
+        ],
+        "bm25": [
+          "rfc9113#0077",
+          "rfc9114#0010",
+          "rfc8446#0059",
+          "rfc1034#0024",
+          "rfc8446#0076"
+        ],
+        "fusion": [
+          "rfc8446#0059",
+          "rfc9113#0077",
+          "rfc6455#0023",
+          "rfc6066#0005",
+          "rfc6066#0004"
+        ],
+        "hybrid": [
+          "rfc9113#0077",
+          "rfc8446#0059",
+          "rfc6455#0023",
+          "rfc9114#0010",
+          "rfc9001#0015"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.25
+        },
+        "hybrid": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 0.6666666666666666
+      }
+    },
+    {
+      "question": "What information does the Subject field identify in an X.509 certificate?",
+      "reference_answer": "The Subject field identifies the entity associated with the public key stored in the certificate. Within the tbsCertificate it is the subject name bound to that public key, alongside the issuer name, a validity period, and other associated information.",
+      "relevant": [
+        "rfc5280#0022"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc5280#0029",
+          "rfc5280#0022",
+          "rfc5280#0021",
+          "rfc5280#0062",
+          "rfc5280#0008"
+        ],
+        "bm25": [
+          "rfc5280#0012",
+          "rfc5280#0022",
+          "rfc5280#0013",
+          "rfc5280#0033",
+          "rfc5280#0000"
+        ],
+        "fusion": [
+          "rfc5280#0022",
+          "rfc5280#0013",
+          "rfc5280#0033",
+          "rfc5280#0012",
+          "rfc5280#0031"
+        ],
+        "hybrid": [
+          "rfc5280#0022",
+          "rfc5280#0033",
+          "rfc5280#0021",
+          "rfc7517#0012",
+          "rfc5280#0013"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does an OCSP response tell a client about a certificate's status?",
+      "reference_answer": "An OCSP response conveys the status of the requested certificate as of the time in thisUpdate, optionally with a nextUpdate (and, for a revoked certificate, a revocationTime). If the responder is operational but cannot return a status, it instead returns an exception response such as \"tryLater\", \"sigRequired\" (the client must sign the request), or \"unauthorized\".",
+      "relevant": [
+        "rfc6960#0008"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6066#0016",
+          "rfc6960#0005",
+          "rfc8446#0069",
+          "rfc6960#0008",
+          "rfc6960#0009"
+        ],
+        "bm25": [
+          "rfc6960#0007",
+          "rfc6066#0015",
+          "rfc6960#0016",
+          "rfc6960#0023",
+          "rfc6960#0009"
+        ],
+        "fusion": [
+          "rfc6960#0005",
+          "rfc8446#0069",
+          "rfc6960#0016",
+          "rfc6960#0009",
+          "rfc6960#0008"
+        ],
+        "hybrid": [
+          "rfc6960#0008",
+          "rfc8446#0069",
+          "rfc6960#0005",
+          "rfc6960#0007",
+          "rfc6066#0016"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.25
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.2
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How does the ACME http-01 challenge validate control of a domain?",
+      "reference_answer": "In the http-01 challenge the client proves control of a domain by provisioning a file whose body is the challenge's key authorization at the path /.well-known/acme-challenge/{token} on the domain. The ACME server validates by building the URL \"http://{domain}/.well-known/acme-challenge/{token}\", fetching it with an HTTP GET to TCP port 80, and verifying that the response body matches the expected key authorization.",
+      "relevant": [
+        "rfc8555#0068"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc8555#0068",
+          "rfc8555#0083",
+          "rfc8555#0085",
+          "rfc8555#0084",
+          "rfc8555#0086"
+        ],
+        "bm25": [
+          "rfc8555#0032",
+          "rfc8555#0066",
+          "rfc8555#0057",
+          "rfc8555#0090",
+          "rfc8555#0068"
+        ],
+        "fusion": [
+          "rfc8555#0068",
+          "rfc8555#0066",
+          "rfc8555#0057",
+          "rfc8555#0083",
+          "rfc8555#0070"
+        ],
+        "hybrid": [
+          "rfc8555#0068",
+          "rfc8555#0069",
+          "rfc8555#0067",
+          "rfc8555#0066",
+          "rfc8555#0090"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.2
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does the invalid_grant error mean in OAuth 2.0?",
+      "reference_answer": "The invalid_grant error means the provided authorization grant (for example, an authorization code or resource owner credentials) or refresh token is invalid, expired, or revoked; does not match the redirection URI used in the authorization request; or was issued to another client.",
+      "relevant": [
+        "rfc6749#0043"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6749#0041",
+          "rfc6749#0044",
+          "rfc6749#0029",
+          "rfc6749#0036",
+          "rfc7636#0010"
+        ],
+        "bm25": [
+          "rfc7636#0010",
+          "rfc7636#0002",
+          "rfc6750#0001",
+          "rfc8628#0018",
+          "rfc6750#0014"
+        ],
+        "fusion": [
+          "rfc7636#0010",
+          "rfc7636#0009",
+          "rfc6750#0014",
+          "rfc6749#0043",
+          "rfc7636#0003"
+        ],
+        "hybrid": [
+          "rfc7636#0010",
+          "rfc8628#0012",
+          "rfc8628#0011",
+          "rfc6750#0014",
+          "rfc6749#0065"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.25
+        },
+        "hybrid": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 0.0
+      }
+    },
+    {
+      "question": "How does PKCE protect the OAuth 2.0 authorization code flow?",
+      "reference_answer": "PKCE (Proof Key for Code Exchange) protects the authorization code flow used by public clients against the authorization code interception attack. The client creates a secret code_verifier and sends its transformed value as the code_challenge in the authorization request; when redeeming the code at the token endpoint it presents the code_verifier, and the server recomputes and compares it against the earlier code_challenge, returning invalid_grant if they do not match. An attacker who intercepts only the authorization code cannot exchange it without the code_verifier.",
+      "relevant": [
+        "rfc7636#0002",
+        "rfc7636#0010"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7636#0009",
+          "rfc7636#0002",
+          "rfc7636#0005",
+          "rfc8628#0003",
+          "rfc7636#0000"
+        ],
+        "bm25": [
+          "rfc7636#0001",
+          "rfc7636#0009",
+          "rfc8628#0003",
+          "rfc7636#0010",
+          "rfc7636#0005"
+        ],
+        "fusion": [
+          "rfc7636#0009",
+          "rfc8628#0003",
+          "rfc7636#0005",
+          "rfc7636#0002",
+          "rfc7636#0000"
+        ],
+        "hybrid": [
+          "rfc7636#0002",
+          "rfc8628#0003",
+          "rfc6750#0004",
+          "rfc7636#0000",
+          "rfc6749#0007"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.5
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.25
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.25
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How is an OAuth 2.0 bearer token presented in an HTTP request?",
+      "reference_answer": "A client presents a bearer token to the resource server using one of three methods (and MUST use only one per request): in the Authorization request header with the \"Bearer\" scheme (Authorization: Bearer <token>), which is the recommended method; as a form-encoded body parameter named \"access_token\"; or as a URI query parameter named \"access_token\".",
+      "relevant": [
+        "rfc6750#0004"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc6750#0004",
+          "rfc6750#0002",
+          "rfc6749#0007",
+          "rfc6750#0000",
+          "rfc6750#0005"
+        ],
+        "bm25": [
+          "rfc6750#0001",
+          "rfc6750#0000",
+          "rfc6750#0009",
+          "rfc9068#0002",
+          "rfc6750#0002"
+        ],
+        "fusion": [
+          "rfc6750#0000",
+          "rfc6750#0004",
+          "rfc6750#0002",
+          "rfc6750#0009",
+          "rfc9068#0002"
+        ],
+        "hybrid": [
+          "rfc6750#0004",
+          "rfc6750#0000",
+          "rfc6750#0002",
+          "rfc6750#0005",
+          "rfc6749#0069"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How are credentials encoded in the HTTP Basic authentication scheme?",
+      "reference_answer": "The Basic authentication scheme transmits credentials as a user-id and password pair joined by a single colon (\"user-id:password\") and encoded with Base64, sent in the Authorization header (e.g., \"Authorization: Basic <base64>\"). Because the credentials are effectively cleartext, Basic is not secure unless used over a secure transport such as TLS.",
+      "relevant": [
+        "rfc7617#0004"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7617#0004",
+          "rfc7617#0005",
+          "rfc7617#0017",
+          "rfc9110#0213",
+          "rfc7617#0000"
+        ],
+        "bm25": [
+          "rfc7617#0004",
+          "rfc6749#0017",
+          "rfc7617#0000",
+          "rfc7617#0007",
+          "rfc9110#0213"
+        ],
+        "fusion": [
+          "rfc7617#0004",
+          "rfc7617#0005",
+          "rfc7617#0000",
+          "rfc9110#0213",
+          "rfc7617#0007"
+        ],
+        "hybrid": [
+          "rfc7617#0004",
+          "rfc9110#0213",
+          "rfc7617#0000",
+          "rfc7617#0005",
+          "rfc7617#0008"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is the purpose of the nonce in HTTP Digest access authentication?",
+      "reference_answer": "The server-specified nonce seeds the computation of the client's Digest response value and is the scheme's main defense against replay attacks. The server can make the nonce limited-use \u2014 bound to a particular client, resource, time window, or number of uses (e.g., by encoding a timestamp, client IP, resource ETag, and a private server key) \u2014 so that a captured response cannot be successfully replayed later.",
+      "relevant": [
+        "rfc7616#0028",
+        "rfc7616#0029"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7616#0029",
+          "rfc7616#0028",
+          "rfc7616#0032",
+          "rfc7616#0009",
+          "rfc7616#0006"
+        ],
+        "bm25": [
+          "rfc7616#0027",
+          "rfc7616#0007",
+          "rfc7616#0032",
+          "rfc7616#0028",
+          "rfc7616#0033"
+        ],
+        "fusion": [
+          "rfc7616#0028",
+          "rfc7616#0032",
+          "rfc7616#0007",
+          "rfc7616#0029",
+          "rfc7616#0027"
+        ],
+        "hybrid": [
+          "rfc7616#0028",
+          "rfc7616#0029",
+          "rfc7616#0007",
+          "rfc7616#0009",
+          "rfc7616#0032"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.25
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What are the registered claim names defined for a JSON Web Token (JWT)?",
+      "reference_answer": "RFC 7519 defines a set of registered claim names (all short, none mandatory to use): \"iss\" (issuer), \"sub\" (subject), \"aud\" (audience), \"exp\" (expiration time), \"nbf\" (not before), \"iat\" (issued at), and \"jti\" (JWT ID).",
+      "relevant": [
+        "rfc7519#0012"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7519#0012",
+          "rfc7519#0008",
+          "rfc7519#0006",
+          "rfc7519#0014",
+          "rfc9068#0006"
+        ],
+        "bm25": [
+          "rfc7519#0012",
+          "rfc7519#0014",
+          "rfc7519#0011",
+          "rfc7519#0006",
+          "rfc9068#0006"
+        ],
+        "fusion": [
+          "rfc7519#0012",
+          "rfc7519#0014",
+          "rfc7519#0006",
+          "rfc7519#0008",
+          "rfc7519#0011"
+        ],
+        "hybrid": [
+          "rfc7519#0012",
+          "rfc7519#0022",
+          "rfc7519#0008",
+          "rfc9068#0006",
+          "rfc7519#0006"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 0.0,
+        "hybrid": 0.5
+      }
+    },
+    {
+      "question": "How is a JWS Compact Serialization structured?",
+      "reference_answer": "The JWS Compact Serialization represents a JWS as three base64url-encoded parts joined by periods: BASE64URL(UTF8(JWS Protected Header)) || '.' || BASE64URL(JWS Payload) || '.' || BASE64URL(JWS Signature).",
+      "relevant": [
+        "rfc7515#0008"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7515#0023",
+          "rfc7515#0004",
+          "rfc7515#0019",
+          "rfc7516#0027",
+          "rfc7515#0002"
+        ],
+        "bm25": [
+          "rfc7515#0023",
+          "rfc7515#0007",
+          "rfc7515#0025",
+          "rfc7515#0019",
+          "rfc7515#0008"
+        ],
+        "fusion": [
+          "rfc7515#0023",
+          "rfc7515#0019",
+          "rfc7515#0004",
+          "rfc7515#0008",
+          "rfc7515#0025"
+        ],
+        "hybrid": [
+          "rfc7515#0008",
+          "rfc7515#0023",
+          "rfc7515#0019",
+          "rfc7515#0007",
+          "rfc7515#0025"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.2
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.25
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does the alg (algorithm) header parameter specify in a JWS?",
+      "reference_answer": "In a JWS, the \"alg\" (algorithm) Header Parameter identifies the cryptographic algorithm used to secure (sign or MAC) the JWS; the JWS Signature is not valid if the \"alg\" value is not a supported algorithm. Its value is a case-sensitive ASCII string, typically one registered in the IANA JSON Web Signature and Encryption Algorithms registry.",
+      "relevant": [
+        "rfc7515#0011"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7518#0012",
+          "rfc7515#0011",
+          "rfc7516#0016",
+          "rfc7518#0030",
+          "rfc7518#0023"
+        ],
+        "bm25": [
+          "rfc7516#0016",
+          "rfc7515#0011",
+          "rfc7515#0021",
+          "rfc7516#0032",
+          "rfc7515#0048"
+        ],
+        "fusion": [
+          "rfc7516#0016",
+          "rfc7515#0011",
+          "rfc7516#0032",
+          "rfc7515#0048",
+          "rfc7517#0011"
+        ],
+        "hybrid": [
+          "rfc7517#0011",
+          "rfc7516#0032",
+          "rfc7515#0011",
+          "rfc7518#0012",
+          "rfc7518#0015"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How does base64url encoding differ from standard base64 encoding?",
+      "reference_answer": "base64url uses the URL- and filename-safe alphabet from Section 5 of RFC 4648: its 62nd and 63rd characters are '-' and '_' instead of standard base64's '+' and '/'. As used by JOSE it also omits the trailing '=' padding and contains no line breaks or whitespace, so the encoded value is safe to place in URLs and filenames.",
+      "relevant": [
+        "rfc7515#0006",
+        "rfc7515#0081"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc4648#0008",
+          "rfc7515#0081",
+          "rfc7516#0061",
+          "rfc4648#0007",
+          "rfc7517#0083"
+        ],
+        "bm25": [
+          "rfc7515#0081",
+          "rfc7636#0016",
+          "rfc4648#0007",
+          "rfc7515#0006",
+          "rfc7636#0007"
+        ],
+        "fusion": [
+          "rfc7515#0081",
+          "rfc4648#0007",
+          "rfc7516#0061",
+          "rfc7636#0016",
+          "rfc7516#0070"
+        ],
+        "hybrid": [
+          "rfc7515#0081",
+          "rfc7515#0006",
+          "rfc4648#0002",
+          "rfc4648#0007",
+          "rfc7516#0061"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.5
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What structured data types does JSON define per RFC 8259?",
+      "reference_answer": "Per RFC 8259, JSON can represent four primitive types \u2014 strings, numbers, booleans, and null \u2014 and two structured types: objects (an unordered collection of name/value pairs, where each name is a string) and arrays (an ordered sequence of values).",
+      "relevant": [
+        "rfc8259#0004"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc8259#0000",
+          "rfc7518#0010",
+          "rfc7517#0006",
+          "rfc8259#0015",
+          "rfc7517#0000"
+        ],
+        "bm25": [
+          "rfc8259#0012",
+          "rfc8259#0000",
+          "rfc8259#0011",
+          "rfc8259#0004",
+          "rfc8555#0095"
+        ],
+        "fusion": [
+          "rfc8259#0000",
+          "rfc8259#0004",
+          "rfc8259#0012",
+          "rfc7518#0010",
+          "rfc7519#0028"
+        ],
+        "hybrid": [
+          "rfc8259#0012",
+          "rfc8259#0004",
+          "rfc8259#0000",
+          "rfc7517#0006",
+          "rfc7518#0010"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.25
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What is the format of an Internet date-time timestamp per RFC 3339?",
+      "reference_answer": "RFC 3339 defines an Internet date/time timestamp as date-time = full-date \"T\" full-time, where full-date is date-fullyear \"-\" date-month \"-\" date-mday (a four-digit year with two-digit month and day) and full-time is a partial-time (hh:mm:ss with an optional fractional second) followed by a time-offset that is either \"Z\" (UTC) or \u00b1hh:mm. For example: 1985-04-12T23:20:50.52Z.",
+      "relevant": [
+        "rfc3339#0007"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc3339#0000",
+          "rfc9110#0047",
+          "rfc3339#0003",
+          "rfc9110#0048",
+          "rfc3339#0001"
+        ],
+        "bm25": [
+          "rfc3339#0007",
+          "rfc3339#0002",
+          "rfc3339#0000",
+          "rfc9110#0048",
+          "rfc1035#0046"
+        ],
+        "fusion": [
+          "rfc3339#0000",
+          "rfc9110#0048",
+          "rfc3339#0007",
+          "rfc9110#0047",
+          "rfc3339#0003"
+        ],
+        "hybrid": [
+          "rfc8555#0092",
+          "rfc3339#0003",
+          "rfc9110#0048",
+          "rfc3339#0002",
+          "rfc3339#0000"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.3333333333333333
+        },
+        "hybrid": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "What does an A resource record provide in the DNS?",
+      "reference_answer": "An A resource record provides the 32-bit IPv4 address of a host: its RDATA is a single 32-bit Internet address. A host with multiple addresses has multiple A records, and A records cause no additional section processing.",
+      "relevant": [
+        "rfc1035#0021"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc1034#0005",
+          "rfc1034#0011",
+          "rfc8555#0069",
+          "rfc1034#0004",
+          "rfc8484#0003"
+        ],
+        "bm25": [
+          "rfc8446#0157",
+          "rfc8555#0069",
+          "rfc8555#0089",
+          "rfc1034#0015",
+          "rfc9110#0058"
+        ],
+        "fusion": [
+          "rfc8555#0069",
+          "rfc8484#0016",
+          "rfc1034#0011",
+          "rfc8446#0081",
+          "rfc3986#0028"
+        ],
+        "hybrid": [
+          "rfc1034#0005",
+          "rfc8555#0069",
+          "rfc8555#0070",
+          "rfc1035#0031",
+          "rfc8484#0016"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "hybrid": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        }
+      },
+      "context_recall": {
+        "fusion": 0.0,
+        "hybrid": 0.0
+      }
+    },
+    {
+      "question": "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?",
+      "reference_answer": "The Name Error response code (RCODE 3, commonly called NXDOMAIN) indicates that the domain name referenced in the query does not exist. A resolver that receives such a name-error indication may cache the negative result for the accompanying TTL and, during that period, assume the name does not exist without re-querying authoritative servers.",
+      "relevant": [
+        "rfc1034#0028"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc8484#0007",
+          "rfc1035#0029",
+          "rfc8484#0008",
+          "rfc8484#0006",
+          "rfc1035#0009"
+        ],
+        "bm25": [
+          "rfc8484#0007",
+          "rfc8484#0018",
+          "rfc1034#0024",
+          "rfc8555#0051",
+          "rfc1034#0047"
+        ],
+        "fusion": [
+          "rfc8484#0007",
+          "rfc3986#0028",
+          "rfc1035#0029",
+          "rfc1034#0038",
+          "rfc1034#0047"
+        ],
+        "hybrid": [
+          "rfc8484#0007",
+          "rfc1034#0028",
+          "rfc8484#0018",
+          "rfc1034#0023",
+          "rfc8484#0008"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "bm25": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "fusion": {
+          "hit": 0.0,
+          "recall": 0.0,
+          "rr": 0.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    },
+    {
+      "question": "How are DNS queries carried in DNS over HTTPS (DoH)?",
+      "reference_answer": "In DNS over HTTPS (DoH) each DNS query/response pair is mapped onto a single HTTP exchange carried over an https URI (thus protected by TLS). The DNS message uses the \"application/dns-message\" media type and can be sent either with an HTTP POST (the DNS message in the request body) or an HTTP GET (the base64url-encoded DNS message supplied in the \"dns\" query parameter).",
+      "relevant": [
+        "rfc8484#0003",
+        "rfc8484#0007"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc8484#0003",
+          "rfc8484#0016",
+          "rfc8484#0018",
+          "rfc8484#0000",
+          "rfc8484#0015"
+        ],
+        "bm25": [
+          "rfc8484#0018",
+          "rfc8484#0023",
+          "rfc8484#0003",
+          "rfc8484#0000",
+          "rfc8484#0014"
+        ],
+        "fusion": [
+          "rfc8484#0003",
+          "rfc8484#0018",
+          "rfc8484#0016",
+          "rfc8484#0000",
+          "rfc8484#0023"
+        ],
+        "hybrid": [
+          "rfc8484#0003",
+          "rfc8484#0014",
+          "rfc8484#0000",
+          "rfc8484#0016",
+          "rfc8484#0018"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 0.3333333333333333
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 0.5,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 0.5,
+        "hybrid": 0.5
+      }
+    },
+    {
+      "question": "What transport port does DNS over TLS (DoT) use by default?",
+      "reference_answer": "DNS over TLS uses TCP port 853 by default: a client wanting DNS-over-TLS privacy MUST open a TCP connection to port 853 (unless it has agreed another non-53 port with the server) and begin with a TLS handshake. Port 853 MUST NOT be used to carry cleartext DNS.",
+      "relevant": [
+        "rfc7858#0006"
+      ],
+      "top_k": {
+        "dense": [
+          "rfc7858#0013",
+          "rfc7858#0006",
+          "rfc7858#0000",
+          "rfc7858#0005",
+          "rfc7858#0004"
+        ],
+        "bm25": [
+          "rfc7858#0006",
+          "rfc7858#0004",
+          "rfc7858#0013",
+          "rfc7858#0005",
+          "rfc7858#0014"
+        ],
+        "fusion": [
+          "rfc7858#0006",
+          "rfc7858#0013",
+          "rfc7858#0004",
+          "rfc7858#0005",
+          "rfc7858#0000"
+        ],
+        "hybrid": [
+          "rfc7858#0006",
+          "rfc7858#0005",
+          "rfc7858#0013",
+          "rfc7858#0004",
+          "rfc7858#0014"
+        ]
+      },
+      "metrics": {
+        "dense": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 0.5
+        },
+        "bm25": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "fusion": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        },
+        "hybrid": {
+          "hit": 1.0,
+          "recall": 1.0,
+          "rr": 1.0
+        }
+      },
+      "context_recall": {
+        "fusion": 1.0,
+        "hybrid": 1.0
+      }
+    }
+  ]
+}
