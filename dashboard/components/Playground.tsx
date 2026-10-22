@@ -10,13 +10,23 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 type Phase = "idle" | "streaming" | "done" | "error";
 type Chunk = { chunk_id: string; rerank_score?: number | null };
+// The `done` event's Answer, the parts this view shows.
+type Guardrails = {
+  context_redactions: Record<string, number>;
+  removed: Record<string, number>;
+  unresolved_citations: string[];
+  uncited: boolean;
+};
+type Done = { latency_ms: Record<string, number>; guardrails?: Guardrails | null };
 
 // Streams from the real Sentinel API: POST /token (demo creds) -> JWT, then POST /query and parse
-// the SSE frames (`retrieved` -> chunks, `token` -> text, `done`). No API configured => idle state.
+// the SSE frames (`retrieved` -> chunks, `token` -> text, `done` -> latency + guardrail report).
+// No API configured => idle state.
 async function streamAnswer(
   question: string,
   onChunks: (c: Chunk[]) => void,
   onToken: (t: string) => void,
+  onDone: (d: Done) => void,
 ): Promise<void> {
   const tokenRes = await fetch(`${API}/token`, {
     method: "POST",
@@ -36,27 +46,39 @@ async function streamAnswer(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
-  let event = "";
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
+    // SSE lines may end in CRLF, LF or CR — sse-starlette sends CRLF. Normalise to LF, holding
+    // back a trailing CR whose LF may arrive in the next read.
+    const held = buf.endsWith("\r") ? "\r" : "";
+    buf = buf.slice(0, buf.length - held.length).replace(/\r\n?/g, "\n") + held;
     const frames = buf.split("\n\n");
     buf = frames.pop() ?? "";
     for (const frame of frames) {
+      let event = "message";
+      const data: string[] = [];
       for (const line of frame.split("\n")) {
         if (line.startsWith("event:")) event = line.slice(6).trim();
-        else if (line.startsWith("data:")) {
-          const data = line.slice(5).trim();
-          if (event === "retrieved") {
-            try {
-              onChunks(JSON.parse(data));
-            } catch {
-              /* ignore malformed frame */
-            }
-          } else if (event === "token") {
-            onToken(data);
-          }
+        // Per the SSE spec, strip ONE leading space after "data:". Trimming more would eat the
+        // spaces between streamed tokens and glue words together.
+        else if (line.startsWith("data:")) data.push(line.slice(line.startsWith("data: ") ? 6 : 5));
+      }
+      const payload = data.join("\n");
+      if (event === "retrieved") {
+        try {
+          onChunks(JSON.parse(payload));
+        } catch {
+          /* ignore malformed frame */
+        }
+      } else if (event === "token") {
+        onToken(payload);
+      } else if (event === "done") {
+        try {
+          onDone(JSON.parse(payload));
+        } catch {
+          /* ignore malformed frame */
         }
       }
     }
@@ -69,6 +91,7 @@ export function Playground({ latest }: { latest: RunResult }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [answer, setAnswer] = useState("");
   const [chunks, setChunks] = useState<Chunk[]>([]);
+  const [done, setDone] = useState<Done | null>(null);
   const [error, setError] = useState("");
 
   async function ask(q: string) {
@@ -81,8 +104,9 @@ export function Playground({ latest }: { latest: RunResult }) {
     setPhase("streaming");
     setAnswer("");
     setChunks([]);
+    setDone(null);
     try {
-      await streamAnswer(q, setChunks, (t) => setAnswer((a) => a + t));
+      await streamAnswer(q, setChunks, (t) => setAnswer((a) => a + t), setDone);
       setPhase("done");
     } catch (e) {
       setError(String(e));
@@ -165,6 +189,7 @@ export function Playground({ latest }: { latest: RunResult }) {
               {answer}
               {phase === "streaming" && <span className="text-accent">▍</span>}
             </div>
+            {done && <AnswerFooter done={done} />}
           </Card>
           <Card className="overflow-hidden">
             <div className="border-b border-border-hair px-4 py-3 text-[12.5px] font-semibold">
@@ -186,6 +211,32 @@ export function Playground({ latest }: { latest: RunResult }) {
           </Card>
         </div>
       )}
+    </div>
+  );
+}
+
+function AnswerFooter({ done }: { done: Done }) {
+  const g = done.guardrails;
+  const notes: string[] = [];
+  if (g) {
+    for (const [k, n] of Object.entries(g.context_redactions)) notes.push(`${n} ${k} redacted from context`);
+    for (const [k, n] of Object.entries(g.removed))
+      notes.push(k === "link" ? `${n} untrusted link removed` : k === "image" ? `${n} image removed` : `${n} ${k} redacted`);
+    if (g.unresolved_citations.length) notes.push(`unresolved citation: ${g.unresolved_citations.join(", ")}`);
+    if (g.uncited) notes.push("no valid citation");
+  }
+  return (
+    <div className="border-t border-border-hair px-[18px] py-3">
+      <div className="flex flex-wrap gap-1.5">
+        {Object.entries(done.latency_ms).map(([stage, ms]) => (
+          <span key={stage} className="rounded-[5px] bg-chip px-1.5 py-0.5 font-mono text-[10.5px] text-text-3">
+            {stage} {Math.round(ms)} ms
+          </span>
+        ))}
+      </div>
+      <div className={`mt-2 text-[11.5px] ${notes.length ? "text-warn-fg" : "text-text-4"}`}>
+        guardrails: {notes.length ? notes.join(" · ") : "no changes"}
+      </div>
     </div>
   );
 }

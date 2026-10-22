@@ -73,7 +73,7 @@ export default function Page() {
               {view === "drill" && <Drilldown latest={data.latest} />}
               {view === "attr" && <Attribution latest={data.latest} />}
               {view === "query" && <Playground latest={data.latest} />}
-              {view === "guard" && <Guardrails />}
+              {view === "guard" && <Guardrails report={data.guardrails} />}
             </>
           )}
         </div>

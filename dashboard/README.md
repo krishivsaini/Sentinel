@@ -18,8 +18,8 @@ npm run dev           # http://localhost:3000
 | **Eval Runs** | every run keyed by git SHA, expandable for attribution + coverage | `history.json` |
 | **Drill-down** | per-question scores; expand for the reranked chunks with **all four retrieval scores** (dense / sparse / RRF / rerank) and the grounded answer, with cited chunks highlighted | `latest.json` |
 | **Failure attribution** | retrieval-failure vs generation-failure split and the offending questions — the README screenshot | `latest.json` |
-| **Query playground** | live streaming answer from the running API (`/token` → JWT → `/query` SSE) | the API, optional |
-| **Guardrails** | **roadmap only** — adversarial safety is not implemented, so this page deliberately shows no metrics | — |
+| **Query playground** | live streaming answer from the running API (`/token` → JWT → `/query` SSE), with per-stage latency and what the guardrails changed | the API, optional |
+| **Guardrails** | attack success per defence configuration (mean and range over runs, dev vs held-out), injection-detector recall and false positives, PII precision / recall | `guardrails.json` |
 
 Views are hash-routed (`#drill`, `#attr`, …), so any view is linkable.
 
@@ -50,8 +50,9 @@ Without it the playground shows a "no API configured" state; the four data views
   the gate line) so colour can't contradict the attribution verdict.
 - The latency strip is the measured per-stage p95 from `latency_report.json` — per stage, never
   blended (NFR-3).
-- Guardrails is a labelled roadmap, not a metrics page, because there is no implementation
-  behind it yet.
+- Guardrails renders only `guardrails.json` (from `python -m sentinel.eval.run_guardrails`),
+  including its dev / held-out split and caveats; without that file the page says so and shows
+  nothing.
 
 Tailwind core utilities only; no component libraries. Colours are CSS variables
 (`app/globals.css`) so light/dark themes swap the whole palette.

@@ -73,10 +73,61 @@ export function stageP95(report: LatencyReport | null, stage: string): number | 
 }
 
 
+// sentinel/eval/run_guardrails.py -> data/guardrails/report.json (v2).
+export type Rate = { flagged: number; of: number; rate: number | null };
+
+export type AttackBlock = {
+  attacks: number;
+  exposed: number;
+  succeeded: number; // mean over repeats
+  succeeded_range: [number, number];
+  success_rate: number | null;
+  success_rate_when_exposed: number | null;
+};
+
+export type AttackConfigSummary = {
+  repeats: number;
+  all: AttackBlock;
+  dev: AttackBlock;
+  heldout: AttackBlock;
+  by_attack: Record<string, { succeeded: number; of: number }>;
+  succeeded_targets: Record<string, number>;
+};
+
+export type PiiKind = { tp: number; fp: number; fn: number; precision: number | null; recall: number | null };
+
+export type PiiSource = {
+  precision: number | null;
+  recall: number | null;
+  tp: number;
+  fp: number;
+  fn: number;
+  per_kind: Record<string, PiiKind>;
+  misses: { kind: string; text: string }[];
+  false_alarms: { kind: string; text: string }[];
+};
+
+export type GuardrailsReport = {
+  generated_utc: string;
+  generation_model: string;
+  threshold: number;
+  injection: {
+    detectors: {
+      detectors: string[];
+      recall: Record<"dev" | "heldout", Record<string, Rate> & { missed: string[] }>;
+      false_positives: Record<string, Rate> & { flagged_chunks: string[]; unscored: number };
+    };
+    attacks: { summary: Record<string, AttackConfigSummary> };
+  };
+  pii: Record<"corpus" | "synthetic", PiiSource>;
+  scope: { default_scope_leaks: number };
+};
+
 export type DashboardData = {
   latest: RunResult;
   history: History;
   latency: LatencyReport | null;
+  guardrails: GuardrailsReport | null;
 };
 
 async function getJSON<T>(path: string): Promise<T> {
@@ -96,5 +147,12 @@ export async function loadDashboardData(): Promise<DashboardData> {
   } catch {
     latency = null;
   }
-  return { latest, history, latency };
+  // Optional: present once `python -m sentinel.eval.run_guardrails` has run and been synced.
+  let guardrails: GuardrailsReport | null = null;
+  try {
+    guardrails = await getJSON<GuardrailsReport>("/data/guardrails.json");
+  } catch {
+    guardrails = null;
+  }
+  return { latest, history, latency, guardrails };
 }
