@@ -98,13 +98,14 @@ class Settings(BaseSettings):
 
     # ---------------------------------------------------------------- Eval + gate (§12/§13)
     faithfulness_threshold: float = 0.80   # CI gate fails below this
-    # Representative subset run in CI (faithfulness only — see run_eval.run). Kept small on
-    # purpose: the free-tier judge is capped at 8K tokens/min, so a big subset throttles into
-    # per-item timeouts. With all three metrics even 10 items overran a 45-min job.
-    ci_eval_subset_size: int = 10
+    # Representative subset run in CI (faithfulness only — see run_eval.run): every other item of
+    # the 48. At 10 items the mean moved ~0.08 between runs of the same code (0.967 vs 0.891), too
+    # noisy for a 0.80 line; 24 halves the standard error. Needs Groq's paid Developer tier
+    # (250K tokens/min) — the free tier's 200K tokens/day covers about two 10-item runs.
+    ci_eval_subset_size: int = 24
     # A gate needs enough data to mean something: if fewer than this many items actually score
     # (throttle/skip), the gate fails as "insufficient coverage" rather than passing on thin data.
-    ci_min_items: int = 6
+    ci_min_items: int = 18
     # A per-item score below this flags the item for failure attribution (§12).
     low_score_threshold: float = 0.60
     # context_recall below this => classify as a retrieval failure (else generation failure).
@@ -133,11 +134,10 @@ class Settings(BaseSettings):
     # timeout and once stalled a run indefinitely; this turns a hang into a skip (resume retries
     # it). Generous vs. an observed ~2-3 min throttled item, but far below an indefinite hang.
     eval_item_timeout: float = 600.0
-    # Proactive pacing between eval items. Both generation (~4K tokens/call, 12K TPM) and the
-    # judge (~6 calls/item, 30K TPM) are token-heavy on the free tier; a real gap keeps a
-    # sequential run under those TPM limits so backoff only has to absorb true bursts (§12).
-    # 25s keeps generation (llama-3.3-70b, 12K TPM) comfortably under its per-minute window.
-    eval_item_pause_seconds: float = 25.0
+    # Proactive pacing between eval items. None is needed on Groq's paid tier (250K tokens/min);
+    # on the free tier (8K tokens/min) set SENTINEL_EVAL_ITEM_PAUSE_SECONDS=25 so backoff only has
+    # to absorb true bursts rather than every item.
+    eval_item_pause_seconds: float = 0.0
 
 
 settings = Settings()

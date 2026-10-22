@@ -7,8 +7,9 @@
 # shows directly in the PR's checks (FR-CI3). The full eval runs locally/on-demand.
 #
 # Requires the GROQ_API_KEY repository secret (Settings > Secrets and variables > Actions), FR-CI4.
-# The free-tier judge is capped at 8K tokens/min, so CI scores faithfulness only (the gate metric;
-# relevance + recall would triple the token spend) over a deliberately small subset.
+# CI scores faithfulness only (the gate metric; relevance + recall would triple the token spend)
+# over half the ground truth. The repo's key is on Groq's paid tier; a free-tier key works but is
+# capped at about two runs a day (200K tokens/day) and should use a smaller subset.
 
 name: eval-gate
 
@@ -27,7 +28,7 @@ concurrency:
 jobs:
   faithfulness-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
