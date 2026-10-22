@@ -48,7 +48,11 @@ optional. Every unit test still passes. The faithfulness gate does not:
 | `main` | **0.967** | 24 / 24 | ✅ [pass](https://github.com/krishivsaini/Sentinel/actions/runs/39724557013) |
 | PR #2 — loosened grounding prompt | **0.746** | 24 / 24 | ❌ [fail, merge blocked](https://github.com/krishivsaini/Sentinel/actions/runs/39724569826) |
 
-CI scores faithfulness on every other ground-truth question (24 of 48) and takes about 15 minutes.
+| `main` — gate passes | PR #2 — gate blocks the merge |
+|---|---|
+| ![CI faithfulness gate passing on main: mean faithfulness 0.967, 24 of 24 items scored](docs/img/ci-gate-pass.png) | ![CI faithfulness gate failing on PR #2: mean faithfulness 0.746 below the 0.80 gate, 24 of 24 items scored](docs/img/ci-gate-fail.png) |
+
+CI scores faithfulness on every other ground-truth question (24 of 48); a run takes 15–17 minutes.
 
 ### Full evaluation — all 48 ground-truth questions
 

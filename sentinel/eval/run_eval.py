@@ -502,8 +502,8 @@ def _ci_gate(result: EvalResult) -> bool:
             f"(min {settings.ci_min_items}) |",
             "",
             "_Answer relevance, context recall and failure attribution are not scored in CI —"
-            " the gate reads faithfulness only, and the free-tier judge's token budget can't"
-            " cover all three per PR. The full eval runs locally and feeds the dashboard._",
+            " the gate reads faithfulness only, and scoring all three would triple the judge's"
+            " token spend per PR. The full eval runs locally and feeds the dashboard._",
             "",
             f"_judge `{settings.judge_model}` · generation `{settings.generation_model}` · "
             f"git `{result.git_sha}`_",
