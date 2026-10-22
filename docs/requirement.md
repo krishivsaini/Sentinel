@@ -197,7 +197,11 @@ Mirrors build plan §16. v1 is **done** only when all boxes below pass.
 - No cost-optimization layer (semantic caching, model routing) — cost is *tracked*, not optimized.
 - No fancy frontend — dense, functional, Tailwind core only.
 
-### 7.2 v2 — Security Guardrails (do NOT start until all §6 boxes pass)
+### 7.2 v2 — Security Guardrails
+
+> **Status: implemented.** Each requirement below is built and measured — see the README's
+> "Do the guardrails hold?" results, `sentinel/guardrails/`, `sentinel/eval/run_guardrails.py`,
+> and `data/guardrails/report.json`.
 Adds ~3–4 days. Each capability MUST be **measured**, not merely present, and joins the existing eval pipeline + CI gate:
 - **v2-R1 Prompt-injection defense** — detect/neutralize instructions embedded in *retrieved documents*; add adversarial docs + questions; measure injection-success rate before/after.
 - **v2-R2 PII detection + redaction** — detect and redact PII in retrieved context and/or answers; measure precision/recall on a labeled subset.

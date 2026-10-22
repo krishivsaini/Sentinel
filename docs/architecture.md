@@ -186,7 +186,11 @@ Local / clean clone                         Cloud
 
 ---
 
-## 8. v2 Architecture Extension — Security Guardrails (post-v1)
+## 8. v2 Architecture Extension — Security Guardrails
+
+> **Implemented** — the README's "Guardrails" section describes the built design and its
+> measurements. One change from the sketch below: injection screening runs at index build
+> (flagged chunks are quarantined and never retrieved) rather than as a query-time stage.
 
 Additive, not a rewrite. Guardrails insert as pipeline stages and extend eval + CI + dashboard:
 - **Retrieved-context injection defense** — a filtering/neutralization stage between retrieval and generation; poisoned chunks are treated as data, never instructions.

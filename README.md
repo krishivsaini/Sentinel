@@ -6,10 +6,12 @@
 > streaming, JWT auth, and rate limiting. Every pull request runs a Ragas evaluation over a
 > hand-built ground-truth set; merges are **blocked when faithfulness regresses below
 > threshold**. The dashboard attributes every low-scoring answer to either a retrieval failure
-> or a generation failure. **Security guardrails** — prompt-injection defence, PII redaction,
-> and citation validation, enforced as a second CI gate — are **in progress**.
+> or a generation failure. **Security guardrails** — layered prompt-injection defence, PII
+> redaction, output validation and scoped retrieval — are measured on labelled adversarial data
+> and enforced as a **second CI gate**: a merge is also blocked if injected instructions start
+> getting through.
 >
-> [Results →](#results) · [Architecture →](docs/architecture.md) · [Eval gate →](.github/workflows/eval-gate.yml) · [Dashboard →](dashboard/) · [Judge calibration →](data/ground_truth_audit.md) · [Guardrails roadmap →](#roadmap)
+> [Results →](#results) · [Guardrails →](#10--guardrails--sentinelguardrails) · [Architecture →](docs/architecture.md) · [CI gates →](.github/workflows/eval-gate.yml) · [Dashboard →](dashboard/) · [Judge calibration →](data/ground_truth_audit.md)
 
 ---
 
@@ -30,6 +32,10 @@ Sentinel treats answer quality as a **tested property of the codebase**, not a v
   problem). Those need completely different fixes, and most RAG setups can't tell them apart.
 - The judge that does the scoring is itself **checked against human judgment**, because an
   automated grader nobody has validated is just a number generator.
+- A retrieval system also **reads documents it doesn't control**. A poisoned passage can talk to
+  the model directly — "ignore your instructions", a forged system message, a link to push. The
+  defences against that are measured against labelled attacks the same way answer quality is,
+  and gated in CI the same way.
 
 ---
 
@@ -102,6 +108,48 @@ judge score hidden while labelling, to rule out anchoring:
 On the same blind set, the identical model served by NVIDIA scored r = +0.69, and OpenAI's
 `gpt-6-luna` r ≈ +0.50 — it scored cleanly grounded answers as hallucinations. Details and
 caveats are in [`data/ground_truth_audit.md`](data/ground_truth_audit.md).
+
+### Do the guardrails hold?
+
+40 hand-written prompt-injection attacks — poisoned RFC-style passages that tell the model to emit
+a canary, push a phishing link, adopt a persona, refuse, or repeat a fake errata — each with a
+question that retrieves its passage. 24 are the **dev** set; the other 16 use attack styles written
+**after** the screening policy and prompt hardening were frozen (non-English, base64, JSON fields,
+zero-width obfuscation, fake log lines, normative "agents MUST" language…), so they estimate how
+the defences generalise. Every configuration ran 3 times
+([`sentinel/eval/run_guardrails.py`](sentinel/eval/run_guardrails.py),
+[`data/guardrails/report.json`](data/guardrails/report.json)):
+
+| Defences | Attacks that succeeded (mean of 3) | Dev | Held-out |
+|---|---|---|---|
+| None | 12.0 / 40 — 30% | 8.3 / 24 | 3.7 / 16 |
+| Prompt hardening only | 4.0 / 40 — 10% | 3.0 / 24 | 1.0 / 16 |
+| Output guard only | 9.0 / 40 — 22.5% | 5.7 / 24 | 3.3 / 16 |
+| Hardening + output guard (*what's left if screening misses*) | 5.0 / 40 — 12.5% | 3.0 / 24 | 2.0 / 16 |
+| Index-time screening only | 0 / 40 | 0 | 0 |
+| **All defences (what ships)** | **0 / 40 in every run** | **0** | **0** |
+
+| Screening detector | Dev attacks caught | Held-out caught | Real RFC chunks flagged |
+|---|---|---|---|
+| Llama Prompt Guard 2 (86M) | 8 / 24 | 1 / 16 | 1 / 2,888 |
+| gpt-oss-safeguard-20b + written policy | 22 / 24 | 15 / 16 | 0 / 2,888 |
+| **Either (the quarantine rule)** | **22 / 24** | **15 / 16** | **1 / 2,888** |
+
+| | Precision | Recall |
+|---|---|---|
+| PII — real corpus (259 labelled spans in author contact blocks) | 0.80 | 1.00 |
+| PII — synthetic passages (cards, credentials, hard negatives) | 1.00 | 0.94 |
+
+**Scope:** across every attack question, **0** poisoned chunks reached a caller with the default
+scope. **Answer quality with every guardrail on:** faithfulness **0.941** on the CI subset (24 / 24);
+unguarded runs on the same 24 questions scored 0.934 and 0.967.
+
+What the numbers say, plainly: index-time screening does almost all of the work. Prompt hardening
+cuts the success rate by two thirds but cannot be relied on alone — forged system messages still
+get through it with this 20B generator. The output guard only matters for link-shaped payloads.
+All 3 attacks that evaded screening also failed against the model. The PII precision of 0.80 is
+deliberate over-redaction: IETF role addresses (`iesg@ietf.org`) are indistinguishable from
+personal ones by pattern, so they are redacted too.
 
 ### Latency, per stage
 
@@ -296,19 +344,21 @@ Two findings from doing this properly, both documented in
   stored inputs through both hosts. So the judge's provider is pinned, and any swap requires
   re-calibration.
 
-### 8 · The CI gate — [`.github/workflows/eval-gate.yml`](.github/workflows/eval-gate.yml)
+### 8 · The CI gates — [`.github/workflows/eval-gate.yml`](.github/workflows/eval-gate.yml)
 
-On every pull request to `main`:
+On every pull request to `main`, one job restores both indexes from cache (or builds them from
+the committed corpus when the corpus, chunker, config, adversarial corpus or screening policy has
+changed), and three checks run against them:
 
-1. Install dependencies with `uv`.
-2. Restore the indexes from cache, or build them from the committed corpus when the corpus,
-   chunker, or config has changed.
-3. Score **faithfulness** on every other ground-truth question (24 of 48). Answer relevance and
-   context recall are left to the full local eval: they would triple the judge's token spend
-   per PR without changing the gate's verdict.
-4. **Fail the check** if mean faithfulness is below 0.80 — **or** if fewer than 18 items scored
-   (a coverage floor, so a run crippled by rate limits can't pass on thin data).
-5. Write a metric summary to the job summary, visible directly in the PR's checks.
+| Check | Fails when |
+|---|---|
+| **tests** | any test in the suite fails |
+| **faithfulness-gate** | mean faithfulness over every other ground-truth question (24 of 48), through the full guarded pipeline, is below **0.80** — or fewer than 18 items scored (a coverage floor, so a run crippled by rate limits can't pass on thin data) |
+| **injection-gate** | more than **5%** of the 40 adversarial attacks succeed with every defence on |
+
+Both gates write a metric summary into the PR's checks. Answer relevance and context recall are
+left to the full local eval: they would triple the judge's token spend per PR without changing
+the gate's verdict.
 
 The LLM key is a repository secret, on Groq's paid tier; the free tier's 200K tokens/day covers
 only about two gate runs. [PR #2](https://github.com/krishivsaini/Sentinel/pull/2) (branch
@@ -327,13 +377,64 @@ LLM calls.
 | **Eval Runs** | Every run keyed by git SHA, expandable for attribution and coverage |
 | **Drill-down** | Each question's scores; expand to see the reranked passages with all four retrieval scores, and the answer with cited passages highlighted |
 | **Failure Attribution** | Retrieval vs. generation failures, with the offending questions |
-| **Query Playground** | Live streaming answers from the running API |
-| **Guardrails** | Roadmap only — see below |
+| **Query Playground** | Live streaming answers from the running API, with per-stage latency and what the guardrails changed |
+| **Guardrails** | Attack success per defence configuration, detector recall and false positives, PII precision / recall |
 
 Honesty is built into the UI: a regression never renders green, score colours can't contradict
 the attribution verdict, the latency card **marks itself stale** if it was measured on a
-different model than the current runs use, and the Guardrails page deliberately shows **no
-metrics** because nothing is implemented behind it yet. See [`dashboard/README.md`](dashboard/README.md).
+different model than the current runs use, and the Guardrails page renders only the exported
+guardrail report — with its dev / held-out split and caveats — or nothing at all. See
+[`dashboard/README.md`](dashboard/README.md).
+
+### 10 · Guardrails — [`sentinel/guardrails/`](sentinel/guardrails/)
+
+Retrieval hands the model text it didn't write, so each guardrail sits where its threat enters:
+
+```mermaid
+flowchart LR
+    I["Index build"] --> SC["Injection screening<br/>Prompt Guard 2 + policy model<br/>flagged → quarantined"]
+    SC --> IDX[("Index")]
+    Q["Question + JWT scopes"] --> R["Retrieval<br/>scope + quarantine filters<br/>inside both searches"]
+    IDX --> R
+    R --> P["PII redaction<br/>of passages"]
+    P --> G["Generation<br/>passages fenced as<br/>untrusted data"]
+    G --> O["Output guard<br/>links · images · PII<br/>citation checks"]
+    O --> A["Answer (streamed)"]
+```
+
+- **Injection screening at index build** ([`injection.py`](sentinel/guardrails/injection.py)).
+  Every chunk is classified by Llama Prompt Guard 2 and by gpt-oss-safeguard-20b applying a
+  written policy; if either flags it, the chunk is quarantined — kept for audit, never retrieved.
+  Doing it at build time costs the query path nothing, and because the corpus is static the
+  verdicts are cached and committed: rebuilding an unchanged corpus makes no API calls. On the
+  real corpus Prompt Guard adds no catches and the one false positive (TCP's state-machine text,
+  full of "return 'error: …'" imperatives); it stays because the policy model is itself an LLM
+  reading attacker-controlled text, and a small dedicated classifier is far harder to steer.
+- **Prompt hardening** ([`generate.py`](sentinel/generate.py)). Passages are fenced with markers
+  carrying a random per-request tag — so a passage can't forge "end of context" — the model is
+  told nothing inside a fence is an instruction, and the rule is repeated after the passages,
+  next to the question. That repetition took hardening-only success from 7.0 to 4.0 of 40;
+  datamarking the passage text on top added nothing, so it isn't used.
+- **PII redaction** ([`pii.py`](sentinel/guardrails/pii.py)) — emails (except RFC 2606
+  documentation domains), phone numbers, Luhn-valid card numbers, and provider credentials — on
+  passages before generation, and again on the answer stream. IP addresses are out of scope by
+  measurement: of 145 IPv4-shaped strings in the corpus, 114 are section numbers and none is
+  personal.
+- **Output guard** ([`output.py`](sentinel/guardrails/output.py)). Links survive only to an
+  allowlist of hosts (the IETF, IANA, W3C, documentation domains); images are always removed,
+  since rendering one fetches its URL. "Only links that appear in the retrieved passages" would
+  not work — a poisoned passage carries its own link. Citations must resolve to retrieved chunks.
+  Because `/query` streams, the guard holds back a short tail and never releases half of a link
+  or an email; a property test checks that streamed output always equals the full-text check.
+- **Scoped retrieval** ([`retrieve.py`](sentinel/retrieve.py)). Every chunk has a scope and the
+  JWT carries the caller's; the filter runs inside the dense and sparse searches, so an
+  out-of-scope chunk can't occupy a candidate slot, reach the reranker, or be cited.
+- **The adversarial corpus is segregated by construction.** Poisoned documents live in
+  [`data/adversarial/`](data/adversarial/) and are indexed only into `indexes_adversarial/` — a
+  sibling built from the real index — never into the index the service reads, and always in the
+  `adversarial` scope.
+
+The second CI gate runs all 40 attacks with every defence on and fails above a 5% success rate.
 
 ---
 
@@ -377,10 +478,16 @@ Sentinel/
 │   ├── retrieve.py          # dense + sparse → RRF → cross-encoder rerank
 │   ├── generate.py          # grounded, cited generation with abstention
 │   ├── llm.py               # provider-agnostic chat-model factory
-│   ├── serve.py             # FastAPI: JWT, rate limiting, SSE
+│   ├── serve.py             # FastAPI: JWT scopes, rate limiting, SSE, guardrails
+│   ├── retry.py             # shared retry policy for every rate-limited API call
 │   ├── logging_config.py    # structured logging + per-stage timers
+│   ├── guardrails/
+│   │   ├── injection.py     # index-time injection screening (Prompt Guard 2 + policy model)
+│   │   ├── pii.py           # PII detection + redaction
+│   │   └── output.py        # streaming output guard: links, images, PII, citations
 │   └── eval/
-│       ├── run_eval.py      # Ragas pipeline, checkpointed + resumable, CI gate
+│       ├── run_eval.py      # Ragas pipeline, checkpointed + resumable, faithfulness gate
+│       ├── run_guardrails.py# attack eval, detector + PII metrics, injection gate
 │       ├── attribution.py   # retrieval- vs generation-failure classifier
 │       └── store.py         # SQLite persistence + JSON export
 ├── data/
@@ -389,7 +496,9 @@ Sentinel/
 │   ├── ground_truth.jsonl   # hand-built eval set
 │   ├── ground_truth_audit.md# second-pass review + judge calibration
 │   ├── retrieval_ablation.json # dense / BM25 / fusion / rerank, per question
-│   └── latency_report.json  # per-stage p50/p95/p99
+│   ├── latency_report.json  # per-stage p50/p95/p99
+│   ├── adversarial/         # 40 labelled poisoned passages + attack questions (dev / held-out)
+│   └── guardrails/          # screening verdicts, PII labels, the guardrail report
 ├── scripts/
 │   ├── fetch_corpus.py              # download the corpus
 │   ├── build_ground_truth.py        # surface candidate passages (--assist)
@@ -401,7 +510,7 @@ Sentinel/
 │   ├── bench_latency.py             # per-stage p50/p95/p99
 │   └── export_dashboard_data.py     # cross-run history for the dashboard
 ├── dashboard/               # Next.js + Tailwind eval dashboard
-├── tests/                   # retrieval, generation, service, eval
+├── tests/                   # retrieval, scope, guardrails, generation, service, eval
 ├── docs/                    # requirements, product design, architecture, plan
 └── .github/workflows/eval-gate.yml
 ```
@@ -424,10 +533,12 @@ uv sync                                  # exact versions pinned in uv.lock
 cp .env.example .env                     # set GROQ_API_KEY and SENTINEL_JWT_SECRET
 ```
 
-**Build the indexes** (local, no API key needed):
+**Build the indexes** (local; no API key needed — the corpus's injection-screening verdicts are
+committed, so only new or changed documents would be sent to the classifiers):
 
 ```bash
-uv run python -m sentinel.ingest
+uv run python -m sentinel.ingest                 # the service index
+uv run python -m sentinel.ingest --adversarial   # + the adversarial corpus, for the guardrail eval
 ```
 
 **Try retrieval on its own** — prints the top-5 with all four scores:
@@ -456,8 +567,11 @@ curl -N -X POST localhost:8000/query \
 
 ```bash
 uv run python -m sentinel.eval.run_eval            # full ground-truth set (resumable)
-uv run python -m sentinel.eval.run_eval --ci       # the CI gate: subset + pass/fail exit code
+uv run python -m sentinel.eval.run_eval --ci       # the faithfulness gate: subset + exit code
+uv run python -m sentinel.eval.run_guardrails      # every guardrail, 3 runs per configuration
+uv run python -m sentinel.eval.run_guardrails --ci # the injection gate
 uv run python scripts/judge_calibration.py         # judge vs. hand labels
+uv run python scripts/retrieval_ablation.py        # dense / BM25 / fusion / rerank
 ```
 
 **Run the tests:**
@@ -493,11 +607,12 @@ threshold, CI subset size, and the provider and model for each role.
 | `GROQ_API_KEY` | yes | Generation and the Ragas judge (default provider) |
 | `SENTINEL_JWT_SECRET` | yes | Signs API tokens |
 | `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | The single demo account |
-| `OPENAI_API_KEY` | no | Alternate provider (evaluated as judge; reserved for the v2 injection classifier) |
-| `DEEPSEEK_API_KEY` / `NVIDIA_API_KEY` / `GOOGLE_API_KEY` | no | Alternate providers |
+| `OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `NVIDIA_API_KEY` / `GOOGLE_API_KEY` | no | Alternate providers |
 | `SENTINEL_TORCH_DEVICE` | no | Device for the local models — `cpu` (default), `mps`, or `cuda` |
+| `SENTINEL_INJECTION_SCREENING` / `SENTINEL_PROMPT_HARDENING` / `SENTINEL_REDACT_CONTEXT_PII` / `SENTINEL_OUTPUT_GUARD` | no | Each guardrail can be switched off — the guardrail eval does exactly that to measure each one |
 
-Retrieval (embeddings and reranking) never needs a key.
+Retrieval (embeddings and reranking) never needs a key. The injection classifiers run on the
+same Groq key.
 
 ---
 
@@ -523,27 +638,30 @@ These are deliberate scope choices, stated plainly:
   corpus size; it isn't a claim about scaling to millions of documents.
 - **A paid judge key for CI.** Everything runs on Groq's free tier, but its daily token cap allows
   about two gate runs a day, so the repo's CI key is on the pay-as-you-go tier.
-- **Single-tenant auth.** One demo account behind JWT. Multi-tenancy is out of scope.
-- **No adversarial-safety layer yet** — that's the next milestone, below.
+- **Single-tenant auth.** One demo account behind JWT. Scopes are enforced, but there is no
+  user store to grant different ones; multi-tenancy is out of scope.
+- **40 attacks, one author.** The adversarial set is hand-written, and the held-out split guards
+  against tuning to it — but it is still small and written by the person who wrote the
+  defences. A public benchmark would be a stronger test.
+- **A canary measures obedience, not harm.** For misinformation attacks it is a lower bound: a
+  model could repeat a false claim without the canary.
+- **The backup layers are weak on their own.** If screening missed an attack, hardening plus the
+  output guard still let 12.5% through in testing; with this 20B generator, forged system
+  messages are the hardest to resist.
+- **PII coverage is pattern-based.** Role addresses are over-redacted (precision 0.80 on the
+  corpus); names, postal addresses and IP addresses are not detected.
 
 ---
 
 ## Roadmap
 
-**v2 — Security guardrails**, adding a **second CI gate** alongside faithfulness:
-
-- **Prompt-injection defence**, measured as an injection-success rate over a labelled
-  adversarial corpus. Adversarial documents are segregated from the real corpus at index-build
-  time so they can never contaminate a normal eval run, and injected text is always treated as
-  data, never as instructions.
-- **PII detection and redaction** on outputs, with precision and recall measured on a labelled
-  subset.
-- **Output validation** — reject answers whose citations don't resolve to retrieved passages
-  (partly in place already, via citation filtering).
-- **Retrieval-scope enforcement.**
-
-Only the injection classifier needs a model; PII detection, citation validation, and scope
-enforcement are deterministic and run locally.
+- **Rerank latency.** Shrink the 50-candidate rerank pool, re-checked against the retrieval
+  ablation so recall@5 and MRR don't drop.
+- **A public injection benchmark** alongside the hand-written set, and attacks aimed at the
+  screening model itself.
+- **Entity recognition** for names and postal addresses in the PII guard.
+- **A larger ground-truth set** (the plan targets 80–120 questions).
+- **Deployment** of the dashboard, and of the API behind its guardrails.
 
 ---
 
