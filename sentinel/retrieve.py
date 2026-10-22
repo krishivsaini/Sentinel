@@ -54,6 +54,9 @@ class _Index:
 
 @lru_cache(maxsize=1)
 def _load_index() -> _Index:
+    # torch must load before faiss: on macOS each bundles its own OpenMP runtime, and with faiss's
+    # loaded first, multithreaded CPU inference in the embedder/reranker segfaults (exit 139).
+    import torch  # noqa: F401
     import faiss
 
     chunks = [Chunk.model_validate_json(line) for line in CHUNKS_PATH.open(encoding="utf-8")]
@@ -77,14 +80,14 @@ def _load_index() -> _Index:
 def _embedder():
     from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer(settings.embedding_model)
+    return SentenceTransformer(settings.embedding_model, device=settings.torch_device)
 
 
 @lru_cache(maxsize=1)
 def _reranker():
     from sentence_transformers import CrossEncoder
 
-    return CrossEncoder(settings.reranker_model)
+    return CrossEncoder(settings.reranker_model, device=settings.torch_device)
 
 
 def warmup() -> None:

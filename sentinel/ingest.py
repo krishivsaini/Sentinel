@@ -151,10 +151,11 @@ def _write_chunks(chunks: list[Chunk]) -> None:
 def _build_faiss(chunks: list[Chunk]) -> int:
     """Embed chunk texts with the local bge model and build a cosine (IP) FAISS index.
     Returns the embedding dimension. Row order matches `chunks` exactly."""
+    import torch  # noqa: F401  (before faiss: see sentinel.retrieve._load_index)
     import faiss
     from sentence_transformers import SentenceTransformer
 
-    model = SentenceTransformer(settings.embedding_model)
+    model = SentenceTransformer(settings.embedding_model, device=settings.torch_device)
     # bge-v1.5 wants no instruction prefix on the passage side (only queries get one).
     embeddings = model.encode(
         [c.text for c in chunks],

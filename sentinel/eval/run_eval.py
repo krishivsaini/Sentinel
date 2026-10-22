@@ -165,7 +165,11 @@ def _build_metrics() -> tuple[Faithfulness, ResponseRelevancy, LLMContextRecall]
         bypass_temperature=not accepts_temperature(settings.judge_provider, settings.judge_model),
     )
     emb = LangchainEmbeddingsWrapper(
-        HuggingFaceEmbeddings(model_name=settings.embedding_model), run_config=rc
+        HuggingFaceEmbeddings(
+            model_name=settings.embedding_model,
+            model_kwargs={"device": settings.torch_device} if settings.torch_device else {},
+        ),
+        run_config=rc,
     )
     return (
         Faithfulness(llm=llm),

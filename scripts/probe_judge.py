@@ -72,7 +72,11 @@ async def main_async(provider: str, model: str, n: int, pause: float) -> int:
         bypass_temperature=not accepts_temperature(provider, model),
     )
     emb = LangchainEmbeddingsWrapper(
-        HuggingFaceEmbeddings(model_name=settings.embedding_model), run_config=rc
+        HuggingFaceEmbeddings(
+            model_name=settings.embedding_model,
+            model_kwargs={"device": settings.torch_device} if settings.torch_device else {},
+        ),
+        run_config=rc,
     )
     metrics = {
         "faithfulness": Faithfulness(llm=llm),

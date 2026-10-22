@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # Local (₹0) models — verified stable HF model IDs.
     embedding_model: str = "BAAI/bge-small-en-v1.5"          # dense embeddings
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"  # cross-encoder rerank
+    # Device for the local embedder + reranker; None = sentence-transformers' pick (CUDA, else
+    # Apple MPS, else CPU). Defaults to CPU: on a Mac, MPS memory grew across a long eval and a
+    # 200-query latency benchmark until both died "MPS backend out of memory" — a long-running
+    # service would too — and CPU was no slower (rerank p50 954 vs 879 ms, p95 1,021 vs 1,928 ms;
+    # retrieve p95 14 vs 379 ms). CI runs on CPU as well. Override with SENTINEL_TORCH_DEVICE.
+    torch_device: str | None = "cpu"
     # LLM providers for product generation + the Ragas judge. Live free-tier quotas were probed
     # against the API 2026-07-09 (do not invent IDs): EVERY Gemini free model here caps at
     # ~20 requests/DAY (gemini-3.5-flash, -2.5-flash-lite) or 0 (gemini-2.0-flash) — far too few
