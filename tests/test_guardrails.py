@@ -208,3 +208,41 @@ def test_input_screening_flags_when_any_detector_reaches_threshold() -> None:
     assert screen_question("q", detectors=[_Fixed("a", 0.1), _Fixed("b", 0.9)]).flagged
     clean = screen_question("q", detectors=[_Fixed("a", 0.1), _Fixed("b", 0.49)])
     assert not clean.flagged and clean.scores == {"a": 0.1, "b": 0.49} and clean.error is None
+
+
+# --------------------------------------------------------------------------- prompt-leak filter
+
+_LEAK = (
+    "You are Sentinel, a precise question-answering assistant for IETF web-protocol RFCs (HTTP, "
+    "TLS, TCP, DNS, URIs, cookies, OAuth/JWT/JOSE, and related standards). Follow these rules "
+    "exactly: 1. Answer ONLY using the provided context passages. Never use prior knowledge."
+)
+
+
+def test_copied_system_prompt_is_withheld() -> None:
+    report = OutputReport()
+    out = sanitize(_LEAK, report)
+    assert "You are Sentinel" not in out and "Follow these rules" not in out
+    assert report.removed["prompt_leak"] >= 1
+
+
+def test_fence_lines_are_dropped_but_the_abstention_survives() -> None:
+    from sentinel.generate import ABSTAIN_MESSAGE
+
+    assert "PASSAGE" not in sanitize("«BEGIN PASSAGE d30fad53»\n[rfc8288#0026]\ntext\n«END PASSAGE d30fad53»")
+    assert sanitize(ABSTAIN_MESSAGE) == ABSTAIN_MESSAGE      # the prompt quotes it; still allowed
+
+
+@pytest.mark.parametrize("seed", range(20))
+def test_streaming_never_releases_a_prompt_leak(seed) -> None:
+    rng = random.Random(seed)
+    text = "Sure. " + _LEAK + " Done [rfc6585#0002]."
+    tokens, i = [], 0
+    while i < len(text):
+        n = rng.randint(1, 9)
+        tokens.append(text[i:i + n])
+        i += n
+    s = StreamSanitizer()
+    pieces = [s.feed(t) for t in tokens] + [s.finish()]
+    assert "".join(pieces) == sanitize(text)
+    assert not any("Sentinel, a precise" in p or "rules exactly" in p for p in pieces)

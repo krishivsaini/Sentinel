@@ -5,7 +5,11 @@ Sanitising (rewrites the answer):
     injected answer exfiltrates data without the user clicking anything;
   * links to hosts outside config.answer_link_hosts are replaced. "Only allow URLs that appear
     in the retrieved passages" would not do: a poisoned passage carries its own phishing link;
-  * PII is redacted (sentinel.guardrails.pii) as a backstop to context redaction.
+  * PII is redacted (sentinel.guardrails.pii) as a backstop to context redaction;
+  * prompt leakage is withheld: passage fence lines are dropped, and any run of 8+ consecutive
+    words copied from the system prompt or hardening rules is replaced. Without the input guard
+    the model printed its whole system prompt on request, hardening notwithstanding — this makes
+    that impossible to stream out, whatever gets past the classifier.
 Checks (reported, not rewritten):
   * every [chunk_id] citation must resolve to a retrieved chunk;
   * a substantive (non-abstaining) answer must cite at least one passage.
@@ -24,15 +28,51 @@ from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
 from sentinel.config import settings
-from sentinel.generate import is_abstention, parse_citations
+from sentinel.generate import (
+    ABSTAIN_MESSAGE,
+    HARDENING_REMINDER,
+    HARDENING_RULE,
+    SYSTEM_PROMPT,
+    is_abstention,
+    parse_citations,
+)
 from sentinel.guardrails import pii
 from sentinel.schema import RetrievedChunk
 
 LINK_REMOVED = "[link removed]"
+PROMPT_WITHHELD = "[instructions withheld]"
 _IMAGE_RE = re.compile(r"!\[[^\]\n]*\]\([^)\n]*\)")
 _URL_RE = re.compile(r"\b(?:https?|ftp)://[^\s<>()\"'\[\]{}]+", re.IGNORECASE)
 _TRAILING_PUNCT = ".,;:!?'\""
 _ANY_CITATION_RE = re.compile(r"[\[【]\s*([a-z][a-z0-9]*#\d+)\s*[\]】]")
+_FENCE_LINE_RE = re.compile(r"«\s*(?:BEGIN|END)\s+PASSAGE[^»\n]*»")
+_WORD_RE = re.compile(r"[a-z0-9]+")
+LEAK_NGRAM = 8
+
+
+def _prompt_ngrams() -> frozenset[tuple[str, ...]]:
+    """Every 8-word sequence of the instructions the model is given. The abstention sentence is
+    left out: the prompt quotes it, and it is also a legitimate answer."""
+    text = " ".join([SYSTEM_PROMPT, HARDENING_RULE.format(tag=""), HARDENING_REMINDER])
+    words = _WORD_RE.findall(text.replace(ABSTAIN_MESSAGE, " ").lower())
+    return frozenset(tuple(words[i:i + LEAK_NGRAM]) for i in range(len(words) - LEAK_NGRAM + 1))
+
+
+_PROMPT_NGRAMS = _prompt_ngrams()
+
+
+def _leak_spans(text: str) -> list[tuple[int, int]]:
+    """Character spans of `text` covered by any 8-word window copied from the instructions."""
+    words = [(m.start(), m.end(), m.group()) for m in _WORD_RE.finditer(text.lower())]
+    spans: list[tuple[int, int]] = []
+    for i in range(len(words) - LEAK_NGRAM + 1):
+        if tuple(w for _, _, w in words[i:i + LEAK_NGRAM]) in _PROMPT_NGRAMS:
+            start, end = words[i][0], words[i + LEAK_NGRAM - 1][1]
+            if spans and start <= spans[-1][1]:
+                spans[-1] = (spans[-1][0], max(spans[-1][1], end))
+            else:
+                spans.append((start, end))
+    return spans
 
 
 def link_allowed(url: str, hosts: tuple[str, ...] | None = None) -> bool:
@@ -56,6 +96,8 @@ class _Edit:
 def _edits(text: str) -> list[_Edit]:
     """Every rewrite the policy wants in `text`, non-overlapping, in order."""
     edits = [_Edit(m.start(), m.end(), "image", "") for m in _IMAGE_RE.finditer(text)]
+    edits += [_Edit(m.start(), m.end(), "prompt_leak", "") for m in _FENCE_LINE_RE.finditer(text)]
+    edits += [_Edit(a, b, "prompt_leak", PROMPT_WITHHELD) for a, b in _leak_spans(text)]
     for m in _URL_RE.finditer(text):
         url = m.group().rstrip(_TRAILING_PUNCT)
         if not link_allowed(url):
