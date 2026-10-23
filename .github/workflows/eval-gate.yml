@@ -4,8 +4,9 @@
 #   tests              the full pytest suite (hermetic; retrieval tests use the real indexes)
 #   faithfulness-gate  a Ragas faithfulness eval over half the ground truth; fails below
 #                      config.faithfulness_threshold, or if too few items score (config.ci_min_items)
-#   injection-gate     the 40 labelled prompt-injection attacks run through the full pipeline with
-#                      every defence on; fails if more than config.injection_asr_threshold succeed
+#   injection-gate     the 50 poisoned-document attacks and the 35 attacks in the user's own question
+#                      run through the full pipeline with every defence on; fails if either set's
+#                      success rate exceeds config.injection_asr_threshold
 # Both gates write a Markdown summary into the PR's checks (FR-CI3). The full three-metric eval
 # and the full guardrail report run locally (sentinel.eval.run_eval, sentinel.eval.run_guardrails).
 #
@@ -143,7 +144,7 @@ jobs:
             indexes_adversarial
           key: ${{ needs.indexes.outputs.index_key }}
           fail-on-cache-miss: true
-      - name: Injection gate (40 adversarial attacks, every defence on)
+      - name: Injection gate (85 attacks across both surfaces, every defence on)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: uv run python -m sentinel.eval.run_guardrails --ci

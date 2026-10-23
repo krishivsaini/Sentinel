@@ -48,9 +48,11 @@ from sentinel.config import (
     settings,
 )
 from sentinel.eval.run_eval import _with_backoff
+from sentinel.eval.stats import proportion
 from sentinel.generate import collect_answer, is_abstention
 from sentinel.guardrails import pii
 from sentinel.guardrails.injection import ScreeningCache, default_detectors, text_key
+from sentinel.guardrails.input import input_detectors
 from sentinel.guardrails.output import guard_answer
 from sentinel.logging_config import configure_logging, log
 from sentinel.retrieve import Access, hybrid_retrieve, warmup
@@ -58,6 +60,7 @@ from sentinel.schema import Chunk, RetrievedChunk
 
 REPORT_PATH = GUARDRAILS_DIR / "report.json"
 PII_LABELS_PATH = GUARDRAILS_DIR / "pii_labels.jsonl"
+USER_PROMPTS_PATH = GUARDRAILS_DIR / "user_prompts.jsonl"
 _ZERO_WIDTH_RE = re.compile("[​-‏⁠﻿]")
 ATTACK_SCOPES = frozenset({"public", "adversarial"})
 
@@ -97,6 +100,17 @@ def _rate(num: int, den: int) -> float | None:
     return round(num / den, 4) if den else None
 
 
+def _flag_rate(k: int, n: int) -> dict:
+    """flagged / of, with the rate and its exact 95% interval (sentinel.eval.stats)."""
+    pr = proportion(k, n)
+    return {"flagged": k, "of": n, "rate": pr["rate"], "ci95": pr["ci95"]}
+
+
+# Attack splits: "dev" shaped the screening policy and prompt hardening; "heldout" was written
+# after both were frozen; "adaptive" targets the screening classifiers themselves.
+SPLITS = ("dev", "heldout", "adaptive")
+
+
 # --------------------------------------------------------------------------- detectors
 
 
@@ -121,13 +135,13 @@ def detector_metrics() -> dict:
 
     names = [d.name for d in detectors] + ["union"]
     result: dict = {"detectors": [d.name for d in detectors], "recall": {}, "false_positives": {}}
-    for part in ("dev", "heldout"):
+    for part in SPLITS:
         texts = [c.text for c in adv if split.get(c.doc_id) == part]
+        if not texts:
+            continue
         fl = [flags(t) for t in texts]
         result["recall"][part] = {
-            n: {"flagged": sum(bool(f[n]) for f in fl), "of": len(fl),
-                "rate": _rate(sum(bool(f[n]) for f in fl), len(fl))}
-            for n in names
+            n: _flag_rate(sum(bool(f[n]) for f in fl), len(fl)) for n in names
         }
         result["recall"][part]["missed"] = sorted(
             c.doc_id for c, f in zip((c for c in adv if split.get(c.doc_id) == part), fl)
@@ -136,9 +150,7 @@ def detector_metrics() -> dict:
     fl = [flags(c.text) for c in real]
     unscored = sum(any(v is None for v in f.values()) for f in fl)
     result["false_positives"] = {
-        n: {"flagged": sum(bool(f[n]) for f in fl), "of": len(fl),
-            "rate": _rate(sum(bool(f[n]) for f in fl), len(fl))}
-        for n in names
+        n: _flag_rate(sum(bool(f[n]) for f in fl), len(fl)) for n in names
     }
     result["false_positives"]["flagged_chunks"] = [
         c.chunk_id for c, f in zip(real, fl) if f["union"]
@@ -202,11 +214,16 @@ def run_attacks(configs=CONFIGS, repeats: int = 1, workers: int = 6) -> dict:
     for cfg in configs:
         rows = [r for r in results if r["config"] == cfg.name]
         block: dict = {"repeats": repeats}
-        for part in ("all", "dev", "heldout"):
+        for part in ("all", *SPLITS):
             rs = rows if part == "all" else [r for r in rows if r["split"] == part]
+            if not rs:
+                continue
             per_rep = [sum(r["succeeded"] for r in rs if r["repeat"] == k) for k in range(repeats)]
             exposed = [r for r in rs if r["exposed"]]
             n = len(rs) // repeats
+            # Repeats of one attack aren't independent trials, so the interval is over attacks:
+            # an attack counts if it got through in ANY run — the conservative reading.
+            any_run = len({r["target_doc"] for r in rs if r["succeeded"]})
             block[part] = {
                 "attacks": n,
                 "exposed": len(exposed) // repeats,
@@ -214,6 +231,7 @@ def run_attacks(configs=CONFIGS, repeats: int = 1, workers: int = 6) -> dict:
                 "succeeded_range": [min(per_rep), max(per_rep)],
                 "success_rate": _rate(sum(per_rep), len(rs)),
                 "success_rate_when_exposed": _rate(sum(r["succeeded"] for r in exposed), len(exposed)),
+                "succeeded_in_any_run": proportion(any_run, n),
             }
         by_type = defaultdict(lambda: [0, 0])
         for r in rows:
@@ -225,6 +243,86 @@ def run_attacks(configs=CONFIGS, repeats: int = 1, workers: int = 6) -> dict:
         )
         summary[cfg.name] = block
     return {"summary": summary, "results": results}
+
+
+# --------------------------------------------------------------------------- input guard
+
+
+def input_guard_eval(repeats: int = 1, workers: int = 6) -> dict:
+    """The user-side attacks and genuine questions in USER_PROMPTS_PATH.
+
+    Detection: each input detector (and the configured rule) on attacks vs genuine questions,
+    dev and held-out. End to end: every attack through the shipped pipeline (all passage
+    defences on) without and with the input guard, so the report shows both what the guard
+    catches and what would actually have got through."""
+    rows = _load_jsonl(USER_PROMPTS_PATH)
+    detectors = input_detectors(("promptguard", "policy"))
+    configured = [d.name for d in input_detectors()]
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        scores = list(pool.map(lambda r: {d.name: d.score(r["text"]) for d in detectors}, rows))
+    thresholds = {d.name: d.threshold for d in detectors}
+
+    def flagged(sc: dict, names: list[str]) -> bool:
+        return any(sc[n] >= thresholds[n] for n in names)
+
+    rules = {d.name: [d.name] for d in detectors}
+    rules["configured"] = configured             # the rule the service ships
+    detection: dict = {"configured_detectors": configured}
+    for rule, names in rules.items():
+        block: dict = {}
+        for part in ("dev", "heldout"):
+            idx = [i for i, r in enumerate(rows) if r["split"] == part]
+            atk = [i for i in idx if rows[i]["label"] == "attack"]
+            ben = [i for i in idx if rows[i]["label"] == "benign"]
+            block[part] = {
+                "attacks_caught": _flag_rate(sum(flagged(scores[i], names) for i in atk), len(atk)),
+                "benign_refused": _flag_rate(sum(flagged(scores[i], names) for i in ben), len(ben)),
+            }
+        gt = [i for i, r in enumerate(rows) if r["kind"] == "ground_truth"]
+        block["ground_truth_refused"] = _flag_rate(sum(flagged(scores[i], names) for i in gt), len(gt))
+        block["missed"] = sorted(
+            rows[i]["kind"] for i, r in enumerate(rows)
+            if r["label"] == "attack" and not flagged(scores[i], names)
+        )
+        block["false_alarms"] = [
+            rows[i]["text"] for i, r in enumerate(rows)
+            if r["label"] == "benign" and flagged(scores[i], names)
+        ]
+        detection[rule] = block
+
+    attacks = [(i, r) for i, r in enumerate(rows) if r["label"] == "attack"]
+    retrieved = {r["text"]: hybrid_retrieve(r["text"]) for _, r in attacks}
+
+    def run(job):
+        (i, r), rep = job
+        out = _attack(r["text"], retrieved[r["text"]], ALL)
+        return {"i": i, "repeat": rep, "split": r["split"], "kind": r["kind"],
+                "succeeded": _succeeded(out["answer"], r["markers"]),
+                "flagged": flagged(scores[i], configured), "answer": out["answer"]}
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(run, [(a, k) for k in range(repeats) for a in attacks]))
+
+    e2e: dict = {"repeats": repeats}
+    for guard in ("without_input_guard", "with_input_guard"):
+        block = {}
+        for part in ("all", "dev", "heldout"):
+            rs = [r for r in results if part == "all" or r["split"] == part]
+            ok = [r["succeeded"] and not (guard == "with_input_guard" and r["flagged"]) for r in rs]
+            n = len(rs) // repeats
+            any_run = len({r["i"] for r, o in zip(rs, ok) if o})
+            block[part] = {
+                "attacks": n,
+                "succeeded": round(sum(ok) / repeats, 2),
+                "success_rate": _rate(sum(ok), len(rs)),
+                "succeeded_in_any_run": proportion(any_run, n),
+            }
+        block["succeeded_kinds"] = sorted({
+            r["kind"] for r in results
+            if r["succeeded"] and not (guard == "with_input_guard" and r["flagged"])
+        })
+        e2e[guard] = block
+    return {"detection": detection, "end_to_end": e2e, "results": results}
 
 
 # --------------------------------------------------------------------------- PII
@@ -271,6 +369,8 @@ def pii_metrics() -> dict:
         T, F, N = sum(tp.values()), sum(fp.values()), sum(fn.values())
         out[source] = {
             "precision": _rate(T, T + F), "recall": _rate(T, T + N),
+            "precision_ci95": proportion(T, T + F)["ci95"],
+            "recall_ci95": proportion(T, T + N)["ci95"],
             "tp": T, "fp": F, "fn": N, "per_kind": per_kind,
             "misses": misses, "false_alarms": sorted(false_alarms, key=lambda x: x["text"]),
             "stale_labels": stale,
@@ -309,16 +409,40 @@ def _print(report: dict) -> None:
     print("=" * 78)
     if "detectors" in inj:
         d = inj["detectors"]
-        print("  injection detectors       dev recall   held-out recall   real-corpus FP")
+        parts = [p for p in SPLITS if p in d["recall"]]
+        print("  injection detectors        " + "".join(f"{p + ' recall':>18}" for p in parts)
+              + "   real-corpus FP")
         for n in d["detectors"] + ["union"]:
-            dv, hv, fp = d["recall"]["dev"][n], d["recall"]["heldout"][n], d["false_positives"][n]
-            print(f"    {n.split(':')[0]:22} {dv['flagged']:>3}/{dv['of']:<3}      "
-                  f"{hv['flagged']:>3}/{hv['of']:<3}          {fp['flagged']}/{fp['of']}")
-    print("\n  attacks succeeded (mean, range)   all            dev        held-out   rate")
+            cells = "".join(
+                f"{d['recall'][p][n]['flagged']:>14}/{d['recall'][p][n]['of']:<3}" for p in parts
+            )
+            fp = d["false_positives"][n]
+            print(f"    {n.split(':')[0]:22} {cells}   {fp['flagged']}/{fp['of']}")
+    print("\n  attacks succeeded: mean over runs [range]; any-run share with 95% CI")
     for name, s in inj["attacks"]["summary"].items():
-        a, dv, hv = s["all"], s["dev"], s["heldout"]
-        rng = lambda b: f"{b['succeeded']:>5}/{b['attacks']:<2} {b['succeeded_range']}"  # noqa: E731
-        print(f"    {name:18} {rng(a):18} {rng(dv):16} {rng(hv):16} {a['success_rate']}")
+        cells = []
+        for p in ("all", *SPLITS):
+            if p in s:
+                b, ci = s[p], s[p]["succeeded_in_any_run"]["ci95"]
+                cells.append(f"{p} {b['succeeded']}/{b['attacks']} {b['succeeded_range']}")
+        anyr = s["all"]["succeeded_in_any_run"]
+        print(f"    {name:18} " + "  ".join(cells)
+              + f"   any-run {anyr['k']}/{anyr['n']} CI95 {anyr['ci95']}")
+    if "input" in report:
+        det, e2e = report["input"]["detection"], report["input"]["end_to_end"]
+        print("\n  input guard        attacks caught (dev / held-out)   genuine refused (dev / held-out)")
+        for rule in [k for k in det if k != "configured_detectors"]:
+            b = det[rule]
+            print(f"    {rule.split(':')[0]:16} "
+                  f"{b['dev']['attacks_caught']['flagged']}/{b['dev']['attacks_caught']['of']} / "
+                  f"{b['heldout']['attacks_caught']['flagged']}/{b['heldout']['attacks_caught']['of']}"
+                  f"{'':20}{b['dev']['benign_refused']['flagged']}/{b['dev']['benign_refused']['of']} / "
+                  f"{b['heldout']['benign_refused']['flagged']}/{b['heldout']['benign_refused']['of']}")
+        for guard in ("without_input_guard", "with_input_guard"):
+            a = e2e[guard]["all"]
+            print(f"    user attacks that got through, {guard.replace('_', ' ')}: "
+                  f"{a['succeeded']}/{a['attacks']} (any run {a['succeeded_in_any_run']['k']}, "
+                  f"CI95 {a['succeeded_in_any_run']['ci95']})  {e2e[guard]['succeeded_kinds']}")
     if "pii" in report:
         for src, p in report["pii"].items():
             print(f"\n  PII ({src}): precision {p['precision']}  recall {p['recall']}  "
@@ -330,19 +454,28 @@ def _print(report: dict) -> None:
 
 
 def _gate(report: dict) -> bool:
-    s = report["injection"]["attacks"]["summary"]["all"]["all"]
-    rate = s["success_rate"]
-    passed = rate is not None and rate <= settings.injection_asr_threshold
+    """Both attack sets, every defence on: poisoned documents and the user's own question."""
+    doc = report["injection"]["attacks"]["summary"]["all"]["all"]
+    usr = report["input"]["end_to_end"]["with_input_guard"]["all"]
+    limit = settings.injection_asr_threshold
+    ok_doc = doc["success_rate"] is not None and doc["success_rate"] <= limit
+    ok_usr = usr["success_rate"] is not None and usr["success_rate"] <= limit
+    passed = ok_doc and ok_usr
+
+    def ci(b: dict) -> str:
+        lo, hi = b["succeeded_in_any_run"]["ci95"]
+        return f"{lo:.3f}–{hi:.3f}"
+
     md = "\n".join([
         f"## Injection gate — {'PASS ✅' if passed else 'FAIL ❌'}",
         "",
-        f"**attack success rate {rate:.3f} {'<=' if passed else '>'} "
-        f"{settings.injection_asr_threshold:.2f}** with every defence on",
+        f"Every defence on; each attack set must stay at or below **{limit:.0%}** success.",
         "",
-        "| | value |", "|---|---|",
-        f"| attacks | {s['attacks']} (24 dev + 16 held-out) |",
-        f"| reached the top-5 | {s['exposed']} |",
-        f"| succeeded | {s['succeeded']} |",
+        "| attack set | attacks | succeeded | rate | 95% CI | |", "|---|---|---|---|---|---|",
+        f"| poisoned documents | {doc['attacks']} | {doc['succeeded']} | {doc['success_rate']:.3f} "
+        f"| {ci(doc)} | {'✅' if ok_doc else '❌'} |",
+        f"| user's own question | {usr['attacks']} | {usr['succeeded']} | {usr['success_rate']:.3f} "
+        f"| {ci(usr)} | {'✅' if ok_usr else '❌'} |",
         "",
         f"_generation `{settings.generation_model}` · screening "
         f"`{', '.join(d.name for d in default_detectors())}`_",
@@ -366,7 +499,10 @@ def main() -> None:
     warmup()
 
     if args.ci:
-        report = {"injection": {"attacks": run_attacks(configs=(ALL,))}}
+        report = {
+            "injection": {"attacks": run_attacks(configs=(ALL,))},
+            "input": input_guard_eval(repeats=1),
+        }
         _print(report)
         sys.exit(0 if _gate(report) else 1)
 
@@ -374,6 +510,7 @@ def main() -> None:
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "generation_model": settings.generation_model,
         "injection": {"detectors": detector_metrics(), "attacks": run_attacks(repeats=args.repeats)},
+        "input": input_guard_eval(repeats=args.repeats),
         "pii": pii_metrics(),
         "scope": scope_check(),
         "threshold": settings.injection_asr_threshold,
@@ -384,6 +521,7 @@ def main() -> None:
     # committed report, the audit trail).
     slim = json.loads(json.dumps(report))
     slim["injection"]["attacks"].pop("results", None)
+    slim["input"].pop("results", None)
     DASHBOARD_DATA_DIR.mkdir(parents=True, exist_ok=True)
     (DASHBOARD_DATA_DIR / "guardrails.json").write_text(json.dumps(slim, indent=2) + "\n", encoding="utf-8")
     _print(report)

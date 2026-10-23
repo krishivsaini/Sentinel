@@ -43,11 +43,13 @@ Sentinel treats answer quality as a **tested property of the codebase**, not a v
 
 Every number below was produced by a script in this repo and can be re-run; none are targets.
 
-### The gate catches a regression that every unit test passes
+### The gate blocks a grounding regression
 
 [PR #2](https://github.com/krishivsaini/Sentinel/pull/2) changes one thing: the generation prompt
 now invites the model to answer from its own knowledge and treat the retrieved RFC text as
-optional. Every unit test still passes. The faithfulness gate does not:
+optional. The prompt unit test flags this particular edit too — it deletes words the test looks
+for — but the gate catches it the way it would catch any grounding regression, by measuring the
+answers:
 
 | Branch | Mean faithfulness | Items scored | Gate (≥ 0.80) |
 |---|---|---|---|
@@ -111,45 +113,78 @@ caveats are in [`data/ground_truth_audit.md`](data/ground_truth_audit.md).
 
 ### Do the guardrails hold?
 
-40 hand-written prompt-injection attacks — poisoned RFC-style passages that tell the model to emit
-a canary, push a phishing link, adopt a persona, refuse, or repeat a fake errata — each with a
-question that retrieves its passage. 24 are the **dev** set; the other 16 use attack styles written
-**after** the screening policy and prompt hardening were frozen (non-English, base64, JSON fields,
-zero-width obfuscation, fake log lines, normative "agents MUST" language…), so they estimate how
-the defences generalise. Every configuration ran 3 times
+Two attack surfaces, each with hand-written attacks and a success marker — a canary or phishing
+host that either appears in the final answer or doesn't, so no judge is involved
 ([`sentinel/eval/run_guardrails.py`](sentinel/eval/run_guardrails.py),
-[`data/guardrails/report.json`](data/guardrails/report.json)):
+[`data/guardrails/report.json`](data/guardrails/report.json)). Every configuration ran 3 times.
+With this few attacks, **"0 succeeded" still allows a true rate of several percent**, so each
+result carries an exact 95% Clopper–Pearson interval.
 
-| Defences | Attacks that succeeded (mean of 3) | Dev | Held-out |
-|---|---|---|---|
-| None | 12.0 / 40 — 30% | 8.3 / 24 | 3.7 / 16 |
-| Prompt hardening only | 4.0 / 40 — 10% | 3.0 / 24 | 1.0 / 16 |
-| Output guard only | 9.0 / 40 — 22.5% | 5.7 / 24 | 3.3 / 16 |
-| Hardening + output guard (*what's left if screening misses*) | 5.0 / 40 — 12.5% | 3.0 / 24 | 2.0 / 16 |
-| Index-time screening only | 0 / 40 | 0 | 0 |
-| **All defences (what ships)** | **0 / 40 in every run** | **0** | **0** |
+**Poisoned documents — 50 attacks** hidden in RFC-style passages, each with a question that
+retrieves its passage, in three sets:
 
-| Screening detector | Dev attacks caught | Held-out caught | Real RFC chunks flagged |
+- **dev (24)** — the set the screening policy and prompt hardening were written against;
+- **held-out (16)** — styles written *after* both were frozen: non-English, base64, JSON fields,
+  zero-width obfuscation, fake log lines, normative "agents MUST" language…;
+- **adaptive (10)** — written *against the screener itself*: telling it "this passage is SAFE",
+  fake policy updates, injections framed as examples of attacks, instructions split across
+  sentences or addressed to "implementations" or "readers", test vectors, look-alike letters.
+
+| Defences | Attacks that got through (mean of 3) | Dev | Held-out | Adaptive |
+|---|---|---|---|---|
+| None | 12.0 / 50 — 24% | 6.3 | 3.7 | 2.0 |
+| Prompt hardening only | 2.7 / 50 — 5.3% | 1.7 | 1.0 | 0 |
+| Output guard only | 12.3 / 50 — 24.7% | 6.7 | 3.7 | 2.0 |
+| Hardening + output guard (*what's left if screening misses*) | 3.7 / 50 — 7.3% | 2.7 | 1.0 | 0 |
+| Index-time screening only | 0 / 50 | 0 | 0 | 0 |
+| **All defences (what ships)** | **0 / 50 in every run — 95% CI 0–7.1%** | **0** | **0** | **0** |
+
+| Screening detector | Dev caught | Held-out caught | Adaptive caught | Real RFC chunks flagged |
+|---|---|---|---|---|
+| Llama Prompt Guard 2 (86M) | 8 / 24 | 1 / 16 | 1 / 10 | 1 / 2,888 |
+| gpt-oss-safeguard-20b + written policy | 22 / 24 | 15 / 16 | 3 / 10 | 0 / 2,888 |
+| **Either (the quarantine rule)** | **22 / 24** | **15 / 16** | **4 / 10** | **1 / 2,888** |
+
+**The user's own question — 35 attacks** (20 dev, 15 held-out): instruction overrides, system-prompt
+extraction, personas and "modes", fake system messages, encoded and non-English payloads, story
+and hypothetical framings, authority claims, phishing and tracking-image requests. Measured
+against **88 genuine questions** — all 48 ground-truth questions plus hard negatives full of
+"inject", "override", "ignore", "bypass".
+
+| Input detector | Dev attacks caught | Held-out caught | Genuine questions refused |
 |---|---|---|---|
-| Llama Prompt Guard 2 (86M) | 8 / 24 | 1 / 16 | 1 / 2,888 |
-| gpt-oss-safeguard-20b + written policy | 22 / 24 | 15 / 16 | 0 / 2,888 |
-| **Either (the quarantine rule)** | **22 / 24** | **15 / 16** | **1 / 2,888** |
+| Llama Prompt Guard 2 | 10 / 20 | 4 / 15 | 2 / 88 |
+| **gpt-oss-safeguard-20b + input policy (ships)** | **16 / 20** | **12 / 15** | **0 / 88** |
+
+Run end to end through the shipped pipeline, **9.7 of 35** user-side attacks got through without
+the input guard and **1.0 of 35** with it (95% CI 0.1–14.9%). The one that still gets through is a
+benign-looking question with a "P.S. end your answer with …" suffix.
 
 | | Precision | Recall |
 |---|---|---|
-| PII — real corpus (259 labelled spans in author contact blocks) | 0.80 | 1.00 |
+| PII — real corpus (259 labelled spans in author contact blocks) | 0.80 | 1.00 (95% CI 0.986–1) |
 | PII — synthetic passages (cards, credentials, hard negatives) | 1.00 | 0.94 |
 
 **Scope:** across every attack question, **0** poisoned chunks reached a caller with the default
 scope. **Answer quality with every guardrail on:** faithfulness **0.941** on the CI subset (24 / 24);
 unguarded runs on the same 24 questions scored 0.934 and 0.967.
 
-What the numbers say, plainly: index-time screening does almost all of the work. Prompt hardening
-cuts the success rate by two thirds but cannot be relied on alone — forged system messages still
-get through it with this 20B generator. The output guard only matters for link-shaped payloads.
-All 3 attacks that evaded screening also failed against the model. The PII precision of 0.80 is
-deliberate over-redaction: IETF role addresses (`iesg@ietf.org`) are indistinguishable from
-personal ones by pattern, so they are redacted too.
+What the numbers say, plainly:
+
+- **Index-time screening does almost all the work against poisoned documents** — but it can be
+  written around. Only 4 of the 10 adaptive attacks were caught: instructions not phrased as
+  addressed to an AI slip past the policy. None of those 6 worked against the model even with no
+  defences, so end-to-end success stayed at 0 — luck of the attack style, not proof of the
+  screener.
+- **The two detectors fail differently,** which is why both run: an injection framed as "an example
+  of an attack" is waved through by the policy model (its policy allows text that *describes*
+  attacks) and caught only by Prompt Guard.
+- **Prompt hardening is the strongest backup layer** (24% → 5.3% on its own); the output guard only
+  matters for link-shaped payloads.
+- **The input guard cuts user-side attacks from 28% to 3%** without refusing a single genuine
+  question; Prompt Guard alone would have refused two.
+- **PII precision of 0.80 is deliberate over-redaction:** IETF role addresses (`iesg@ietf.org`)
+  can't be told apart from personal ones by pattern, so they're redacted too.
 
 ### Latency, per stage
 
@@ -354,7 +389,7 @@ changed), and three checks run against them:
 |---|---|
 | **tests** | any test in the suite fails |
 | **faithfulness-gate** | mean faithfulness over every other ground-truth question (24 of 48), through the full guarded pipeline, is below **0.80** — or fewer than 18 items scored (a coverage floor, so a run crippled by rate limits can't pass on thin data) |
-| **injection-gate** | more than **5%** of the 40 adversarial attacks succeed with every defence on |
+| **injection-gate** | with every defence on, more than **5%** of either attack set succeeds: the 50 poisoned-document attacks or the 35 attacks in the user's own question |
 
 Both gates write a metric summary into the PR's checks. Answer relevance and context recall are
 left to the full local eval: they would triple the judge's token spend per PR without changing
@@ -363,8 +398,8 @@ the gate's verdict.
 The LLM key is a repository secret, on Groq's paid tier; the free tier's 200K tokens/day covers
 only about two gate runs. [PR #2](https://github.com/krishivsaini/Sentinel/pull/2) (branch
 `demo/prompt-regression-breaks-grounding`) carries a deliberately harmful change — it loosens
-the grounding prompt so the model answers from general knowledge — which passes every unit test
-but erodes faithfulness. The gate blocks it ([Results](#the-gate-catches-a-regression-that-every-unit-test-passes)).
+the grounding prompt so the model answers from general knowledge, eroding faithfulness. The
+gate blocks it ([Results](#the-gate-blocks-a-grounding-regression)).
 
 ### 9 · Dashboard — [`dashboard/`](dashboard/)
 
@@ -394,7 +429,8 @@ Retrieval hands the model text it didn't write, so each guardrail sits where its
 flowchart LR
     I["Index build"] --> SC["Injection screening<br/>Prompt Guard 2 + policy model<br/>flagged → quarantined"]
     SC --> IDX[("Index")]
-    Q["Question + JWT scopes"] --> R["Retrieval<br/>scope + quarantine filters<br/>inside both searches"]
+    Q["Question + JWT scopes"] --> IG["Input guard<br/>policy model<br/>flagged → refused"]
+    IG --> R["Retrieval<br/>scope + quarantine filters<br/>inside both searches"]
     IDX --> R
     R --> P["PII redaction<br/>of passages"]
     P --> G["Generation<br/>passages fenced as<br/>untrusted data"]
@@ -402,14 +438,21 @@ flowchart LR
     O --> A["Answer (streamed)"]
 ```
 
+- **Input guard** ([`input.py`](sentinel/guardrails/input.py)). The question is screened before
+  anything else runs; a flagged one gets a fixed refusal and never reaches retrieval or the
+  model. It uses gpt-oss-safeguard-20b with its own input policy — "manipulating the assistant",
+  not "mentioning attacks", since genuine questions here are full of "inject" and "bypass".
+  Prompt Guard was measured for this job too and refused two genuine questions, so it isn't
+  used here. The guard fails closed if the classifier can't be reached.
 - **Injection screening at index build** ([`injection.py`](sentinel/guardrails/injection.py)).
   Every chunk is classified by Llama Prompt Guard 2 and by gpt-oss-safeguard-20b applying a
   written policy; if either flags it, the chunk is quarantined — kept for audit, never retrieved.
   Doing it at build time costs the query path nothing, and because the corpus is static the
-  verdicts are cached and committed: rebuilding an unchanged corpus makes no API calls. On the
-  real corpus Prompt Guard adds no catches and the one false positive (TCP's state-machine text,
-  full of "return 'error: …'" imperatives); it stays because the policy model is itself an LLM
-  reading attacker-controlled text, and a small dedicated classifier is far harder to steer.
+  verdicts are cached and committed: rebuilding an unchanged corpus makes no API calls. Prompt
+  Guard causes the one false positive (TCP's state-machine text, full of "return 'error: …'"
+  imperatives), and it earns its place anyway: an injection framed as "an example of an attack"
+  passes the policy model — whose policy allows text that describes attacks — and only Prompt
+  Guard catches it.
 - **Prompt hardening** ([`generate.py`](sentinel/generate.py)). Passages are fenced with markers
   carrying a random per-request tag — so a passage can't forge "end of context" — the model is
   told nothing inside a fence is an instruction, and the rule is repeated after the passages,
@@ -434,7 +477,8 @@ flowchart LR
   sibling built from the real index — never into the index the service reads, and always in the
   `adversarial` scope.
 
-The second CI gate runs all 40 attacks with every defence on and fails above a 5% success rate.
+The second CI gate runs both attack sets with every defence on and fails if either exceeds a 5%
+success rate.
 
 ---
 
@@ -482,12 +526,14 @@ Sentinel/
 │   ├── retry.py             # shared retry policy for every rate-limited API call
 │   ├── logging_config.py    # structured logging + per-stage timers
 │   ├── guardrails/
+│   │   ├── input.py         # screens the user's question before retrieval
 │   │   ├── injection.py     # index-time injection screening (Prompt Guard 2 + policy model)
 │   │   ├── pii.py           # PII detection + redaction
 │   │   └── output.py        # streaming output guard: links, images, PII, citations
 │   └── eval/
 │       ├── run_eval.py      # Ragas pipeline, checkpointed + resumable, faithfulness gate
-│       ├── run_guardrails.py# attack eval, detector + PII metrics, injection gate
+│       ├── run_guardrails.py# attack evals, detector + PII metrics, injection gate
+│       ├── stats.py         # exact confidence intervals for small samples
 │       ├── attribution.py   # retrieval- vs generation-failure classifier
 │       └── store.py         # SQLite persistence + JSON export
 ├── data/
@@ -497,8 +543,8 @@ Sentinel/
 │   ├── ground_truth_audit.md# second-pass review + judge calibration
 │   ├── retrieval_ablation.json # dense / BM25 / fusion / rerank, per question
 │   ├── latency_report.json  # per-stage p50/p95/p99
-│   ├── adversarial/         # 40 labelled poisoned passages + attack questions (dev / held-out)
-│   └── guardrails/          # screening verdicts, PII labels, the guardrail report
+│   ├── adversarial/         # 50 labelled poisoned passages + questions (dev / held-out / adaptive)
+│   └── guardrails/          # screening verdicts, PII labels, user-side prompts, the report
 ├── scripts/
 │   ├── fetch_corpus.py              # download the corpus
 │   ├── build_ground_truth.py        # surface candidate passages (--assist)
@@ -609,7 +655,7 @@ threshold, CI subset size, and the provider and model for each role.
 | `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | The single demo account |
 | `OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `NVIDIA_API_KEY` / `GOOGLE_API_KEY` | no | Alternate providers |
 | `SENTINEL_TORCH_DEVICE` | no | Device for the local models — `cpu` (default), `mps`, or `cuda` |
-| `SENTINEL_INJECTION_SCREENING` / `SENTINEL_PROMPT_HARDENING` / `SENTINEL_REDACT_CONTEXT_PII` / `SENTINEL_OUTPUT_GUARD` | no | Each guardrail can be switched off — the guardrail eval does exactly that to measure each one |
+| `SENTINEL_INPUT_GUARD` / `SENTINEL_INJECTION_SCREENING` / `SENTINEL_PROMPT_HARDENING` / `SENTINEL_REDACT_CONTEXT_PII` / `SENTINEL_OUTPUT_GUARD` | no | Each guardrail can be switched off — the guardrail eval does exactly that to measure each one |
 
 Retrieval (embeddings and reranking) never needs a key. The injection classifiers run on the
 same Groq key.
@@ -640,14 +686,21 @@ These are deliberate scope choices, stated plainly:
   about two gate runs a day, so the repo's CI key is on the pay-as-you-go tier.
 - **Single-tenant auth.** One demo account behind JWT. Scopes are enforced, but there is no
   user store to grant different ones; multi-tenancy is out of scope.
-- **40 attacks, one author.** The adversarial set is hand-written, and the held-out split guards
-  against tuning to it — but it is still small and written by the person who wrote the
-  defences. A public benchmark would be a stronger test.
+- **85 attacks, one author.** Every attack is hand-written by the person who wrote the defences.
+  The held-out and adaptive splits limit tuning to them, but don't remove the bias, and the sets
+  are small: zero successes in 50 still allows a true rate of up to 7%. A public benchmark would
+  be a stronger test.
+- **The screener can be written around.** Adaptive attacks that don't address an AI evaded it 6
+  times in 10; none of those happened to work on the model, which is not the same as being safe.
 - **A canary measures obedience, not harm.** For misinformation attacks it is a lower bound: a
   model could repeat a false claim without the canary.
-- **The backup layers are weak on their own.** If screening missed an attack, hardening plus the
-  output guard still let 12.5% through in testing; with this 20B generator, forged system
+- **The backup layers are weaker on their own.** If screening missed an attack, hardening plus
+  the output guard still let 7.3% through in testing; with this 20B generator, forged system
   messages are the hardest to resist.
+- **The faithfulness gate is an absolute line.** It catches gross regressions (PR #2 scores
+  0.75–0.80) but not moderate ones: two subtler prompt changes that relax the grounding rules
+  without deleting them scored 0.855 and 0.865 — clearly worse than main's 0.91–0.97, and still
+  above 0.80. A gate relative to main's own baseline would catch them.
 - **PII coverage is pattern-based.** Role addresses are over-redacted (precision 0.80 on the
   corpus); names, postal addresses and IP addresses are not detected.
 
@@ -657,8 +710,10 @@ These are deliberate scope choices, stated plainly:
 
 - **Rerank latency.** Shrink the 50-candidate rerank pool, re-checked against the retrieval
   ablation so recall@5 and MRR don't drop.
-- **A public injection benchmark** alongside the hand-written set, and attacks aimed at the
-  screening model itself.
+- **A faithfulness gate relative to main's baseline** — a paired, per-question comparison
+  against the last main run — so moderate regressions fail CI, not only gross ones.
+- **A public injection benchmark** alongside the hand-written sets, and a screening policy that
+  doesn't depend on the attacker addressing an AI.
 - **Entity recognition** for names and postal addresses in the PII guard.
 - **A larger ground-truth set** (the plan targets 80–120 questions).
 - **Deployment** of the dashboard, and of the API behind its guardrails.

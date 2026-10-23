@@ -169,3 +169,42 @@ def test_windows_cover_every_short_span(size, overlap) -> None:
     for start in range(0, len(text) - overlap, 37):
         span = text[start:start + overlap - 20]
         assert any(span in w for w in ws), (start, span)
+
+
+# --------------------------------------------------------------------------- statistics
+
+
+@pytest.mark.parametrize(
+    "k, n, lo, hi",
+    [
+        (0, 40, 0.0, 0.0881),      # "0 / 40" still allows up to ~8.8%
+        (1, 40, 0.0006, 0.1316),
+        (12, 40, 0.1656, 0.4653),
+        (40, 40, 0.9119, 1.0),
+        (1, 2888, 0.0, 0.0019),
+    ],
+)
+def test_clopper_pearson_matches_exact_values(k, n, lo, hi) -> None:
+    from sentinel.eval.stats import clopper_pearson
+
+    got = clopper_pearson(k, n)
+    assert got[0] == pytest.approx(lo, abs=1e-4) and got[1] == pytest.approx(hi, abs=1e-4)
+
+
+# --------------------------------------------------------------------------- input guard
+
+
+class _Fixed:
+    def __init__(self, name: str, score: float) -> None:
+        self.name, self.threshold, self._score = name, 0.5, score
+
+    def score(self, text: str) -> float:
+        return self._score
+
+
+def test_input_screening_flags_when_any_detector_reaches_threshold() -> None:
+    from sentinel.guardrails.input import screen_question
+
+    assert screen_question("q", detectors=[_Fixed("a", 0.1), _Fixed("b", 0.9)]).flagged
+    clean = screen_question("q", detectors=[_Fixed("a", 0.1), _Fixed("b", 0.49)])
+    assert not clean.flagged and clean.scores == {"a": 0.1, "b": 0.49} and clean.error is None

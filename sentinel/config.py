@@ -171,6 +171,11 @@ class Settings(BaseSettings):
     # injection Prompt Guard missed, and left RFC text *about* injection attacks alone.
     safeguard_model: str = "openai/gpt-oss-safeguard-20b"
     screening_workers: int = 8             # parallel classifier calls for uncached chunks
+    # Screen the user's question before retrieval (sentinel.guardrails.input). A flagged question
+    # is refused. Fails closed unless input_guard_fail_open: the generator shares the provider.
+    input_guard: bool = True
+    input_guard_detectors: tuple[str, ...] = ("policy",)
+    input_guard_fail_open: bool = False
     # Fence retrieved passages as untrusted data in the generation prompt (sentinel.generate).
     prompt_hardening: bool = True
     # Redact PII in retrieved passages before generation (sentinel.guardrails.pii).

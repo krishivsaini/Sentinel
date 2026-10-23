@@ -24,6 +24,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sentinel.config import settings
+from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening
 from sentinel.retrieve import Access
 from sentinel.schema import RetrievedChunk
 from sentinel.serve import create_access_token, create_app, get_engine
@@ -38,6 +39,8 @@ class FakeEngine:
         self.text = text
         self.tokens = tokens or ["The 429 ", "status code ", "means too many requests ", "[rfc6585#0002]"]
         self.accesses: list[Access] = []
+        self.refuse = False
+        self.generated = False
 
     def retrieve(
         self, question: str, top_k: int | None, access: Access
@@ -54,7 +57,11 @@ class FakeEngine:
         return [chunk], 1.5, 0.7
 
     def generate_tokens(self, question: str, chunks: list[RetrievedChunk]) -> Iterator[str]:
+        self.generated = True
         yield from self.tokens
+
+    def screen_input(self, question: str) -> InputScreening:
+        return InputScreening(flagged=self.refuse, scores={"fake": float(self.refuse)})
 
 
 def _client(engine: FakeEngine) -> TestClient:
@@ -200,3 +207,29 @@ def test_forged_citation_is_flagged() -> None:
     _, answer = _done(c, _auth_header(c))
     assert answer["guardrails"]["unresolved_citations"] == ["rfc7517#9999"]
     assert answer["guardrails"]["uncited"] is True
+
+
+def test_flagged_question_is_refused_before_retrieval_or_generation() -> None:
+    engine = FakeEngine()
+    engine.refuse = True
+    c = _client(engine)
+    tokens, answer = _done(c, _auth_header(c))
+    assert tokens == [REFUSAL_MESSAGE] and answer["text"] == REFUSAL_MESSAGE
+    assert answer["retrieved"] == [] and answer["guardrails"]["input_flagged"] is True
+    assert engine.accesses == [] and engine.generated is False   # nothing downstream ran
+
+
+def test_input_guard_fails_closed_when_the_classifier_is_unreachable(monkeypatch) -> None:
+    from sentinel.guardrails import input as input_guard
+    from sentinel.guardrails._groq import GuardrailAPIError
+
+    class Down:
+        name, threshold = "down", 0.5
+
+        def score(self, text):
+            raise GuardrailAPIError("503 classifier unavailable")
+
+    verdict = input_guard.screen_question("What is HSTS?", detectors=[Down()])
+    assert verdict.flagged and "503" in verdict.error
+    monkeypatch.setattr(settings, "input_guard_fail_open", True)
+    assert not input_guard.screen_question("What is HSTS?", detectors=[Down()]).flagged

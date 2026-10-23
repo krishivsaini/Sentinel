@@ -9,6 +9,8 @@ Production hygiene: JWT auth (FR-S3), slowapi per-IP rate limit (FR-S4, a test p
 fires), structured per-stage-latency logging (FR-S5), Pydantic validation everywhere (FR-S6).
 
 Guardrails (v2), applied here in the service layer so every engine gets them:
+  * the question is screened first (sentinel.guardrails.input); a flagged one is refused with a
+    fixed message and never reaches retrieval or the model;
   * retrieval is scoped to the document scopes in the caller's JWT (v2-R4), and quarantined
     chunks are never retrieved (v2-R1);
   * PII is redacted from retrieved passages before generation (v2-R2);
@@ -43,6 +45,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from sentinel.config import settings
 from sentinel.generate import generate, is_abstention, parse_citations
+from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening, screen_question
 from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_citations
 from sentinel.guardrails.pii import redact_chunks
 from sentinel.logging_config import configure_logging, log
@@ -71,6 +74,9 @@ class QueryEngine:
 
     def generate_tokens(self, question: str, chunks: list[RetrievedChunk]) -> Iterator[str]:
         return generate(question, chunks)
+
+    def screen_input(self, question: str) -> InputScreening:
+        return screen_question(question)
 
 
 _default_engine = QueryEngine()
@@ -125,10 +131,17 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
     """Sync generator of SSE events: retrieved -> token* -> done. Runs in a threadpool (the
     LLM stream is sync), so it never blocks the event loop."""
     latency: dict[str, float] = {}
+    guard_s = 0.0
+    if settings.input_guard:
+        t = time.perf_counter()
+        screening = engine.screen_input(req.question)
+        guard_s += time.perf_counter() - t
+        if screening.flagged:
+            yield from _refusal(user, req, screening, guard_s)
+            return
     chunks, latency["retrieve"], latency["rerank"] = engine.retrieve(
         req.question, req.top_k, Access(scopes=user.scopes)
     )
-    guard_s = 0.0
     t = time.perf_counter()
     redactions: dict[str, int] = {}
     if settings.redact_context_pii:
@@ -200,6 +213,26 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
         outcome="abstained" if abstained else "answered",
         guardrails_flagged=guardrails.flagged or bool(redactions),
     )
+    yield {"event": "done", "data": answer.model_dump_json()}
+
+
+def _refusal(user: Principal, req: QueryRequest, screening: InputScreening, guard_s: float):
+    """The SSE stream for a question the input guard refused: no retrieval, no generation."""
+    report = GuardrailReport(input_flagged=True, input_error=screening.error, flagged=True)
+    answer = Answer(
+        question=req.question,
+        text=REFUSAL_MESSAGE,
+        latency_ms=LatencyMs(retrieve=0.0, rerank=0.0, generate=0.0, guard=guard_s * 1000.0),
+        guardrails=report,
+    )
+    log.warning(
+        "query.refused",
+        user=user.subject,
+        input_scores=screening.scores,
+        input_error=screening.error,
+    )
+    yield {"event": "retrieved", "data": "[]"}
+    yield {"event": "token", "data": REFUSAL_MESSAGE}
     yield {"event": "done", "data": answer.model_dump_json()}
 
 

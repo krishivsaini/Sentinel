@@ -74,7 +74,9 @@ export function stageP95(report: LatencyReport | null, stage: string): number | 
 
 
 // sentinel/eval/run_guardrails.py -> data/guardrails/report.json (v2).
-export type Rate = { flagged: number; of: number; rate: number | null };
+export type Rate = { flagged: number; of: number; rate: number | null; ci95?: [number, number] };
+export type Proportion = { k: number; n: number; rate: number | null; ci95: [number, number] };
+export type Split = "dev" | "heldout" | "adaptive";
 
 export type AttackBlock = {
   attacks: number;
@@ -83,6 +85,7 @@ export type AttackBlock = {
   succeeded_range: [number, number];
   success_rate: number | null;
   success_rate_when_exposed: number | null;
+  succeeded_in_any_run?: Proportion;
 };
 
 export type AttackConfigSummary = {
@@ -90,6 +93,7 @@ export type AttackConfigSummary = {
   all: AttackBlock;
   dev: AttackBlock;
   heldout: AttackBlock;
+  adaptive?: AttackBlock;
   by_attack: Record<string, { succeeded: number; of: number }>;
   succeeded_targets: Record<string, number>;
 };
@@ -99,6 +103,8 @@ export type PiiKind = { tp: number; fp: number; fn: number; precision: number | 
 export type PiiSource = {
   precision: number | null;
   recall: number | null;
+  precision_ci95?: [number, number];
+  recall_ci95?: [number, number];
   tp: number;
   fp: number;
   fn: number;
@@ -114,13 +120,34 @@ export type GuardrailsReport = {
   injection: {
     detectors: {
       detectors: string[];
-      recall: Record<"dev" | "heldout", Record<string, Rate> & { missed: string[] }>;
+      recall: Partial<Record<Split, Record<string, Rate> & { missed: string[] }>>;
       false_positives: Record<string, Rate> & { flagged_chunks: string[]; unscored: number };
     };
     attacks: { summary: Record<string, AttackConfigSummary> };
   };
+  input?: InputGuardReport;
   pii: Record<"corpus" | "synthetic", PiiSource>;
   scope: { default_scope_leaks: number };
+};
+
+export type InputRule = {
+  dev: { attacks_caught: Rate; benign_refused: Rate };
+  heldout: { attacks_caught: Rate; benign_refused: Rate };
+  ground_truth_refused: Rate;
+  missed: string[];
+  false_alarms: string[];
+};
+
+export type InputE2E = {
+  all: { attacks: number; succeeded: number; success_rate: number | null; succeeded_in_any_run: Proportion };
+  dev: { attacks: number; succeeded: number };
+  heldout: { attacks: number; succeeded: number };
+  succeeded_kinds: string[];
+};
+
+export type InputGuardReport = {
+  detection: { configured_detectors: string[] } & Record<string, InputRule | string[]>;
+  end_to_end: { repeats: number; without_input_guard: InputE2E; with_input_guard: InputE2E };
 };
 
 export type DashboardData = {

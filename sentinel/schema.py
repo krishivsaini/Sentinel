@@ -79,6 +79,8 @@ class LatencyMs(BaseModel):
 class GuardrailReport(BaseModel):
     """What the guardrails did to one answer (v2). Empty when nothing needed changing."""
 
+    input_flagged: bool = False        # the question was refused by the input guard
+    input_error: str | None = None     # the input guard couldn't run (it fails closed)
     context_redactions: dict[str, int] = Field(default_factory=dict)  # PII kind -> count
     removed: dict[str, int] = Field(default_factory=dict)             # from the answer, by kind
     removed_links: list[str] = Field(default_factory=list)

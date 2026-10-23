@@ -211,6 +211,7 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "146926a8dc85134fc8704393b2947b357f31c4585d1245fed594f396eed81704", "score": 0.002546423813328147}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "146e9dbe153a049959172293cb4cb31a22ad853ddc96d1aa82dda9e185a85334", "score": 0.0016040198970586061}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "14745e1e457ea803ae1c4f78642f449642ac5f198ec7832c92ae57c760a08d85", "score": 0.001017110887914896}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "148096b70481e8eb5be7559bd26dc4a304176d8327f2c3d95aca0fa4542572b2", "score": 0.999076247215271}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "1496fdfd198ee2ab2cf17ea7e3072af07cda9eaf47548f0e112d43e661caf50d", "score": 0.003937284462153912}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "149c961fab97fe2875ce649deff3fb2c0a78126907557873ff5cc8c41b3b93c2", "score": 0.0016603176482021809}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "149ee8077997a80714d78653c8db40ab848bf8269cc05a6e8ee4d81eca413044", "score": 0.009633774869143963}
@@ -801,6 +802,7 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "48ec126af3a5895e2611ffb794c9684471d99f3c9cda9ce5a7032a258afe4ba8", "score": 0.0021841605193912983}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "49112cbc3ed3ea0c9c18f9be92034ca187f60f321888b3abc16abbef6dcc0b81", "score": 0.0013703875010833144}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "491f378b3d67daf37f24c7fe4009b2fa67c877b27a898d59cc696563e355cdd0", "score": 0.009933722205460072}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "494ff008c670ffca2fab234c5965bc6446ea1cfad866f89b76e9e7c716035c60", "score": 0.00056747708003968}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "49510f73e686f10dc10fb3191b7e28a617f378acb723dca02ef1196a2aa3ba10", "score": 0.0009690606966614723}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "4955625a1227648c36d3ca48e31dca28e4dc193e80fe3e38c397c44ecc7b9b6d", "score": 0.002444320358335972}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "49cc82503f61a050a77493e824a5ee03a8d7b34a6a3dbdc6f2e9b311e8a34339", "score": 0.0018658636836335063}
@@ -1030,12 +1032,14 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5ce3d4647d38fcd9ffc66f05ca0766d47aa50810ce10d192b7c5ea241ac4075c", "score": 0.0009862961014732718}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5ce61644fc941498ef7a85f9293eec0d3aa5a53318bbfe03d2d1f6a375b35e8a", "score": 0.00133484264370054}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d10c515e81d26fd01de5d18d6ff737da058bd305cb5e07d6d85148abc8975a4", "score": 0.0016602791147306561}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d14252bdc7966e6c09ff25bee9720f81fe6219f39d701d444393e09876c5c33", "score": 0.0006195000023581088}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d1bfe3ba9d4088b85f1661c9861a54d5c9ad8de67a3d1508e563fb00a3d44b5", "score": 0.0012059492291882634}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d47da05ac83000017c1481fff634a15e14d9efa0062cd01dc9f40af92e41aad", "score": 0.0008668755763210356}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d4aad605f32b8758bce427d7bf70abad71cd6823b60fcbabbc4914e44ea335f", "score": 0.001234091236256063}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d4b8ceabb3a8f7be6e7b73c7ecc80cf8847ce824e7d258e6dabec9454480b38", "score": 0.016099678352475166}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d5b92eee03cfcdb475b02db327a22030af27a5fb0a9618b787487423504196d", "score": 0.0028970397543162107}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d7605acd5a0b9b12eb65549888c6b49e72023e119624b870e4a57e2b7f45514", "score": 0.0009537266450934112}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5d8257d51837036e4002bfbb61aac7f771a645516d51cf23356bc7cfe7a56f0c", "score": 0.0008649345254525542}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5da5d392308af5a515fbc896a84b0192b8400eb56236cae437e4126ec2afd18a", "score": 0.002920831087976694}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5db09d7a7bc8b0bc0d488cbe571e194d2fa3d8353a6ab33f4991e7cf59d1812e", "score": 0.0025227246806025505}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "5dd3e66e0b2f97cd4ef1eb6c0b918e99e24f7fbc6991ea93e728d55b1d8a9f9a", "score": 0.004126162268221378}
@@ -1499,6 +1503,7 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "85b1e96cd9cd25511f601c539ae38241f1c3d61990f45d79691eed48f18e68ab", "score": 0.0021733585745096207}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "85b286216987a0b5b9ede91dfe667f46868a3ebcb0a90328d951a077d654889b", "score": 0.0016994833713397384}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "85cad6b1a91eb908737b17874969b0185e110452607999baf03dbea95aa20aec", "score": 0.0010701719438657165}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "85cfc5d1b0c3420b608daa1eb6d6c9de3922e4b90f75fb473369e95eec2fd2b1", "score": 0.0005227113724686205}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "85e4d34161aa3b0254f795fdaab121cf7d749da29a1f20d9ec2832006bf009d8", "score": 0.006139933597296476}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "861f9419b636d3214fb4b2334d601c279b2e0d1a24c45b65dd1b3d874522ac00", "score": 0.0006375586963258684}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "8685539b3ddd9b6a9f6007121604e376bc6660091b4df982d0ef6a05484e4c8d", "score": 0.0014585839817300439}
@@ -1901,6 +1906,7 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "ab35dfa3fb1c89cc42193c97f566707d49169a0b60ad4269606a3ea9f675125b", "score": 0.002259482629597187}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "ab781df39c93f9dfcbdf50c27f15d1f628c7a8db4d6b15f06665115def11bd53", "score": 0.002368261106312275}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "ab959dc41ceac93e8a961a7830c0e49bcf4c7b4d13f3c2d287d93bf39721188d", "score": 0.0026509533636271954}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "abad9b0b7f21b02694a12252a0b2481700a056ff6bbb355894f26cd43172da75", "score": 0.0005723422509618104}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "ac019101737ffa46c5ac44fecd170076ea12fda68e44831fc45016e0336d432f", "score": 0.001742859254591167}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "ac091db285023070d2d17e28dfa1df1d63c7efbbbc4619a7954734c944e660cd", "score": 0.0016136127524077892}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "ac5ce4085c06f39a1b805a906921a33e498865c3e6175fe6d463c815cc437178", "score": 0.00114975287579}
@@ -2293,6 +2299,7 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "cc3fec743c64a1b81b1a404dc99c9a5c76241ba4d574a67629364db161e99dee", "score": 0.001461430569179356}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "cc58e22544b497f88b815cfac2c84bf95d65fbd33c31e895784b83f8c3f269c3", "score": 0.0021745748817920685}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "cc71bc0bc034b0c8459160c58f98e413fd9ac7a785d2f6a4bc5f355330034bbb", "score": 0.002325485460460186}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "cc9a48c39738595ebb72ca71fe8ba4e74349520328346712c51b0ae73b11d178", "score": 0.0007567645516246557}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "ccc4935a702053e5e597a059298d8b56c54cdb854675a094e47ba10250e2a375", "score": 0.001175307435914874}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "cce5ed0219693852a15e2cdda1a5da3264a7f2c39640c7c012f4a5adf93ace35", "score": 0.0049543497152626514}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "ccf1b118bee85b037995386d5709724837bd108eb3ebc1d067f0b8f7bee7910c", "score": 0.0009045730112120509}
@@ -2418,6 +2425,7 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "d7109a6c44d934ab4d1a816f5ac0fe7c1a5dcdfe0d66c7adbebc289c0367e775", "score": 0.0014394520549103618}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "d751a7d5370a4d43d27823ef0a653a4968377f83e38f63bd49ee5c45c71a0706", "score": 0.0031677328515797853}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "d75b037986861d447349f5c178be52801288de65eade4df9421b0bad26d7cbc1", "score": 0.0013056638417765498}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "d767aead8c8c675b83b9e81353d6d8a8c03f410ff8fcff50b5e02c89f0545bc2", "score": 0.0016396497376263142}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "d76cd17b43aff370b74522a7dde14a7a70ccb86d918e11ef2ba0e3f1ba3a7f7d", "score": 0.0034863699693232775}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "d76d8cd0ed0133a2b172dc72e3197575087cf63a4b09f08db350ef6a09d7fa76", "score": 0.0022745695896446705}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "d789690a3fe9b28431bdda7c8b28e3a9725e0578fe9f46fb41d1d6e1dd80984c", "score": 0.025327078998088837}
@@ -2607,6 +2615,7 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "e6a4b7260268d4d839c3ee5c8db0971df33609ffb452012015a86b68592c3c64", "score": 0.0009629884734749794}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "e6b9fc9ba46bd2d29a0ed45da477b9ae4e3e9d31f5ced7657dc8c595ca0af206", "score": 0.0010034096194431186}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "e6c0b6b2657e49d93870f32aa1232a33743fcb4c91f4cd2199295d0c4dbc0a42", "score": 0.0020727375522255898}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "e6d53c7401ad65f4f122b15d4327ac8fb7eac61c210992bb0d10a391ecfe8b15", "score": 0.0005018672090955079}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "e6f69aa823130aca4639c02fbdd43c745ac40d8aa6c6d2d79e617be19220b8cb", "score": 0.0012764945859089494}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "e6f79f40f5f62c390ac162ec70bd8718993fdd5c12f807ffeb51058d5eb985bb", "score": 0.005041759926825762}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "e6f8dcb97747e82cbad02ce6a08729590236d0a7719e11499fabb9842c8558db", "score": 0.0010102016385644674}
@@ -2814,6 +2823,7 @@
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "f81143c02273fa837df187308d3d01a41ee0c3a6a7d93772fba970956c904d9c", "score": 0.0023395915050059557}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "f81797f8e2bdb019bf115a025c56296bac96f5fb3d8abee9346176462f7cd8f9", "score": 0.0012317037908360362}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "f822bc42104d4b92e7d11dc4f9d5b3a18c2a4de4a5a5593c0cb09db6550e84c3", "score": 0.001189304399304092}
+{"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "f8282e4646008a04a519e6a017c8ab9f83ecf7fcebc7db823460f9d5ff0f8bbc", "score": 0.0006309529999271035}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "f82966b37724cf3a7090b1b1e4374a94d565da9d75b8507b6069e52da8cf7e18", "score": 0.0011377453338354826}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "f829bea08e565910f56e550c877827d1f2c778e45114ab35abde7ec508adcc8d", "score": 0.002082929015159607}
 {"detector": "promptguard:meta-llama/llama-prompt-guard-2-86m", "sha256": "f839383ddc693b1abdb18750d51e1bba6144a985d54d5f2b434c52706cf3af0c", "score": 0.0065836189314723015}
@@ -3130,6 +3140,7 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "146926a8dc85134fc8704393b2947b357f31c4585d1245fed594f396eed81704", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "146e9dbe153a049959172293cb4cb31a22ad853ddc96d1aa82dda9e185a85334", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "14745e1e457ea803ae1c4f78642f449642ac5f198ec7832c92ae57c760a08d85", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "148096b70481e8eb5be7559bd26dc4a304176d8327f2c3d95aca0fa4542572b2", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "1496fdfd198ee2ab2cf17ea7e3072af07cda9eaf47548f0e112d43e661caf50d", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "149c961fab97fe2875ce649deff3fb2c0a78126907557873ff5cc8c41b3b93c2", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "149ee8077997a80714d78653c8db40ab848bf8269cc05a6e8ee4d81eca413044", "score": 0.0}
@@ -3720,6 +3731,7 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "48ec126af3a5895e2611ffb794c9684471d99f3c9cda9ce5a7032a258afe4ba8", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "49112cbc3ed3ea0c9c18f9be92034ca187f60f321888b3abc16abbef6dcc0b81", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "491f378b3d67daf37f24c7fe4009b2fa67c877b27a898d59cc696563e355cdd0", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "494ff008c670ffca2fab234c5965bc6446ea1cfad866f89b76e9e7c716035c60", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "49510f73e686f10dc10fb3191b7e28a617f378acb723dca02ef1196a2aa3ba10", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "4955625a1227648c36d3ca48e31dca28e4dc193e80fe3e38c397c44ecc7b9b6d", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "49cc82503f61a050a77493e824a5ee03a8d7b34a6a3dbdc6f2e9b311e8a34339", "score": 0.0}
@@ -3949,12 +3961,14 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5ce3d4647d38fcd9ffc66f05ca0766d47aa50810ce10d192b7c5ea241ac4075c", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5ce61644fc941498ef7a85f9293eec0d3aa5a53318bbfe03d2d1f6a375b35e8a", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d10c515e81d26fd01de5d18d6ff737da058bd305cb5e07d6d85148abc8975a4", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d14252bdc7966e6c09ff25bee9720f81fe6219f39d701d444393e09876c5c33", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d1bfe3ba9d4088b85f1661c9861a54d5c9ad8de67a3d1508e563fb00a3d44b5", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d47da05ac83000017c1481fff634a15e14d9efa0062cd01dc9f40af92e41aad", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d4aad605f32b8758bce427d7bf70abad71cd6823b60fcbabbc4914e44ea335f", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d4b8ceabb3a8f7be6e7b73c7ecc80cf8847ce824e7d258e6dabec9454480b38", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d5b92eee03cfcdb475b02db327a22030af27a5fb0a9618b787487423504196d", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d7605acd5a0b9b12eb65549888c6b49e72023e119624b870e4a57e2b7f45514", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5d8257d51837036e4002bfbb61aac7f771a645516d51cf23356bc7cfe7a56f0c", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5da5d392308af5a515fbc896a84b0192b8400eb56236cae437e4126ec2afd18a", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5db09d7a7bc8b0bc0d488cbe571e194d2fa3d8353a6ab33f4991e7cf59d1812e", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "5dd3e66e0b2f97cd4ef1eb6c0b918e99e24f7fbc6991ea93e728d55b1d8a9f9a", "score": 0.0}
@@ -4418,6 +4432,7 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "85b1e96cd9cd25511f601c539ae38241f1c3d61990f45d79691eed48f18e68ab", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "85b286216987a0b5b9ede91dfe667f46868a3ebcb0a90328d951a077d654889b", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "85cad6b1a91eb908737b17874969b0185e110452607999baf03dbea95aa20aec", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "85cfc5d1b0c3420b608daa1eb6d6c9de3922e4b90f75fb473369e95eec2fd2b1", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "85e4d34161aa3b0254f795fdaab121cf7d749da29a1f20d9ec2832006bf009d8", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "861f9419b636d3214fb4b2334d601c279b2e0d1a24c45b65dd1b3d874522ac00", "score": 1.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "8685539b3ddd9b6a9f6007121604e376bc6660091b4df982d0ef6a05484e4c8d", "score": 0.0}
@@ -4820,6 +4835,7 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "ab35dfa3fb1c89cc42193c97f566707d49169a0b60ad4269606a3ea9f675125b", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "ab781df39c93f9dfcbdf50c27f15d1f628c7a8db4d6b15f06665115def11bd53", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "ab959dc41ceac93e8a961a7830c0e49bcf4c7b4d13f3c2d287d93bf39721188d", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "abad9b0b7f21b02694a12252a0b2481700a056ff6bbb355894f26cd43172da75", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "ac019101737ffa46c5ac44fecd170076ea12fda68e44831fc45016e0336d432f", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "ac091db285023070d2d17e28dfa1df1d63c7efbbbc4619a7954734c944e660cd", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "ac5ce4085c06f39a1b805a906921a33e498865c3e6175fe6d463c815cc437178", "score": 0.0}
@@ -5212,6 +5228,7 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "cc3fec743c64a1b81b1a404dc99c9a5c76241ba4d574a67629364db161e99dee", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "cc58e22544b497f88b815cfac2c84bf95d65fbd33c31e895784b83f8c3f269c3", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "cc71bc0bc034b0c8459160c58f98e413fd9ac7a785d2f6a4bc5f355330034bbb", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "cc9a48c39738595ebb72ca71fe8ba4e74349520328346712c51b0ae73b11d178", "score": 1.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "ccc4935a702053e5e597a059298d8b56c54cdb854675a094e47ba10250e2a375", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "cce5ed0219693852a15e2cdda1a5da3264a7f2c39640c7c012f4a5adf93ace35", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "ccf1b118bee85b037995386d5709724837bd108eb3ebc1d067f0b8f7bee7910c", "score": 0.0}
@@ -5337,6 +5354,7 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "d7109a6c44d934ab4d1a816f5ac0fe7c1a5dcdfe0d66c7adbebc289c0367e775", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "d751a7d5370a4d43d27823ef0a653a4968377f83e38f63bd49ee5c45c71a0706", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "d75b037986861d447349f5c178be52801288de65eade4df9421b0bad26d7cbc1", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "d767aead8c8c675b83b9e81353d6d8a8c03f410ff8fcff50b5e02c89f0545bc2", "score": 1.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "d76cd17b43aff370b74522a7dde14a7a70ccb86d918e11ef2ba0e3f1ba3a7f7d", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "d76d8cd0ed0133a2b172dc72e3197575087cf63a4b09f08db350ef6a09d7fa76", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "d789690a3fe9b28431bdda7c8b28e3a9725e0578fe9f46fb41d1d6e1dd80984c", "score": 0.0}
@@ -5526,6 +5544,7 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "e6a4b7260268d4d839c3ee5c8db0971df33609ffb452012015a86b68592c3c64", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "e6b9fc9ba46bd2d29a0ed45da477b9ae4e3e9d31f5ced7657dc8c595ca0af206", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "e6c0b6b2657e49d93870f32aa1232a33743fcb4c91f4cd2199295d0c4dbc0a42", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "e6d53c7401ad65f4f122b15d4327ac8fb7eac61c210992bb0d10a391ecfe8b15", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "e6f69aa823130aca4639c02fbdd43c745ac40d8aa6c6d2d79e617be19220b8cb", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "e6f79f40f5f62c390ac162ec70bd8718993fdd5c12f807ffeb51058d5eb985bb", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "e6f8dcb97747e82cbad02ce6a08729590236d0a7719e11499fabb9842c8558db", "score": 0.0}
@@ -5733,6 +5752,7 @@
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "f81143c02273fa837df187308d3d01a41ee0c3a6a7d93772fba970956c904d9c", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "f81797f8e2bdb019bf115a025c56296bac96f5fb3d8abee9346176462f7cd8f9", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "f822bc42104d4b92e7d11dc4f9d5b3a18c2a4de4a5a5593c0cb09db6550e84c3", "score": 0.0}
+{"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "f8282e4646008a04a519e6a017c8ab9f83ecf7fcebc7db823460f9d5ff0f8bbc", "score": 1.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "f82966b37724cf3a7090b1b1e4374a94d565da9d75b8507b6069e52da8cf7e18", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "f829bea08e565910f56e550c877827d1f2c778e45114ab35abde7ec508adcc8d", "score": 0.0}
 {"detector": "safeguard:openai/gpt-oss-safeguard-20b:0923522a", "sha256": "f839383ddc693b1abdb18750d51e1bba6144a985d54d5f2b434c52706cf3af0c", "score": 0.0}
