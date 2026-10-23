@@ -43,8 +43,9 @@ from sentinel.schema import Chunk, RetrievedChunk
 
 # bge-*-en-v1.5 wants this instruction on the QUERY side only (passages were embedded plain).
 QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
-# Fused candidates handed to the cross-encoder before it trims to top-K (the "N" in 50 -> 5).
-RERANK_POOL_SIZE = max(settings.dense_top_n, settings.sparse_top_n)
+# Fused candidates handed to the cross-encoder before it trims to top-K (config.rerank_pool_size).
+# The cross-encoder's cost is linear in this number; it dominates query latency.
+RERANK_POOL_SIZE = settings.rerank_pool_size
 
 
 # --------------------------------------------------------------------------- loaded state
@@ -261,6 +262,7 @@ def hybrid_retrieve_timed(
     *,
     index_dir: Path | None = None,
     access: Access = DEFAULT_ACCESS,
+    pool_size: int | None = None,
 ) -> tuple[list[RetrievedChunk], float, float]:
     """Full pipeline, returning (results, retrieve_ms, rerank_ms) so the service can report
     per-stage latency in isolation (never blended, NFR-3). 'retrieve' covers dense + sparse +
@@ -275,7 +277,7 @@ def hybrid_retrieve_timed(
     dense_map = dict(dense)
     sparse_map = dict(sparse)
     fused_map = rrf_fuse([[c for c, _ in dense], [c for c, _ in sparse]])
-    pool = sorted(fused_map, key=lambda c: fused_map[c], reverse=True)[:RERANK_POOL_SIZE]
+    pool = sorted(fused_map, key=lambda c: fused_map[c], reverse=True)[: pool_size or RERANK_POOL_SIZE]
     retrieve_ms = (time.perf_counter() - t0) * 1000.0
 
     t1 = time.perf_counter()

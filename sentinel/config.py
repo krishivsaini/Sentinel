@@ -140,6 +140,12 @@ class Settings(BaseSettings):
     dense_top_n: int = 50                  # FAISS first-stage
     sparse_top_n: int = 50                 # BM25 first-stage
     rrf_k: int = 60                        # Reciprocal Rank Fusion constant
+    # Fused candidates the cross-encoder re-scores; its cost is linear in this and dominates query
+    # latency. Kept at 50 for the best retrieval quality. Measured option
+    # (data/rerank_pool_sweep.json): 20 keeps hit@5 (0.896) and nearly all recall@5 (0.812 vs
+    # 0.816) at 2.6x less rerank time, but changes the top-5 for 13 of 48 questions; below 20
+    # quality falls (10: recall@5 0.743).
+    rerank_pool_size: int = 50
     rerank_top_k: int = 5                  # cross-encoder output (fused top-N -> top-K)
 
     # ---------------------------------------------------------------- Eval + gate (§12/§13)

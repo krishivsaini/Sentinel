@@ -197,8 +197,13 @@ Apple M3, 8 GB, local models on CPU; generation on Groq `gpt-oss-20b`
 | Rerank — cross-encoder over 50 candidates | 200 | 954 ms | 1,021 ms | 1,129 ms |
 | Generate — full streamed answer | 50 | 1,047 ms | 2,457 ms | 4,273 ms |
 
-Reranking is the bottleneck: it scores all 50 fused candidates. Shrinking that pool is the
-obvious next optimisation, and has to be re-checked against the ablation above before it ships.
+Reranking is the bottleneck: it scores all 50 fused candidates. A sweep of the pool size over
+the 48 questions ([`data/rerank_pool_sweep.json`](data/rerank_pool_sweep.json),
+`scripts/retrieval_ablation.py --pool-sweep`) shows a 20-candidate pool would keep hit@5 at 0.896
+and recall@5 at 0.812 (vs 0.816) for **2.6× less rerank time** (p50 439 ms vs 1,139 ms on that
+run), but would change the top-5 for 13 of the 48 questions. The pool stays at 50 — best
+quality, and every published number above is measured on it; 20 is the measured fallback if
+latency matters more. Below 20, quality falls (10: recall@5 0.743).
 
 ### Corpus
 
@@ -469,6 +474,12 @@ flowchart LR
   not work — a poisoned passage carries its own link. Citations must resolve to retrieved chunks.
   Because `/query` streams, the guard holds back a short tail and never releases half of a link
   or an email; a property test checks that streamed output always equals the full-text check.
+  It also withholds **prompt leakage**: passage fence lines are dropped, and any run of 8 or more
+  words copied from the system prompt or hardening rules is replaced. Testing showed that
+  without the input guard the model prints its whole system prompt on request, hardening
+  notwithstanding; this makes that impossible to stream out whatever gets past the classifier
+  (0 false positives across 595 real answers). It was added after the guardrail results above
+  were measured, and can only lower them.
 - **Scoped retrieval** ([`retrieve.py`](sentinel/retrieve.py)). Every chunk has a scope and the
   JWT carries the caller's; the filter runs inside the dense and sparse searches, so an
   out-of-scope chunk can't occupy a candidate slot, reach the reranker, or be cited.
@@ -679,7 +690,8 @@ These are deliberate scope choices, stated plainly:
   in the ablation can.
 - **The CI gate sees half the ground truth.** 24 of 48 questions per PR, faithfulness only; the
   full three-metric eval runs locally.
-- **Reranking dominates latency** at ~1 s per query on CPU, because it scores 50 candidates.
+- **Reranking dominates latency** at ~1 s per query on CPU, because it scores 50 candidates; a
+  measured 20-candidate pool would cut that 2.6× at a small cost in recall.
 - **FAISS, not a managed vector database.** A flat in-memory index is the right tool at this
   corpus size; it isn't a claim about scaling to millions of documents.
 - **A paid judge key for CI.** Everything runs on Groq's free tier, but its daily token cap allows
@@ -708,8 +720,6 @@ These are deliberate scope choices, stated plainly:
 
 ## Roadmap
 
-- **Rerank latency.** Shrink the 50-candidate rerank pool, re-checked against the retrieval
-  ablation so recall@5 and MRR don't drop.
 - **A faithfulness gate relative to main's baseline** — a paired, per-question comparison
   against the last main run — so moderate regressions fail CI, not only gross ones.
 - **A public injection benchmark** alongside the hand-written sets, and a screening policy that

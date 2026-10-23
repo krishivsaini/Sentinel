@@ -21,6 +21,12 @@ hybrid retrieval.
 
     python scripts/retrieval_ablation.py              # writes data/retrieval_ablation.json
     python scripts/retrieval_ablation.py --no-judge   # deterministic metrics only, no API
+    python scripts/retrieval_ablation.py --pool-sweep # rerank pool size vs quality and latency
+
+The pool sweep asks how many fused candidates the cross-encoder needs to score. Its cost is linear
+in the pool, and it dominates query latency. The cross-encoder scores each (question, passage)
+pair independently, so scoring the top 50 once gives the exact top-K for every smaller pool;
+latency is then timed separately per pool size. Judge-free and local: no API calls.
 """
 
 from __future__ import annotations
@@ -50,6 +56,8 @@ from sentinel.retrieve import (  # noqa: E402
 )
 
 OUT_PATH = DATA_DIR / "retrieval_ablation.json"
+SWEEP_PATH = DATA_DIR / "rerank_pool_sweep.json"
+POOL_SIZES = (5, 10, 15, 20, 25, 30, 40, 50)
 CONFIGS = ("dense", "bm25", "fusion", "hybrid")
 
 
@@ -96,10 +104,66 @@ async def judge_recall(items: list[dict]) -> None:
     print()
 
 
+def pool_sweep(timing_repeats: int = 3) -> None:
+    """Quality (hit/recall/MRR@K) and rerank latency for each pool size in POOL_SIZES."""
+    import time
+
+    k = settings.rerank_top_k
+    warmup()
+    idx = _load_index()
+    text2id = {c.text: cid for cid, c in idx.id2chunk.items()}
+    reranker = _reranker()
+    biggest = max(POOL_SIZES)
+
+    per_q = []
+    for gt in load_ground_truth():
+        relevant = {text2id[t] for t in gt.relevant_contexts}
+        dense = [c for c, _ in dense_search(gt.question)]
+        sparse = [c for c, _ in sparse_search(gt.question)]
+        fused = rrf_fuse([dense, sparse])
+        pool = sorted(fused, key=lambda c: fused[c], reverse=True)[:biggest]
+        pairs = [[gt.question, idx.id2chunk[c].text] for c in pool]
+        scores = list(reranker.predict(pairs))
+        per_q.append((gt.question, relevant, pool, scores, pairs))
+
+    rows = []
+    for size in POOL_SIZES:
+        metrics, times = [], []
+        for _, relevant, pool, scores, pairs in per_q:
+            top = [c for c, _ in sorted(zip(pool[:size], scores[:size]), key=lambda x: x[1], reverse=True)][:k]
+            metrics.append(rank_metrics(top, relevant))
+            for _ in range(timing_repeats):
+                t0 = time.perf_counter()
+                reranker.predict(pairs[:size])
+                times.append((time.perf_counter() - t0) * 1000.0)
+        times.sort()
+        row = {
+            "pool_size": size,
+            "hit": round(statistics.mean(m["hit"] for m in metrics), 3),
+            "recall": round(statistics.mean(m["recall"] for m in metrics), 3),
+            "mrr": round(statistics.mean(m["rr"] for m in metrics), 3),
+            "rerank_p50_ms": round(times[len(times) // 2], 1),
+            "rerank_p95_ms": round(times[int(len(times) * 0.95)], 1),
+        }
+        rows.append(row)
+        print(f"  pool {size:>3}  hit@{k} {row['hit']:.3f}  recall@{k} {row['recall']:.3f}  "
+              f"MRR {row['mrr']:.3f}  rerank p50 {row['rerank_p50_ms']:7.1f} ms  "
+              f"p95 {row['rerank_p95_ms']:7.1f} ms", flush=True)
+    SWEEP_PATH.write_text(json.dumps({
+        "k": k, "n": len(per_q), "device": str(settings.torch_device), "timing_repeats": timing_repeats,
+        "rows": rows,
+    }, indent=2) + "\n", encoding="utf-8")
+    print(f"\n  wrote {SWEEP_PATH}\n")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--no-judge", action="store_true", help="skip the LLM-judged context recall")
+    ap.add_argument("--pool-sweep", action="store_true", help="rerank pool size vs quality/latency")
     args = ap.parse_args()
+    if args.pool_sweep:
+        pool_sweep()
+        return
 
     k = settings.rerank_top_k
     warmup()
