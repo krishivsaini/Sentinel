@@ -17,6 +17,7 @@ import tenacity
 
 from sentinel.config import settings
 from sentinel.retry import backoff_wait, is_transient, log_retry
+from sentinel.spend import meter
 
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -91,6 +92,7 @@ def chat(model: str, messages: list[dict], *, rpm: int | None = None, **params) 
     """One chat completion; returns the message content. `rpm` caps this model's request rate
     across threads. Raises GuardrailAPIError on any API error (its message carries the server's
     text, which the retry policy reads)."""
+    meter.check()
     if rpm:
         _limiter(model, rpm).acquire()
     resp = _client().post(GROQ_CHAT_URL, json={"model": model, "messages": messages, **params})
@@ -98,4 +100,6 @@ def chat(model: str, messages: list[dict], *, rpm: int | None = None, **params) 
     if resp.status_code != 200 or "choices" not in body:
         detail = body.get("error", {}).get("message") or resp.text[:300]
         raise GuardrailAPIError(f"{resp.status_code} {model}: {detail}")
+    usage = body.get("usage") or {}
+    meter.record(model, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0))
     return body["choices"][0]["message"].get("content") or ""

@@ -76,6 +76,7 @@ from sentinel.schema import (
     EvalResult,
     GroundTruthItem,
 )
+from sentinel.spend import meter
 
 # Main's per-question faithfulness on the CI subset, for the relative gate (write_baseline).
 BASELINE_PATH = DATA_DIR / "faithfulness_baseline.json"
@@ -508,7 +509,7 @@ def _ci_gate(result: EvalResult) -> bool:
             " token spend per PR. The full eval runs locally and feeds the dashboard._",
             "",
             f"_judge `{settings.judge_model}` · generation `{settings.generation_model}` · "
-            f"git `{result.git_sha}`_",
+            f"git `{result.git_sha}` · metered Groq spend ${meter.usd:.3f}_",
         ]
     )
     print("\n" + md + "\n")
@@ -557,13 +558,18 @@ def main() -> None:
     ap.add_argument("--no-resume", action="store_true", help="ignore checkpoints; re-score all")
     ap.add_argument("--write-baseline", type=int, metavar="RUNS", default=0,
                     help="score the CI subset RUNS times and write data/faithfulness_baseline.json")
+    ap.add_argument("--max-spend", type=float, metavar="USD", default=None,
+                    help="stop once this run's metered Groq spend reaches USD (sentinel.spend)")
     args = ap.parse_args()
+    if args.max_spend is not None:
+        settings.spend_limit_usd = args.max_spend
     if args.write_baseline:
         write_baseline(args.write_baseline)
         return
 
     subset_n = settings.ci_eval_subset_size if args.ci else args.subset
     result = run(subset_n=subset_n, resume=not args.no_resume, gate_only=args.ci)
+    log.info("eval.spend", **meter.summary())
 
     if args.ci and not _ci_gate(result):
         raise SystemExit(1)  # the gate: a red build below threshold / on thin coverage (§13)

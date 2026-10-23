@@ -439,7 +439,10 @@ left to the full local eval: they would triple the judge's token spend per PR wi
 the gate's verdict.
 
 The LLM key is a repository secret, on Groq's paid tier; the free tier's 200K tokens/day covers
-only about two gate runs. [PR #2](https://github.com/krishivsaini/Sentinel/pull/2) (branch
+only about two gate runs. Every Groq call is metered ([`spend.py`](sentinel/spend.py)): the token
+counts the API reports, priced per model. Each gate is capped at $0.25 and fails rather than
+overspend, and both summaries report what the run cost. Local runs take the same cap with
+`--max-spend`. [PR #2](https://github.com/krishivsaini/Sentinel/pull/2) (branch
 `demo/prompt-regression-breaks-grounding`) carries a deliberately harmful change — it loosens
 the grounding prompt so the model answers from general knowledge, eroding faithfulness. The
 gate blocks it ([Results](#the-gate-blocks-a-grounding-regression)).

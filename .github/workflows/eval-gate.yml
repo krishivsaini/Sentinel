@@ -17,7 +17,9 @@
 # data the gates read trigger the two gates — the only jobs that call the paid API. A skipped job
 # counts as passing. Manual runs (workflow_dispatch) always run everything.
 #
-# Requires the GROQ_API_KEY repository secret (FR-CI4); the repo's key is on Groq's paid tier.
+# Requires the GROQ_API_KEY repository secret (FR-CI4); the repo's key is on Groq's paid tier,
+# under a fixed monthly budget. Each gate is capped at $0.25 of metered spend and fails if a run
+# would need more; both summaries report what the run actually cost.
 # Injection-screening verdicts for the corpus are committed (data/guardrails/screening_cache.jsonl),
 # so building the indexes makes no API calls unless the corpus or the screening policy changed.
 
@@ -170,6 +172,7 @@ jobs:
       - name: Faithfulness gate (eval subset)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          SENTINEL_SPEND_LIMIT_USD: "0.25"   # fail, don't overspend (sentinel.spend)
         run: uv run python -m sentinel.eval.run_eval --ci --no-resume
 
   injection-gate:
@@ -197,4 +200,5 @@ jobs:
       - name: Injection gate (85 attacks across both surfaces, every defence on)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          SENTINEL_SPEND_LIMIT_USD: "0.25"   # fail, don't overspend (sentinel.spend)
         run: uv run python -m sentinel.eval.run_guardrails --ci

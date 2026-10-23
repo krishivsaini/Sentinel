@@ -14,6 +14,7 @@ import re
 
 from sentinel.config import settings
 from sentinel.logging_config import log
+from sentinel.spend import BudgetExceeded
 
 # Error-message fragments that mark a *transient* failure worth backing off and retrying.
 # Anything else re-raises immediately — we don't want to spin on a real bug.
@@ -61,6 +62,8 @@ def is_daily_quota(exc: BaseException) -> bool:
 
 
 def is_transient(exc: BaseException) -> bool:
+    if isinstance(exc, BudgetExceeded):   # its message can contain "500" ("$0.2500")
+        return False
     return any(t in _text(exc) for t in TRANSIENT_SIGNATURES) and not is_daily_quota(exc)
 
 

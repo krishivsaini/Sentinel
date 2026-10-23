@@ -45,6 +45,7 @@ from functools import lru_cache
 from langchain_core.language_models import BaseChatModel
 
 from sentinel.config import settings
+from sentinel.spend import SpendCallback
 
 
 _OPENAI_REASONING_PREFIXES = ("gpt-5", "gpt-6", "o1", "o3", "o4")
@@ -138,6 +139,7 @@ def chat_model(
             # and Ragas raised LLMDidNotFinishException — 4 of 24 items in a CI run. A higher cap
             # only changes calls that were being cut off.
             max_tokens=settings.groq_max_output_tokens,
+            callbacks=[SpendCallback(model)],   # priced and capped (sentinel.spend)
             **extra,
         )
     if provider == "google":

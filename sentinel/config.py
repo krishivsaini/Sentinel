@@ -239,6 +239,8 @@ class Settings(BaseSettings):
     # on the free tier (8K tokens/min) set SENTINEL_EVAL_ITEM_PAUSE_SECONDS=25 so backoff only has
     # to absorb true bursts rather than every item.
     eval_item_pause_seconds: float = 0.0
+    # Stop a run once its metered LLM spend reaches this many USD (sentinel.spend). None = no cap.
+    spend_limit_usd: float | None = None
 
 
 settings = Settings()

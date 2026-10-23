@@ -62,6 +62,7 @@ from sentinel.guardrails.output import guard_answer
 from sentinel.logging_config import configure_logging, log
 from sentinel.retrieve import Access, hybrid_retrieve, warmup
 from sentinel.schema import Chunk, RetrievedChunk
+from sentinel.spend import meter
 
 REPORT_PATH = GUARDRAILS_DIR / "report.json"
 PII_LABELS_PATH = GUARDRAILS_DIR / "pii_labels.jsonl"
@@ -510,7 +511,7 @@ def _gate(report: dict) -> bool:
         f"| {ci(usr)} | {'✅' if ok_usr else '❌'} |",
         "",
         f"_generation `{settings.generation_model}` · screening "
-        f"`{', '.join(d.name for d in default_detectors())}`_",
+        f"`{', '.join(d.name for d in default_detectors())}` · metered Groq spend ${meter.usd:.3f}_",
     ])
     print(md)
     if path := os.getenv("GITHUB_STEP_SUMMARY"):
@@ -557,7 +558,11 @@ def main() -> None:
                     help="runs per configuration for the full report (generation varies)")
     ap.add_argument("--rescore", action="store_true",
                     help="re-score the answers recorded in the report; no API calls")
+    ap.add_argument("--max-spend", type=float, metavar="USD", default=None,
+                    help="stop once this run's metered Groq spend reaches USD (sentinel.spend)")
     args = ap.parse_args()
+    if args.max_spend is not None:
+        settings.spend_limit_usd = args.max_spend
     configure_logging()
     if args.rescore:
         report = rescore(json.loads(REPORT_PATH.read_text(encoding="utf-8")))
@@ -586,7 +591,7 @@ def main() -> None:
     }
     _write(report)
     _print(report)
-    log.info("guardrails.report", path=str(REPORT_PATH))
+    log.info("guardrails.report", path=str(REPORT_PATH), spend=meter.summary())
 
 
 if __name__ == "__main__":
