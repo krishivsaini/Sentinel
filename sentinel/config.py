@@ -204,6 +204,10 @@ class Settings(BaseSettings):
         "rfc-editor.org", "ietf.org", "iana.org", "w3.org",
         "example.com", "example.net", "example.org",
     )
+    # Check the finished answer for carried-out passage instructions (sentinel.guardrails.answer);
+    # a flagged answer is withheld. Fails closed unless answer_check_fail_open.
+    answer_check: bool = True
+    answer_check_fail_open: bool = False
     # Second CI gate (v2-R5): the share of the 40 adversarial attacks allowed to succeed with every
     # defence on. Set from measurement — see data/guardrails/report.json.
     injection_asr_threshold: float = 0.05

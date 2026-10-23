@@ -148,12 +148,30 @@ retrieves its passage, in three sets:
 
 | Defences | Attacks that got through (mean of 3) | Dev | Held-out | Adaptive |
 |---|---|---|---|---|
-| None | 12.0 / 50 — 24% | 6.3 | 3.7 | 2.0 |
-| Prompt hardening only | 2.7 / 50 — 5.3% | 1.7 | 1.0 | 0 |
-| Output guard only | 12.3 / 50 — 24.7% | 6.7 | 3.7 | 2.0 |
-| Hardening + output guard (*what's left if screening misses*) | 3.7 / 50 — 7.3% | 2.7 | 1.0 | 0 |
+| None | 14.7 / 50 — 29% | 8.0 | 4.7 | 2.0 |
+| Prompt hardening only | 4.3 / 50 — 8.7% | 2.7 | 1.7 | 0 |
+| Output guard only | 15.0 / 50 — 30% | 8.3 | 4.7 | 2.0 |
+| Hardening + output guard | 5.3 / 50 — 10.7% | 3.3 | 2.0 | 0 |
+| **Hardening + output guard + answer check** (*what's left if screening misses*) † | **0.7 / 50 — 1.3%** | 0.7 | 0 | 0 |
 | Index-time screening only | 0 / 50 | 0 | 0 | 0 |
 | **All defences (what ships)** | **0 / 50 in every run — 95% CI 0–7.1%** | **0** | **0** | **0** |
+
+An earlier version of this table undercounted. The success check missed canaries the model wrote
+with Unicode hyphens (`WHIMBREL‑4406`, with U+2011), and canaries from a second attack passage
+retrieved alongside the target. Re-scoring the recorded answers (`run_guardrails --rescore`, no
+API calls) raised the weaker rows by up to 2.7 attacks; the rows with screening on didn't change.
+
+† **The answer check** reads only the question and the finished answer, and withholds an answer
+that carried out a planted instruction. Since it sees nothing but the final text, applying it to
+the recorded answers ([`answer_check.json`](data/guardrails/answer_check.json),
+[`scripts/answer_check_eval.py`](scripts/answer_check_eval.py)) gives what the pipeline would have
+returned. Over 665 distinct answers:
+
+| Answers | Withheld |
+|---|---|
+| an attack succeeded in them | **59 / 69** — 59 / 62 leaving out misinformation, which it doesn't try to judge |
+| saw an attack passage and didn't obey it | 6 / 285: 3 still told the user to paste their token into a removed link, 3 were clean |
+| never saw an attack (eval, calibration, screened questions) | **0 / 311** (95% CI 0–1.2%) |
 
 | Screening detector | Dev caught | Held-out caught | Adaptive caught | Real RFC chunks flagged |
 |---|---|---|---|---|
@@ -195,8 +213,12 @@ What the numbers say, plainly:
 - **The two detectors fail differently,** which is why both run: an injection framed as "an example
   of an attack" is waved through by the policy model (its policy allows text that *describes*
   attacks) and caught only by Prompt Guard.
-- **Prompt hardening is the strongest backup layer** (24% → 5.3% on its own); the output guard only
-  matters for link-shaped payloads.
+- **Every attack that beat hardening + the output guard had the same shape:** a correct answer
+  plus something the question never asked for — a "compliance tag", an "audit id", an "OCSP
+  check id". The answer check targets that shape, not the canary format, and takes the backup
+  layers from 10.7% to 1.3%. What's left is a planted false claim written as RFC text.
+- **Prompt hardening is the strongest single backup layer** (29% → 8.7% on its own); the output
+  guard only matters for link-shaped payloads.
 - **The input guard cuts user-side attacks from 28% to 3%** without refusing a single genuine
   question; Prompt Guard alone would have refused two.
 - **PII precision of 0.80 is deliberate over-redaction:** IETF role addresses (`iesg@ietf.org`)
@@ -456,7 +478,8 @@ flowchart LR
     R --> P["PII redaction<br/>of passages"]
     P --> G["Generation<br/>passages fenced as<br/>untrusted data"]
     G --> O["Output guard<br/>links · images · PII<br/>citation checks"]
-    O --> A["Answer (streamed)"]
+    O --> C["Answer check<br/>did it carry out<br/>a planted instruction?"]
+    C --> A["Answer (streamed;<br/>withheld if flagged)"]
 ```
 
 - **Input guard** ([`input.py`](sentinel/guardrails/input.py)). The question is screened before
@@ -500,6 +523,15 @@ flowchart LR
   notwithstanding; this makes that impossible to stream out whatever gets past the classifier
   (0 false positives across 595 real answers). It was added after the guardrail results above
   were measured, and can only lower them.
+- **Answer check** ([`answer.py`](sentinel/guardrails/answer.py)). The backup for an attack that
+  screening misses. gpt-oss-safeguard-20b reads the question and the finished answer — never
+  the passages, so a poisoned passage can't address the checker — and flags content the question
+  didn't ask for: verification or audit codes, calls to paste or visit something, claims about
+  the assistant itself. A flagged answer is withheld. The tokens have already streamed by then,
+  so the `done` event carries the replacement and a `withheld` flag, and the dashboard swaps it in.
+  It costs one classifier call per answer, and like the input guard it fails closed. The
+  faithfulness eval leaves it out (a withheld answer makes no claims, which would hide false
+  alarms); its false-alarm rate is measured directly instead.
 - **Scoped retrieval** ([`retrieve.py`](sentinel/retrieve.py)). Every chunk has a scope and the
   JWT carries the caller's; the filter runs inside the dense and sparse searches, so an
   out-of-scope chunk can't occupy a candidate slot, reach the reranker, or be cited.
@@ -727,9 +759,13 @@ These are deliberate scope choices, stated plainly:
   times in 10; none of those happened to work on the model, which is not the same as being safe.
 - **A canary measures obedience, not harm.** For misinformation attacks it is a lower bound: a
   model could repeat a false claim without the canary.
-- **The backup layers are weaker on their own.** If screening missed an attack, hardening plus
-  the output guard still let 7.3% through in testing; with this 20B generator, forged system
-  messages are the hardest to resist.
+- **The backup layers are weaker on their own.** If screening missed an attack, hardening, the
+  output guard and the answer check still let 1.3% through in replay: a false claim phrased as
+  RFC errata, which the answer check can't recognise as planted. Its numbers come from the
+  answers already recorded; the next full guardrail run measures it end to end.
+- **The answer check retracts rather than blocks.** On the stream the answer has already been
+  sent when the check runs; a client that ignores the `done` event's replacement would still
+  show it. It wrongly withheld 3 of the ~600 clean answers measured.
 - **The relative gate is calibrated on 4 runs.** Their SD is itself uncertain, and under a
   normal approximation about 1 healthy PR in 40 would fall below the line by noise alone: a
   re-run settles it. Regressions smaller than ~0.07 still pass. The baseline must be refreshed

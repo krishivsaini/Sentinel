@@ -86,6 +86,8 @@ class GuardrailReport(BaseModel):
     removed_links: list[str] = Field(default_factory=list)
     unresolved_citations: list[str] = Field(default_factory=list)
     uncited: bool = False
+    answer_withheld: bool = False      # the answer check withheld it (text is the replacement)
+    answer_check_error: str | None = None  # the answer check couldn't run (it fails closed)
     flagged: bool = False
 
 

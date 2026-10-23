@@ -16,8 +16,11 @@ Guardrails (v2), applied here in the service layer so every engine gets them:
   * PII is redacted from retrieved passages before generation (v2-R2);
   * the generation prompt fences passages as untrusted data (sentinel.generate, v2-R1);
   * the token stream passes through the output sanitiser — untrusted links, images and PII
-    never reach the client — and citations are checked at the end (v2-R3). The `done` event
-    carries a GuardrailReport of everything that was changed or flagged.
+    never reach the client — and citations are checked at the end (v2-R3);
+  * the finished answer is checked for carried-out passage instructions
+    (sentinel.guardrails.answer). A flagged answer is withheld: the tokens have already
+    streamed, so the `done` event's text is the replacement and clients must show it instead.
+The `done` event carries a GuardrailReport of everything that was changed or flagged.
 
 The retrieval+generation pipeline is injected as a `QueryEngine` dependency so tests can swap
 in an instant fake — that keeps the auth/rate-limit/contract tests hermetic (no models, no API).
@@ -45,6 +48,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from sentinel.config import settings
 from sentinel.generate import generate, is_abstention, parse_citations
+from sentinel.guardrails.answer import WITHHELD_MESSAGE, AnswerCheck, check_answer
 from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening, screen_question
 from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_citations
 from sentinel.guardrails.pii import redact_chunks
@@ -77,6 +81,9 @@ class QueryEngine:
 
     def screen_input(self, question: str) -> InputScreening:
         return screen_question(question)
+
+    def check_answer(self, question: str, answer: str) -> AnswerCheck:
+        return check_answer(question, answer)
 
 
 _default_engine = QueryEngine()
@@ -189,11 +196,20 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
     text = "".join(parts)
     t = time.perf_counter()
     check_citations(text, chunks, report)
+    abstained = is_abstention(text)
+    verdict = None
+    if settings.answer_check and not abstained:
+        verdict = engine.check_answer(req.question, text)
+        if verdict.flagged:
+            text = WITHHELD_MESSAGE
     guard_s += time.perf_counter() - t
     latency["guard"] = guard_s * 1000.0
-    abstained = is_abstention(text)
-    citations = [] if abstained else parse_citations(text, chunks)
+    withheld = verdict is not None and verdict.flagged
+    citations = [] if abstained or withheld else parse_citations(text, chunks)
     guardrails = GuardrailReport(context_redactions=redactions, **report.as_dict())
+    if withheld:
+        guardrails.answer_withheld = guardrails.flagged = True
+        guardrails.answer_check_error = verdict.error
     answer = Answer(
         question=req.question,
         text=text,
@@ -210,7 +226,7 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
         chunk_ids=[c.chunk_id for c in chunks],
         latency_ms={k: round(v, 1) for k, v in latency.items()},
         n_citations=len(citations),
-        outcome="abstained" if abstained else "answered",
+        outcome="withheld" if withheld else "abstained" if abstained else "answered",
         guardrails_flagged=guardrails.flagged or bool(redactions),
     )
     yield {"event": "done", "data": answer.model_dump_json()}

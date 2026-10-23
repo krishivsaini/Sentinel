@@ -14,10 +14,12 @@ const CONFIG_LABEL: Record<string, string> = {
   hardening: "Prompt hardening only",
   output_guard: "Output guard only",
   "hardening+output": "Hardening + output guard",
+  "hardening+output+answer": "Hardening + output guard + answer check",
   all: "All defences",
 };
 const CONFIG_NOTE: Record<string, string> = {
-  "hardening+output": "what an attack faces if screening misses it",
+  "hardening+output": "what an attack faced if screening missed it, before the answer check",
+  "hardening+output+answer": "what an attack faces if screening misses it",
   all: "what ships",
 };
 const SPLIT_LABEL: Record<Split, string> = { dev: "dev", heldout: "held-out", adaptive: "adaptive" };
@@ -137,7 +139,7 @@ export function Guardrails({ report }: { report: GuardrailsReport | null }) {
   const att = report.injection.attacks.summary;
   const det = report.injection.detectors;
   const splits = (["dev", "heldout", "adaptive"] as Split[]).filter((s) => det.recall[s]);
-  const order = ["none", "screening", "hardening", "output_guard", "hardening+output", "all"].filter((k) => att[k]);
+  const order = ["none", "screening", "hardening", "output_guard", "hardening+output", "hardening+output+answer", "all"].filter((k) => att[k]);
   const repeats = att.all?.repeats ?? 1;
   const allDoc = att.all?.all;
   const input = report.input;

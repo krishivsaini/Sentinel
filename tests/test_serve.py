@@ -24,6 +24,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sentinel.config import settings
+from sentinel.guardrails.answer import WITHHELD_MESSAGE, AnswerCheck
 from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening
 from sentinel.retrieve import Access
 from sentinel.schema import RetrievedChunk
@@ -40,7 +41,9 @@ class FakeEngine:
         self.tokens = tokens or ["The 429 ", "status code ", "means too many requests ", "[rfc6585#0002]"]
         self.accesses: list[Access] = []
         self.refuse = False
+        self.withhold = False
         self.generated = False
+        self.checked: list[str] = []
 
     def retrieve(
         self, question: str, top_k: int | None, access: Access
@@ -62,6 +65,10 @@ class FakeEngine:
 
     def screen_input(self, question: str) -> InputScreening:
         return InputScreening(flagged=self.refuse, scores={"fake": float(self.refuse)})
+
+    def check_answer(self, question: str, answer: str) -> AnswerCheck:
+        self.checked.append(answer)
+        return AnswerCheck(flagged=self.withhold, score=float(self.withhold))
 
 
 def _client(engine: FakeEngine) -> TestClient:
@@ -217,6 +224,48 @@ def test_flagged_question_is_refused_before_retrieval_or_generation() -> None:
     assert tokens == [REFUSAL_MESSAGE] and answer["text"] == REFUSAL_MESSAGE
     assert answer["retrieved"] == [] and answer["guardrails"]["input_flagged"] is True
     assert engine.accesses == [] and engine.generated is False   # nothing downstream ran
+
+
+def test_flagged_answer_is_withheld_in_the_done_event() -> None:
+    engine = FakeEngine()
+    engine.withhold = True
+    c = _client(engine)
+    tokens, answer = _done(c, _auth_header(c))
+    assert "".join(tokens) == "".join(engine.tokens)   # already streamed: done replaces it
+    assert engine.checked == ["".join(engine.tokens)]
+    assert answer["text"] == WITHHELD_MESSAGE and answer["citations"] == []
+    assert answer["guardrails"]["answer_withheld"] is True and answer["guardrails"]["flagged"] is True
+
+
+def test_clean_answer_passes_the_answer_check_unchanged(client) -> None:
+    tokens, answer = _done(client, _auth_header(client))
+    assert answer["text"] == "".join(tokens) and answer["guardrails"]["answer_withheld"] is False
+
+
+def test_abstentions_skip_the_answer_check() -> None:
+    from sentinel.generate import ABSTAIN_MESSAGE
+
+    engine = FakeEngine(tokens=[ABSTAIN_MESSAGE])
+    engine.withhold = True
+    c = _client(engine)
+    _, answer = _done(c, _auth_header(c))
+    assert engine.checked == [] and answer["text"] == ABSTAIN_MESSAGE
+
+
+def test_answer_check_fails_closed_when_the_classifier_is_unreachable(monkeypatch) -> None:
+    from sentinel.guardrails import answer as answer_check
+    from sentinel.guardrails._groq import GuardrailAPIError
+
+    class Down:
+        threshold = 0.5
+
+        def score(self, question, answer):
+            raise GuardrailAPIError("503 classifier unavailable")
+
+    verdict = answer_check.check_answer("What is HSTS?", "HSTS is ...", classifier=Down())
+    assert verdict.flagged and "503" in verdict.error
+    monkeypatch.setattr(settings, "answer_check_fail_open", True)
+    assert not answer_check.check_answer("What is HSTS?", "HSTS is ...", classifier=Down()).flagged
 
 
 def test_input_guard_fails_closed_when_the_classifier_is_unreachable(monkeypatch) -> None:

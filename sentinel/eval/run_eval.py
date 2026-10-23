@@ -268,6 +268,9 @@ async def _score_one(
 ):
     """Retrieve -> generate -> score one item, through the same guardrails the service applies
     (context PII redaction, hardened prompt, output sanitising), so the gate measures what ships.
+    The answer check (sentinel.guardrails.answer) is left out: a withheld answer makes no claims,
+    so faithfulness would hide its false alarms. Its withhold rate on genuine answers is measured
+    on its own (scripts/answer_check_eval.py).
     Returns (answer, abstained, retrieved, faith, arel, crec); arel/crec are NaN when gate_only.
     Wrapped in a wall-clock timeout by the caller so a hang can't stall the run."""
     retrieved = hybrid_retrieve(gt.question)

@@ -16,8 +16,9 @@ type Guardrails = {
   removed: Record<string, number>;
   unresolved_citations: string[];
   uncited: boolean;
+  answer_withheld?: boolean;
 };
-type Done = { latency_ms: Record<string, number>; guardrails?: Guardrails | null };
+type Done = { text: string; latency_ms: Record<string, number>; guardrails?: Guardrails | null };
 
 // Streams from the real Sentinel API: POST /token (demo creds) -> JWT, then POST /query and parse
 // the SSE frames (`retrieved` -> chunks, `token` -> text, `done` -> latency + guardrail report).
@@ -106,7 +107,11 @@ export function Playground({ latest }: { latest: RunResult }) {
     setChunks([]);
     setDone(null);
     try {
-      await streamAnswer(q, setChunks, (t) => setAnswer((a) => a + t), setDone);
+      await streamAnswer(q, setChunks, (t) => setAnswer((a) => a + t), (d) => {
+        // The answer check runs after the stream: a withheld answer is replaced, not appended to.
+        if (d.guardrails?.answer_withheld) setAnswer(d.text);
+        setDone(d);
+      });
       setPhase("done");
     } catch (e) {
       setError(String(e));
@@ -224,6 +229,7 @@ function AnswerFooter({ done }: { done: Done }) {
       notes.push(k === "link" ? `${n} untrusted link removed` : k === "image" ? `${n} image removed` : `${n} ${k} redacted`);
     if (g.unresolved_citations.length) notes.push(`unresolved citation: ${g.unresolved_citations.join(", ")}`);
     if (g.uncited) notes.push("no valid citation");
+    if (g.answer_withheld) notes.push("answer withheld by the answer check");
   }
   return (
     <div className="border-t border-border-hair px-[18px] py-3">
