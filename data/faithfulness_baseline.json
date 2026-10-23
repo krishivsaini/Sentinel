@@ -1,0 +1,161 @@
+{
+  "git_sha": "34e94f3",
+  "created_utc": "2026-10-23T18:14:13+00:00",
+  "runs": 4,
+  "subset_size": 24,
+  "judge_model": "openai/gpt-oss-120b",
+  "generation_model": "openai/gpt-oss-20b",
+  "run_means": [
+    0.9324,
+    0.9157,
+    0.9639,
+    0.9926
+  ],
+  "run_mean_sd": 0.0341,
+  "per_question": {
+    "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?": [
+      0.6667,
+      0.75,
+      0.6667,
+      1.0
+    ],
+    "What does the key word MUST NOT mean in an RFC?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "How does HTTP decide whether a stored cached response is still fresh?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "What is the purpose of the dynamic table in HPACK header compression?": [
+      1.0,
+      0.9091,
+      1.0,
+      1.0
+    ],
+    "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?": [
+      1.0,
+      0.8333,
+      1.0,
+      1.0
+    ],
+    "What does the 431 Request Header Fields Too Large status code indicate?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "What are the main components of a URI's generic syntax?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "How does a URI Template expand a simple string variable such as {var}?": [
+      0.8333,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "What is the effect of the HttpOnly attribute on a cookie?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?": [
+      1.0,
+      0.7143,
+      1.0,
+      1.0
+    ],
+    "What is the purpose of the Sec-WebSocket-Key request header?": [
+      0.8,
+      0.75,
+      0.8,
+      1.0
+    ],
+    "How does QUIC detect lost packets?": [
+      0.8,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "How does the TCP three-way handshake establish a connection?": [
+      1.0,
+      1.0,
+      1.0,
+      0.9231
+    ],
+    "Which TLS 1.3 handshake message carries the server's certificate?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "How does a TLS client indicate the target server name using Server Name Indication (SNI)?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "What does an OCSP response tell a client about a certificate's status?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "What does the invalid_grant error mean in OAuth 2.0?": [
+      0.8,
+      1.0,
+      0.6667,
+      1.0
+    ],
+    "How is an OAuth 2.0 bearer token presented in an HTTP request?": [
+      1.0,
+      1.0,
+      1.0,
+      0.9
+    ],
+    "What is the purpose of the nonce in HTTP Digest access authentication?": [
+      0.7692,
+      0.75,
+      1.0,
+      1.0
+    ],
+    "How is a JWS Compact Serialization structured?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "How does base64url encoding differ from standard base64 encoding?": [
+      0.8333,
+      0.7692,
+      1.0,
+      1.0
+    ],
+    "What is the format of an Internet date-time timestamp per RFC 3339?": [
+      0.875,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?": [
+      1.0,
+      0.5,
+      1.0,
+      1.0
+    ],
+    "What transport port does DNS over TLS (DoT) use by default?": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  }
+}

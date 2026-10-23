@@ -337,3 +337,50 @@ def test_live_run_single_item_produces_metrics() -> None:
     it = result.per_item[0]
     assert 0.0 <= it.faithfulness <= 1.0
     assert it.attribution in {"pass", "retrieval_fail", "generation_fail"}
+
+
+# --------------------------------------------------------------------------- relative gate
+
+
+def _baseline(tmp_path, monkeypatch, per_q_mean: float, sd: float, n: int):
+    import json
+
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps({
+        "git_sha": "base123", "runs": 4, "run_mean_sd": sd,
+        "per_question": {f"q{i}": [per_q_mean] * 4 for i in range(n)},
+    }))
+    monkeypatch.setattr(run_eval, "BASELINE_PATH", path)
+
+
+def test_relative_gate_fails_a_moderate_regression_the_absolute_line_misses(tmp_path, monkeypatch):
+    """0.86 clears the absolute 0.80 line but sits 0.08 below a 0.94 baseline."""
+    _baseline(tmp_path, monkeypatch, 0.94, sd=0.02, n=settings.ci_min_items)
+    assert run_eval._ci_gate(_result(settings.ci_min_items, 0.86)) is False
+
+
+def test_relative_gate_passes_a_drop_within_noise(tmp_path, monkeypatch):
+    _baseline(tmp_path, monkeypatch, 0.94, sd=0.02, n=settings.ci_min_items)
+    assert run_eval._ci_gate(_result(settings.ci_min_items, 0.91)) is True   # drop 0.03 < 0.05
+
+
+def test_relative_margin_never_goes_below_its_floor(tmp_path, monkeypatch):
+    _baseline(tmp_path, monkeypatch, 0.94, sd=0.0, n=settings.ci_min_items)
+    rel = run_eval._baseline_check(_result(settings.ci_min_items, 0.90))
+    assert rel["margin"] == settings.faithfulness_regression_margin and rel["passed"]
+
+
+def test_relative_gate_falls_back_when_the_question_set_changed(tmp_path, monkeypatch):
+    _baseline(tmp_path, monkeypatch, 0.99, sd=0.01, n=2)   # only q0, q1 shared
+    rel = run_eval._baseline_check(_result(settings.ci_min_items, 0.85))
+    assert rel["applicable"] is False
+    assert run_eval._ci_gate(_result(settings.ci_min_items, 0.85)) is True   # absolute gate only
+
+
+def test_gate_summary_reports_the_baseline_comparison(tmp_path, monkeypatch):
+    _baseline(tmp_path, monkeypatch, 0.94, sd=0.02, n=settings.ci_min_items)
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    run_eval._ci_gate(_result(settings.ci_min_items, 0.86))
+    text = summary.read_text()
+    assert "FAIL" in text and "below main's baseline" in text and "Largest per-question drops" in text

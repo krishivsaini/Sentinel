@@ -4,8 +4,8 @@
 >
 > Hybrid BM25 + dense retrieval with cross-encoder reranking, served over FastAPI with SSE
 > streaming, JWT auth, and rate limiting. Every pull request runs a Ragas evaluation over a
-> hand-built ground-truth set; merges are **blocked when faithfulness regresses below
-> threshold**. The dashboard attributes every low-scoring answer to either a retrieval failure
+> hand-built ground-truth set; merges are **blocked when faithfulness falls below a floor or
+> measurably below main's own baseline**. The dashboard attributes every low-scoring answer to either a retrieval failure
 > or a generation failure. **Security guardrails** — layered prompt-injection defence, PII
 > redaction, output validation and scoped retrieval — are measured on labelled adversarial data
 > and enforced as a **second CI gate**: a merge is also blocked if injected instructions start
@@ -61,6 +61,22 @@ answers:
 | ![CI faithfulness gate passing on main: mean faithfulness 0.967, 24 of 24 items scored](docs/img/ci-gate-pass.png) | ![CI faithfulness gate failing on PR #2: mean faithfulness 0.746 below the 0.80 gate, 24 of 24 items scored](docs/img/ci-gate-fail.png) |
 
 CI scores faithfulness on every other ground-truth question (24 of 48); a run takes 15–17 minutes.
+
+A fixed 0.80 line only catches gross regressions. Two subtler prompt changes, which relax the
+grounding rules without deleting them, scored **0.855 and 0.865**: clearly worse than main, but
+above 0.80. So the gate also compares each PR with **main's own baseline**
+([`data/faithfulness_baseline.json`](data/faithfulness_baseline.json): per-question scores from
+4 runs on main, mean **0.951**, run-to-run SD **0.034**). A PR fails if it scores more than
+max(0.05, 2 SD) = **0.068** below it, a line at 0.883:
+
+| Run | Mean faithfulness | vs main's baseline | Gate |
+|---|---|---|---|
+| main, every recorded run | 0.904 – 0.993 | −0.047 at worst | ✅ pass |
+| subtle prompt regressions | 0.865 · 0.855 | −0.086 · −0.096 | ❌ fail (both passed the 0.80 line) |
+| PR #2 | 0.746 – 0.799 | −0.15 or more | ❌ fail |
+
+CI always reads the baseline from main, never from the PR, so a PR can't pass itself by editing
+it. The summary also lists the questions that dropped the most.
 
 ### Full evaluation — all 48 ground-truth questions
 
@@ -393,7 +409,7 @@ changed), and three checks run against them:
 | Check | Fails when |
 |---|---|
 | **tests** | any test in the suite fails |
-| **faithfulness-gate** | mean faithfulness over every other ground-truth question (24 of 48), through the full guarded pipeline, is below **0.80** — or fewer than 18 items scored (a coverage floor, so a run crippled by rate limits can't pass on thin data) |
+| **faithfulness-gate** | mean faithfulness over every other ground-truth question (24 of 48), through the full guarded pipeline, is below **0.80**; or more than **0.068** below main's per-question baseline (read from main, not the PR); or fewer than 18 items scored (a coverage floor, so a run crippled by rate limits can't pass on thin data) |
 | **injection-gate** | with every defence on, more than **5%** of either attack set succeeds: the 50 poisoned-document attacks or the 35 attacks in the user's own question |
 
 Both gates write a metric summary into the PR's checks. Answer relevance and context recall are
@@ -629,6 +645,7 @@ curl -N -X POST localhost:8000/query \
 ```bash
 uv run python -m sentinel.eval.run_eval            # full ground-truth set (resumable)
 uv run python -m sentinel.eval.run_eval --ci       # the faithfulness gate: subset + exit code
+uv run python -m sentinel.eval.run_eval --write-baseline 4  # refresh main's baseline (4 runs)
 uv run python -m sentinel.eval.run_guardrails      # every guardrail, 3 runs per configuration
 uv run python -m sentinel.eval.run_guardrails --ci # the injection gate
 uv run python scripts/judge_calibration.py         # judge vs. hand labels
@@ -713,10 +730,11 @@ These are deliberate scope choices, stated plainly:
 - **The backup layers are weaker on their own.** If screening missed an attack, hardening plus
   the output guard still let 7.3% through in testing; with this 20B generator, forged system
   messages are the hardest to resist.
-- **The faithfulness gate is an absolute line.** It catches gross regressions (PR #2 scores
-  0.75–0.80) but not moderate ones: two subtler prompt changes that relax the grounding rules
-  without deleting them scored 0.855 and 0.865 — clearly worse than main's 0.91–0.97, and still
-  above 0.80. A gate relative to main's own baseline would catch them.
+- **The relative gate is calibrated on 4 runs.** Their SD is itself uncertain, and under a
+  normal approximation about 1 healthy PR in 40 would fall below the line by noise alone: a
+  re-run settles it. Regressions smaller than ~0.07 still pass. The baseline must be refreshed
+  (`--write-baseline 4`) when main deliberately changes generation, or every later PR is
+  compared against the old behaviour.
 - **PII coverage is pattern-based.** Role addresses are over-redacted (precision 0.80 on the
   corpus); names, postal addresses and IP addresses are not detected.
 
@@ -724,8 +742,6 @@ These are deliberate scope choices, stated plainly:
 
 ## Roadmap
 
-- **A faithfulness gate relative to main's baseline** — a paired, per-question comparison
-  against the last main run — so moderate regressions fail CI, not only gross ones.
 - **A public injection benchmark** alongside the hand-written sets, and a screening policy that
   doesn't depend on the attacker addressing an AI.
 - **Entity recognition** for names and postal addresses in the PII guard.

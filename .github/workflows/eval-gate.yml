@@ -3,7 +3,9 @@
 # On every PR to main, three checks run against indexes built from the committed corpus:
 #   tests              the full pytest suite (hermetic; retrieval tests use the real indexes)
 #   faithfulness-gate  a Ragas faithfulness eval over half the ground truth; fails below
-#                      config.faithfulness_threshold, or if too few items score (config.ci_min_items)
+#                      config.faithfulness_threshold, if too few items score (config.ci_min_items),
+#                      or if it falls more than the regression margin below main's per-question
+#                      baseline (data/faithfulness_baseline.json, always read from main)
 #   injection-gate     the 50 poisoned-document attacks and the 35 attacks in the user's own question
 #                      run through the full pipeline with every defence on; fails if either set's
 #                      success rate exceeds config.injection_asr_threshold
@@ -153,6 +155,16 @@ jobs:
             indexes_adversarial
           key: ${{ needs.indexes.outputs.index_key }}
           fail-on-cache-miss: true
+      # The relative gate compares against main's baseline. Take it from the PR's base commit,
+      # so a PR can't pass itself by editing the file; no baseline there -> absolute gate only.
+      - name: Use main's faithfulness baseline
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --depth=1 origin "$BASE"
+          git show "$BASE:data/faithfulness_baseline.json" > data/faithfulness_baseline.json \
+            || rm -f data/faithfulness_baseline.json
       # --ci scores faithfulness only over config.ci_eval_subset_size items, through the same
       # guardrails the service applies, and exits non-zero below the gate.
       - name: Faithfulness gate (eval subset)

@@ -24,8 +24,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import math
 import os
+import statistics
 import subprocess
 import uuid
 import warnings
@@ -53,7 +55,7 @@ from ragas.run_config import RunConfig
 
 import tenacity
 
-from sentinel.config import GROUND_TRUTH_PATH, REPO_ROOT, settings
+from sentinel.config import DATA_DIR, GROUND_TRUTH_PATH, REPO_ROOT, settings
 from sentinel.eval import attribution, store
 from sentinel.generate import collect_answer, is_abstention
 from sentinel.guardrails.output import guard_answer
@@ -74,6 +76,9 @@ from sentinel.schema import (
     EvalResult,
     GroundTruthItem,
 )
+
+# Main's per-question faithfulness on the CI subset, for the relative gate (write_baseline).
+BASELINE_PATH = DATA_DIR / "faithfulness_baseline.json"
 
 # The retry policy is shared with generation and the guardrail classifiers (sentinel.retry);
 # these aliases keep the eval's long-standing private names.
@@ -409,23 +414,77 @@ def _fmt(v: float) -> str:
     return f"{'—':>6}" if math.isnan(v) else f"{v:6.2f}"
 
 
+def _baseline_check(result: EvalResult) -> dict | None:
+    """Compare this run with main's committed per-question baseline. None when there is no
+    baseline; {"applicable": False, ...} when too few of its questions are in this run (the
+    subset changed) — the gate then falls back to the absolute threshold alone."""
+    if not BASELINE_PATH.exists():
+        return None
+    base = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    per_q = {q: statistics.mean(v) for q, v in base["per_question"].items()}
+    shared = [x for x in result.per_item if x.question in per_q]
+    if len(shared) < settings.ci_min_items:
+        return {"applicable": False, "shared": len(shared), "baseline_sha": base["git_sha"]}
+    base_mean = statistics.mean(per_q[x.question] for x in shared)
+    run_mean = statistics.mean(x.faithfulness for x in shared)
+    margin = max(
+        settings.faithfulness_regression_margin,
+        settings.faithfulness_regression_sd_k * base["run_mean_sd"],
+    )
+    deltas = sorted((x.faithfulness - per_q[x.question], x.question) for x in shared)
+    return {
+        "applicable": True,
+        "baseline_sha": base["git_sha"],
+        "baseline_runs": base["runs"],
+        "shared": len(shared),
+        "baseline_mean": round(base_mean, 4),
+        "run_mean": round(run_mean, 4),
+        "drop": round(base_mean - run_mean, 4),
+        "margin": round(margin, 4),
+        "passed": base_mean - run_mean <= margin,
+        "worst": [(round(d, 3), q) for d, q in deltas[:5] if d < 0],
+    }
+
+
 def _ci_gate(result: EvalResult) -> bool:
     """The CI faithfulness gate (§13, FR-CI2/3). Returns True to pass, False to fail. Fails on
-    EITHER insufficient coverage (too few items scored to trust the mean — throttle/skips) OR mean
-    faithfulness below the threshold. Writes a Markdown summary to $GITHUB_STEP_SUMMARY when run in
-    GitHub Actions so the metrics surface directly in the PR's checks (FR-CI3)."""
+    insufficient coverage (too few items scored to trust the mean — throttle/skips), on mean
+    faithfulness below the absolute threshold, OR on a drop below main's committed baseline larger
+    than the noise-calibrated margin (_baseline_check). Writes a Markdown summary to
+    $GITHUB_STEP_SUMMARY when run in GitHub Actions so it surfaces in the PR's checks (FR-CI3)."""
     m = result.means
     n = len(result.per_item)
     gate = settings.faithfulness_threshold
     enough = n >= settings.ci_min_items
-    passed = enough and m.faithfulness >= gate
+    rel = _baseline_check(result) if enough else None
+    rel_ok = rel is None or not rel["applicable"] or rel["passed"]
+    passed = enough and m.faithfulness >= gate and rel_ok
 
     if not enough:
         reason = f"insufficient coverage — only {n}/{settings.ci_min_items} items scored"
-    elif passed:
-        reason = f"mean faithfulness {m.faithfulness:.3f} >= {gate:.2f}"
-    else:
+    elif m.faithfulness < gate:
         reason = f"mean faithfulness {m.faithfulness:.3f} < {gate:.2f}"
+    elif not rel_ok:
+        reason = (f"mean faithfulness {rel['run_mean']:.3f} is {rel['drop']:.3f} below main's "
+                  f"baseline {rel['baseline_mean']:.3f} (allowed drop {rel['margin']:.3f})")
+    else:
+        reason = f"mean faithfulness {m.faithfulness:.3f} >= {gate:.2f}"
+
+    if rel is None:
+        rel_rows = ["| vs main's baseline | no baseline committed — absolute gate only |"]
+    elif not rel["applicable"]:
+        rel_rows = [f"| vs main's baseline | only {rel['shared']} questions in common — "
+                    "absolute gate only |"]
+    else:
+        rel_rows = [
+            f"| vs main's baseline | {rel['run_mean']:.3f} vs {rel['baseline_mean']:.3f}: "
+            f"drop {rel['drop']:+.3f}, allowed {rel['margin']:.3f} "
+            f"({rel['baseline_runs']} runs @ `{rel['baseline_sha']}`) |",
+        ]
+    worst = [] if not rel or not rel.get("worst") else [
+        "", "Largest per-question drops vs the baseline:", "",
+        *[f"- {d:+.3f} — {q}" for d, q in rel["worst"]],
+    ]
 
     md = "\n".join(
         [
@@ -436,8 +495,10 @@ def _ci_gate(result: EvalResult) -> bool:
             "| metric | value |",
             "|---|---|",
             f"| mean faithfulness | **{m.faithfulness:.3f}** (gate >= {gate:.2f}) |",
+            *rel_rows,
             f"| items scored | {n} of {settings.ci_eval_subset_size} "
             f"(min {settings.ci_min_items}) |",
+            *worst,
             "",
             "_Answer relevance, context recall and failure attribution are not scored in CI —"
             " the gate reads faithfulness only, and scoring all three would triple the judge's"
@@ -455,6 +516,32 @@ def _ci_gate(result: EvalResult) -> bool:
     return passed
 
 
+def write_baseline(runs: int) -> None:
+    """Score the CI subset `runs` times on the current code (faithfulness only) and commit-ready
+    write main's per-question baseline for the relative gate. Run on main whenever its answer
+    quality changes on purpose, and commit the file with that change."""
+    per_q: dict[str, list[float]] = {}
+    run_means = []
+    for k in range(runs):
+        res = run(subset_n=settings.ci_eval_subset_size, resume=False, gate_only=True)
+        run_means.append(res.means.faithfulness)
+        for x in res.per_item:
+            per_q.setdefault(x.question, []).append(x.faithfulness)
+        log.info("baseline.run", run=k + 1, of=runs, mean=round(res.means.faithfulness, 4))
+    BASELINE_PATH.write_text(json.dumps({
+        "git_sha": _git_sha(),
+        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "runs": runs,
+        "subset_size": settings.ci_eval_subset_size,
+        "judge_model": settings.judge_model,
+        "generation_model": settings.generation_model,
+        "run_means": [round(v, 4) for v in run_means],
+        "run_mean_sd": round(statistics.stdev(run_means), 4) if runs > 1 else 0.0,
+        "per_question": {q: [round(v, 4) for v in vs] for q, vs in per_q.items()},
+    }, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {BASELINE_PATH}: run means {[round(v, 3) for v in run_means]}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Run the Ragas eval over the ground-truth set.")
     ap.add_argument("--subset", type=int, default=None, help="evaluate only N representative items")
@@ -465,7 +552,12 @@ def main() -> None:
         f"({settings.ci_eval_subset_size}) items; never checkpointed or exported",
     )
     ap.add_argument("--no-resume", action="store_true", help="ignore checkpoints; re-score all")
+    ap.add_argument("--write-baseline", type=int, metavar="RUNS", default=0,
+                    help="score the CI subset RUNS times and write data/faithfulness_baseline.json")
     args = ap.parse_args()
+    if args.write_baseline:
+        write_baseline(args.write_baseline)
+        return
 
     subset_n = settings.ci_eval_subset_size if args.ci else args.subset
     result = run(subset_n=subset_n, resume=not args.no_resume, gate_only=args.ci)

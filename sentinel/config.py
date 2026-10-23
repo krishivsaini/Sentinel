@@ -158,6 +158,15 @@ class Settings(BaseSettings):
     # A gate needs enough data to mean something: if fewer than this many items actually score
     # (throttle/skip), the gate fails as "insufficient coverage" rather than passing on thin data.
     ci_min_items: int = 18
+    # Relative gate: a PR also fails if its mean faithfulness falls more than this margin below
+    # main's committed per-question baseline (data/faithfulness_baseline.json). The margin is the
+    # larger of a floor and k standard deviations of the baseline's run-to-run mean, so ordinary
+    # generation noise doesn't fail main while moderate regressions — which the absolute 0.80 line
+    # misses — do fail. Calibrated on the committed baseline (4 runs: mean 0.951, sd 0.034), k=2
+    # puts the line at 0.883: below every main run on record (lowest 0.904), above both subtle
+    # regressions (0.855, 0.865). k=2.5 (line 0.866) would pass the 0.865 one by noise alone.
+    faithfulness_regression_margin: float = 0.05
+    faithfulness_regression_sd_k: float = 2.0
     # A per-item score below this flags the item for failure attribution (§12).
     low_score_threshold: float = 0.60
     # context_recall below this => classify as a retrieval failure (else generation failure).
