@@ -470,7 +470,11 @@ flowchart LR
   personal.
 - **Output guard** ([`output.py`](sentinel/guardrails/output.py)). Links survive only to an
   allowlist of hosts (the IETF, IANA, W3C, documentation domains); images are always removed,
-  since rendering one fetches its URL. "Only links that appear in the retrieved passages" would
+  since rendering one fetches its URL. Links written without a scheme count too
+  (`evil.example/login`, `www.evil-site.com`), including lookalikes spelled with Unicode
+  hyphens. Bare hostnames with no path don't: the DNS RFCs are full of examples like
+  `VENERA.ISI.EDU`, and answers quoting them keep them. Of ~230 scheme-less hostnames in the
+  corpus, 3 would be removed, all real web addresses; none of 1,035 recorded answers lost one. "Only links that appear in the retrieved passages" would
   not work — a poisoned passage carries its own link. Citations must resolve to retrieved chunks.
   Because `/query` streams, the guard holds back a short tail and never releases half of a link
   or an email; a property test checks that streamed output always equals the full-text check.

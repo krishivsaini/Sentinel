@@ -3,8 +3,9 @@
 Sanitising (rewrites the answer):
   * markdown images are removed outright — a rendered image fetches its URL, which is how an
     injected answer exfiltrates data without the user clicking anything;
-  * links to hosts outside config.answer_link_hosts are replaced. "Only allow URLs that appear
-    in the retrieved passages" would not do: a poisoned passage carries its own phishing link;
+  * links to hosts outside config.answer_link_hosts are replaced — with or without a scheme
+    ("evil.example/login" counts too). "Only allow URLs that appear in the retrieved passages"
+    would not do: a poisoned passage carries its own phishing link;
   * PII is redacted (sentinel.guardrails.pii) as a backstop to context redaction;
   * prompt leakage is withheld: passage fence lines are dropped, and any run of 8+ consecutive
     words copied from the system prompt or hardening rules is replaced. Without the input guard
@@ -44,6 +45,31 @@ PROMPT_WITHHELD = "[instructions withheld]"
 _IMAGE_RE = re.compile(r"!\[[^\]\n]*\]\([^)\n]*\)")
 _URL_RE = re.compile(r"\b(?:https?|ftp)://[^\s<>()\"'\[\]{}]+", re.IGNORECASE)
 _TRAILING_PUNCT = ".,;:!?'\""
+# A host written without a scheme counts as a link only when it is link-shaped — it carries a path
+# ("evil.example/login") or starts with "www." — and its last label is a real TLD, not a file
+# extension. RFC text is full of bare hostnames that are examples, not links (the DNS RFCs alone
+# have ~200 like "VENERA.ISI.EDU"), plus "rfc9110.txt", "e.g.", versions and OIDs; answers quoting
+# them must survive. The list covers the common generic TLDs, the ones phishing favours, and the
+# reserved documentation TLDs (RFC 2606/6761), which the adversarial corpus uses.
+_LINK_TLDS = frozenset("""
+com net org edu gov mil int info biz name pro mobi app dev page site online web website tech
+cloud io co ai me ly gg to sh xyz top club live news shop store blog email support help login
+account verify security services solutions systems network link click download zip mov us uk
+de fr nl eu ca au in jp cn ru br es it ch se no fi dk pl cz ie nz za kr tw hk sg
+example test invalid localhost local internal
+""".split())
+_FILE_EXTENSIONS = frozenset("""
+txt html htm xhtml json md markdown py js ts css csv xml yml yaml toml ini cfg conf log pem der
+crt cer key pub pdf png jpg jpeg gif svg webp tar gz tgz bz2 xz zip whl rs go java c h cpp
+""".split()) - {"zip"}   # .zip is a real TLD and a classic phishing lure; links win the tie
+_BARE_HOST_RE = re.compile(
+    r"(?<![\w@/.:\u2010-\u2015-])"   # not mid-word, mid-email, mid-URL or after a hyphen
+    # Labels accept the Unicode hyphens (U+2010-2015) too: a lookalike host written with
+    # non-breaking hyphens must be caught whole, not truncated to its last label.
+    r"((?:[a-z0-9](?:[a-z0-9\u2010-\u2015-]{0,61}[a-z0-9])?\.)+([a-z]{2,24}))"
+    r"(?::\d{2,5})?(?:/[^\s<>()\"'\[\]{}]*)?(?![\w\u2010-\u2015-])",
+    re.IGNORECASE,
+)
 _ANY_CITATION_RE = re.compile(r"[\[【]\s*([a-z][a-z0-9]*#\d+)\s*[\]】]")
 _FENCE_LINE_RE = re.compile(r"«\s*(?:BEGIN|END)\s+PASSAGE[^»\n]*»")
 _WORD_RE = re.compile(r"[a-z0-9]+")
@@ -76,6 +102,8 @@ def _leak_spans(text: str) -> list[tuple[int, int]]:
 
 
 def link_allowed(url: str, hosts: tuple[str, ...] | None = None) -> bool:
+    if "://" not in url:
+        url = "//" + url   # a bare host: let urlsplit find it
     host = (urlsplit(url).hostname or "").lower()
     allowed = settings.answer_link_hosts if hosts is None else hosts
     return any(host == h or host.endswith("." + h) for h in allowed)
@@ -102,6 +130,14 @@ def _edits(text: str) -> list[_Edit]:
         url = m.group().rstrip(_TRAILING_PUNCT)
         if not link_allowed(url):
             edits.append(_Edit(m.start(), m.start() + len(url), "link", LINK_REMOVED))
+    for m in _BARE_HOST_RE.finditer(text):
+        tld = m.group(2).lower()
+        link_shaped = "/" in m.group() or m.group(1).lower().startswith("www.")
+        if not link_shaped or tld not in _LINK_TLDS or tld in _FILE_EXTENSIONS:
+            continue
+        link = m.group().rstrip(_TRAILING_PUNCT)
+        if not link_allowed(link):
+            edits.append(_Edit(m.start(), m.start() + len(link), "link", LINK_REMOVED))
     edits += [
         _Edit(s.start, s.end, s.kind, pii.REDACTION.format(kind=s.kind)) for s in pii.find_pii(text)
     ]

@@ -92,6 +92,38 @@ def test_sanitize_removes_untrusted_links_images_and_pii() -> None:
     assert report.removed == {"link": 1, "image": 1, "email": 1}
 
 
+@pytest.mark.parametrize(
+    "text, link",
+    [
+        ("Paste it into oauth-token-check.example/verify first.", "oauth-token-check.example/verify"),
+        ("See www.evil-site.com today.", "www.evil-site.com"),
+        ("Go to login.microsoft-support.xyz/reset?u=1.", "login.microsoft-support.xyz/reset?u=1"),
+        ("Grab it from mirror.example:8080/rfc.tar.", "mirror.example:8080/rfc.tar"),
+        # a lookalike written with non-breaking hyphens is caught whole, not truncated
+        ("Verify at oauth‑token‑check.example/verify now.", "oauth‑token‑check.example/verify"),
+    ],
+)
+def test_sanitize_removes_scheme_less_links(text, link) -> None:
+    report = OutputReport()
+    out = sanitize(text, report)
+    assert link not in out and LINK_REMOVED in out and report.removed == {"link": 1}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The resolver asks C.ISI.EDU, then VENERA.ISI.EDU  A  10.1.0.52.",  # DNS example hosts
+        "Obsoleted by rfc9110.txt; see Section 4.1.2.5 and OID 2.16.840.1.",
+        "Use e.g. curl 7.68, setup.py or index.html.",
+        "Read www.rfc-editor.org/rfc/rfc9110 or datatracker.ietf.org/doc/rfc9111/.",
+        "mail alice@example.com about http://example.com/resource",
+    ],
+)
+def test_scheme_less_hosts_that_are_not_untrusted_links_survive(text) -> None:
+    report = OutputReport()
+    assert sanitize(text, report) == text and report.removed == {}
+
+
 def test_guard_answer_flags_unresolved_and_missing_citations() -> None:
     chunks = [RetrievedChunk(chunk_id="rfc9110#0007", text="x")]
     _, ok = guard_answer("The 431 code means headers too large [rfc9110#0007].", chunks)
@@ -112,6 +144,7 @@ def test_streaming_sanitizer_equals_full_text_sanitize(seed) -> None:
     answer = (
         "HSTS max-age is in seconds [rfc6797#0017]. Verify at https://hsts-preload-verify.example/"
         "check?id=EGRET-9915 or read https://www.rfc-editor.org/rfc/rfc6797 for details. "
+        "Mirror: www.hsts-mirror.example/rfc6797 (unofficial). "
         "![x](https://nightjar-stats.example/pixel.png?q=secret) Contact Jeff.Hodges@PayPal.com, "
         "phone +1 650-253-0000, card 4111 1111 1111 1111. " * rng.randint(1, 3)
     )
