@@ -10,6 +10,11 @@
 # Both gates write a Markdown summary into the PR's checks (FR-CI3). The full three-metric eval
 # and the full guardrail report run locally (sentinel.eval.run_eval, sentinel.eval.run_guardrails).
 #
+# Jobs run only when the PR touches something that can change their result (the `changes` job):
+# README, docs, dashboard, scripts and regenerated reports skip everything, and only code and the
+# data the gates read trigger the two gates — the only jobs that call the paid API. A skipped job
+# counts as passing. Manual runs (workflow_dispatch) always run everything.
+#
 # Requires the GROQ_API_KEY repository secret (FR-CI4); the repo's key is on Groq's paid tier.
 # Injection-screening verdicts for the corpus are committed (data/guardrails/screening_cache.jsonl),
 # so building the indexes makes no API calls unless the corpus or the screening policy changed.
@@ -29,7 +34,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      gates: ${{ steps.paths.outputs.gates }}
+      tests: ${{ steps.paths.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: paths
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "gates=true" >> "$GITHUB_OUTPUT"; echo "tests=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          files=$(git diff --name-only "$BASE" HEAD)
+          echo "changed files:"; echo "$files"
+          # What the gates read: the package, dependencies, this workflow, and the eval data — the
+          # corpus, ground truth, attack sets, screening verdicts and labels. Not reports or docs.
+          gates='^(sentinel/|pyproject\.toml$|uv\.lock$|\.github/workflows/eval-gate\.yml$|data/(corpus/|corpus_manifest\.json$|ground_truth\.jsonl$|adversarial/|guardrails/(screening_cache|user_prompts|pii_labels)\.jsonl$))'
+          if echo "$files" | grep -qE "$gates"; then g=true; else g=false; fi
+          if [ "$g" = true ] || echo "$files" | grep -qE '^tests/'; then t=true; else t=false; fi
+          echo "gates=$g" >> "$GITHUB_OUTPUT"; echo "tests=$t" >> "$GITHUB_OUTPUT"
+          echo "gates=$g tests=$t"
+
   indexes:
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The cache keys are computed once here and handed to the other jobs, so all four use the
@@ -55,7 +90,7 @@ jobs:
           path: ~/.cache/huggingface
           key: ${{ steps.keys.outputs.hf }}
       # Indexes are gitignored (rebuilt from source, §16.6). The service index embeds the whole
-      # corpus on CPU (~9 min); the adversarial index copies it and embeds only 40 passages.
+      # corpus on CPU (~9 min); the adversarial index copies it and embeds only 50 passages.
       - name: Cache indexes
         id: index-cache
         uses: actions/cache@v4
@@ -73,7 +108,8 @@ jobs:
           uv run python -m sentinel.ingest --adversarial
 
   tests:
-    needs: indexes
+    needs: [changes, indexes]
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -96,7 +132,8 @@ jobs:
       - run: uv run pytest -q
 
   faithfulness-gate:
-    needs: indexes
+    needs: [changes, indexes]
+    if: needs.changes.outputs.gates == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -124,7 +161,8 @@ jobs:
         run: uv run python -m sentinel.eval.run_eval --ci --no-resume
 
   injection-gate:
-    needs: indexes
+    needs: [changes, indexes]
+    if: needs.changes.outputs.gates == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
