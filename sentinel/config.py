@@ -28,6 +28,10 @@ INDEXES_DIR = REPO_ROOT / "indexes"
 # and nothing that reads indexes/ can ever see a poisoned chunk.
 ADVERSARIAL_INDEX_DIR = REPO_ROOT / "indexes_adversarial"
 ADVERSARIAL_DIR = DATA_DIR / "adversarial"          # poisoned docs + attack questions (labelled)
+# The independent public attack set (BIPIA), in its own sibling index so adding it can't shift
+# retrieval — BM25 statistics included — for the 50 hand-written attacks.
+BIPIA_INDEX_DIR = REPO_ROOT / "indexes_bipia"
+BIPIA_DIR = DATA_DIR / "bipia"
 GUARDRAILS_DIR = DATA_DIR / "guardrails"            # screening cache, PII labels, eval reports
 EVAL_DB_PATH = REPO_ROOT / "eval_runs.db"           # SQLite, gitignored
 DASHBOARD_DATA_DIR = REPO_ROOT / "dashboard" / "data"

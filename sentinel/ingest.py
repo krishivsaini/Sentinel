@@ -48,6 +48,8 @@ from pathlib import Path
 from sentinel.config import (
     ADVERSARIAL_DIR,
     ADVERSARIAL_INDEX_DIR,
+    BIPIA_DIR,
+    BIPIA_INDEX_DIR,
     CORPUS_DIR,
     DATA_DIR,
     INDEXES_DIR,
@@ -58,6 +60,7 @@ from sentinel.schema import Chunk, SourceDoc
 
 MANIFEST_PATH = DATA_DIR / "corpus_manifest.json"
 ADVERSARIAL_CORPUS_PATH = ADVERSARIAL_DIR / "corpus.jsonl"
+BIPIA_CORPUS_PATH = BIPIA_DIR / "corpus.jsonl"
 TIKTOKEN_ENCODING = "cl100k_base"  # only used to *measure* chunk length in tokens
 MIN_CHUNK_TOKENS = 5               # drop degenerate fragments (stray letters, page artifacts)
 
@@ -303,25 +306,50 @@ def load_adversarial_docs() -> list[SourceDoc]:
     return docs
 
 
-def adversarial_index_is_current(index_dir: Path = ADVERSARIAL_INDEX_DIR) -> bool:
-    """True when index_dir exists and holds exactly the documents of the adversarial corpus file —
-    so an eval or test never runs attacks against a stale index."""
+def load_bipia_docs() -> list[SourceDoc]:
+    """BIPIA's attack instructions planted in RFC passages (data/bipia/corpus.jsonl, built by
+    scripts/build_bipia.py). Each doc gets a scope of its own, "bipia:<doc_id>", so a run can
+    retrieve exactly one attack at a time; like the adversarial corpus, never public."""
+    return [
+        SourceDoc(
+            doc_id=rec["doc_id"],
+            title=rec["title"],
+            source_uri=f"bipia://{rec['doc_id']}",
+            text=rec["text"],
+            scope=f"bipia:{rec['doc_id']}",
+        )
+        for rec in map(json.loads, filter(str.strip, BIPIA_CORPUS_PATH.open(encoding="utf-8")))
+    ]
+
+
+def _holds_exactly(index_dir: Path, docs: list[SourceDoc]) -> bool:
     paths = IndexPaths(index_dir)
     if not paths.chunks.exists():
         return False
     chunks = (Chunk.model_validate_json(line) for line in paths.chunks.open(encoding="utf-8"))
-    indexed = {c.doc_id for c in chunks if c.scope == "adversarial"}
-    return indexed == {d.doc_id for d in load_adversarial_docs()}
+    indexed = {c.doc_id for c in chunks if c.scope != "public"}
+    return indexed == {d.doc_id for d in docs}
+
+
+def adversarial_index_is_current(index_dir: Path = ADVERSARIAL_INDEX_DIR) -> bool:
+    """True when index_dir exists and holds exactly the documents of the adversarial corpus file —
+    so an eval or test never runs attacks against a stale index."""
+    return _holds_exactly(index_dir, load_adversarial_docs())
+
+
+def bipia_index_is_current(index_dir: Path = BIPIA_INDEX_DIR) -> bool:
+    return _holds_exactly(index_dir, load_bipia_docs())
 
 
 def ingest_adversarial(
     base_dir: Path = INDEXES_DIR,
     out_dir: Path = ADVERSARIAL_INDEX_DIR,
     screen: bool | None = None,
+    docs: list[SourceDoc] | None = None,
 ) -> None:
-    """Build the guardrail-eval index: every chunk of the real index (copied verbatim, vectors
-    and quarantine verdicts included) followed by the chunked, screened, embedded adversarial
-    corpus."""
+    """Build a guardrail-eval index: every chunk of the real index (copied verbatim, vectors
+    and quarantine verdicts included) followed by the chunked, screened, embedded attack corpus —
+    the adversarial one by default, or `docs`."""
     import faiss
     import numpy as np
 
@@ -335,7 +363,7 @@ def ingest_adversarial(
     if len(base_vectors) != len(base_chunks):
         raise RuntimeError(f"{base_dir} is inconsistent — rebuild it with `sentinel.ingest`")
 
-    adv_docs = load_adversarial_docs()
+    adv_docs = load_adversarial_docs() if docs is None else docs
     adv_chunks = chunk_documents(adv_docs)
     clash = {c.chunk_id for c in adv_chunks} & {c.chunk_id for c in base_chunks}
     if clash:
@@ -361,12 +389,16 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true", help="clean + chunk only; no embed/index")
     ap.add_argument("--adversarial", action="store_true",
                     help="build indexes_adversarial/ (real index + adversarial corpus)")
+    ap.add_argument("--bipia", action="store_true",
+                    help="build indexes_bipia/ (real index + the BIPIA attack set)")
     ap.add_argument("--no-screen", action="store_true",
                     help="skip prompt-injection screening (nothing is quarantined)")
     args = ap.parse_args()
     screen = False if args.no_screen else None
     if args.adversarial:
         ingest_adversarial(screen=screen)
+    elif args.bipia:
+        ingest_adversarial(out_dir=BIPIA_INDEX_DIR, screen=screen, docs=load_bipia_docs())
     else:
         ingest(limit=args.limit, dry_run=args.dry_run, screen=screen)
 
