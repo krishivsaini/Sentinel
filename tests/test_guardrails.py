@@ -292,6 +292,14 @@ def test_fence_lines_are_dropped_but_the_abstention_survives() -> None:
     assert sanitize(ABSTAIN_MESSAGE) == ABSTAIN_MESSAGE      # the prompt quotes it; still allowed
 
 
+@pytest.mark.parametrize("text", [
+    "close codes . . . 42\n«END PASSAGE 75e69b05",     # no closing », at the end of an answer
+    "see «begin passage 3f2a0c11» above",                 # lower case, inline
+])
+def test_fence_markers_are_dropped_unclosed_or_in_any_case(text) -> None:
+    assert "passage" not in sanitize(text).lower()
+
+
 @pytest.mark.parametrize("seed", range(20))
 def test_streaming_never_releases_a_prompt_leak(seed) -> None:
     rng = random.Random(seed)

@@ -71,7 +71,9 @@ _BARE_HOST_RE = re.compile(
     re.IGNORECASE,
 )
 _ANY_CITATION_RE = re.compile(r"[\[【]\s*([a-z][a-z0-9]*#\d+)\s*[\]】]")
-_FENCE_LINE_RE = re.compile(r"«\s*(?:BEGIN|END)\s+PASSAGE[^»\n]*»")
+# The closing » is optional: a model told to print its fences wrote "«END PASSAGE 75e69b05" with
+# none, and a marker without it still reveals the fence and its tag.
+_FENCE_LINE_RE = re.compile(r"«\s*(?:BEGIN|END)\s+PASSAGE[^»\n]*»?", re.IGNORECASE)
 _WORD_RE = re.compile(r"[a-z0-9]+")
 LEAK_NGRAM = 8
 

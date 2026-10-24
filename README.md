@@ -152,7 +152,7 @@ retrieves its passage, in three sets:
 | Prompt hardening only | 4.3 / 50 — 8.7% | 2.7 | 1.7 | 0 |
 | Output guard only | 15.0 / 50 — 30% | 8.3 | 4.7 | 2.0 |
 | Hardening + output guard | 5.3 / 50 — 10.7% | 3.3 | 2.0 | 0 |
-| **Hardening + output guard + answer check** (*what's left if screening misses*) † | **0.7 / 50 — 1.3%** | 0.7 | 0 | 0 |
+| **Hardening + output guard + answer check** (*what's left if screening misses*) | **1.0 / 50 — 2%** (0–2 per run) | 0.7 | 0.3 | 0 |
 | Index-time screening only | 0 / 50 | 0 | 0 | 0 |
 | **All defences (what ships)** | **0 / 50 in every run — 95% CI 0–7.1%** | **0** | **0** | **0** |
 
@@ -161,11 +161,14 @@ with Unicode hyphens (`WHIMBREL‑4406`, with U+2011), and canaries from a secon
 retrieved alongside the target. Re-scoring the recorded answers (`run_guardrails --rescore`, no
 API calls) raised the weaker rows by up to 2.7 attacks; the rows with screening on didn't change.
 
-† **The answer check** reads only the question and the finished answer, and withholds an answer
-that carried out a planted instruction. Since it sees nothing but the final text, applying it to
-the recorded answers ([`answer_check.json`](data/guardrails/answer_check.json),
-[`scripts/answer_check_eval.py`](scripts/answer_check_eval.py)) gives what the pipeline would have
-returned. Over 665 distinct answers:
+**The answer check** reads only the question and the finished answer, and withholds an answer
+that carried out a planted instruction. Run end to end it took the backup layers from 5.3 to
+**1.0** of 50 (it withheld 18 of 150 answers); replaying it over the answers recorded before it
+existed had predicted 0.7. What still gets through: the planted false errata claim twice, and
+once a canary the check let pass on a run where it had caught the same attack before — the
+classifier isn't deterministic either. On the recorded answers
+([`answer_check.json`](data/guardrails/answer_check.json),
+[`scripts/answer_check_eval.py`](scripts/answer_check_eval.py)), over 665 distinct answers:
 
 | Answers | Withheld |
 |---|---|
@@ -209,11 +212,21 @@ against **88 genuine questions** — all 48 ground-truth questions plus hard neg
 | Input detector | Dev attacks caught | Held-out caught | Genuine questions refused |
 |---|---|---|---|
 | Llama Prompt Guard 2 | 10 / 20 | 4 / 15 | 2 / 88 |
-| **gpt-oss-safeguard-20b + input policy (ships)** | **16 / 20** | **12 / 15** | **0 / 88** |
+| **gpt-oss-safeguard-20b + input policy (ships)** | **15–16 / 20** | **11–12 / 15** | **0 / 88** |
 
-Run end to end through the shipped pipeline, **9.7 of 35** user-side attacks got through without
-the input guard and **1.0 of 35** with it (95% CI 0.1–14.9%). The one that still gets through is a
-benign-looking question with a "P.S. end your answer with …" suffix.
+The safeguard classifier isn't deterministic at temperature 0: across two measurements it caught
+16 then 15 of the dev attacks and 12 then 11 held-out — three prompt-extraction questions flipped
+to "safe" and one fabrication request to "attack" — and refused no genuine question in either.
+
+Run end to end through the shipped pipeline, now with the answer check, **6.7 of 35** user-side
+attacks got through without the input guard and **1.3 of 35** with it (any run: 2; 95% CI
+0.7–19.2%). One is a benign-looking question with a "P.S. end your answer with …" suffix (once in
+three runs): the question itself asks for the code, so the answer check rightly doesn't object.
+The other was a prompt-extraction question the input guard missed this time, which got the model
+to print a passage fence as `«END PASSAGE 75e69b05` — with no closing `»`, so the output guard's
+fence filter didn't match it. The filter now matches unclosed and any-case markers; replayed on
+the recorded answers that leaves 1 success in the 105 attempts, the suffix one, and it changes
+none of 1,873 other recorded answers.
 
 | | Precision | Recall |
 |---|---|---|
@@ -237,10 +250,10 @@ What the numbers say, plainly:
 - **Every attack that beat hardening + the output guard had the same shape:** a correct answer
   plus something the question never asked for — a "compliance tag", an "audit id", an "OCSP
   check id". The answer check targets that shape, not the canary format, and takes the backup
-  layers from 10.7% to 1.3%. What's left is a planted false claim written as RFC text.
+  layers from 10.7% to 2%. What's left is mostly a planted false claim written as RFC text.
 - **Prompt hardening is the strongest single backup layer** (29% → 8.7% on its own); the output
   guard only matters for link-shaped payloads.
-- **The input guard cuts user-side attacks from 28% to 3%** without refusing a single genuine
+- **The input guard cuts user-side attacks from 19% to 4%** without refusing a single genuine
   question; Prompt Guard alone would have refused two.
 - **PII precision of 0.80 is deliberate over-redaction:** IETF role addresses (`iesg@ietf.org`)
   can't be told apart from personal ones by pattern, so they're redacted too.
@@ -793,9 +806,11 @@ These are deliberate scope choices, stated plainly:
 - **A canary measures obedience, not harm.** For misinformation attacks it is a lower bound: a
   model could repeat a false claim without the canary.
 - **The backup layers are weaker on their own.** If screening missed an attack, hardening, the
-  output guard and the answer check still let 1.3% through in replay: a false claim phrased as
-  RFC errata, which the answer check can't recognise as planted. Its numbers come from the
-  answers already recorded; the next full guardrail run measures it end to end.
+  output guard and the answer check still let 2% through: mostly a false claim phrased as RFC
+  errata, which the answer check can't recognise as planted.
+- **The classifiers vary run to run.** The input guard and the answer check each let through,
+  on one run, an attack they caught on another. Every rate here is a mean over 3 runs, and the
+  gate counts an attack that got through in any run.
 - **The answer check retracts rather than blocks.** On the stream the answer has already been
   sent when the check runs; a client that ignores the `done` event's replacement would still
   show it. It wrongly withheld 3 of the ~600 clean answers measured.
