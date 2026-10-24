@@ -64,7 +64,7 @@ from sentinel.guardrails.output import guard_answer
 from sentinel.logging_config import configure_logging, log
 from sentinel.retrieve import Access, hybrid_retrieve, warmup
 from sentinel.schema import Chunk, RetrievedChunk
-from sentinel.spend import meter
+from sentinel.spend import BudgetExceeded, meter
 
 REPORT_PATH = GUARDRAILS_DIR / "report.json"
 PII_LABELS_PATH = GUARDRAILS_DIR / "pii_labels.jsonl"
@@ -540,6 +540,21 @@ def rescore(report: dict) -> dict:
     return report
 
 
+def _gate_stopped(why: str) -> None:
+    """The gate couldn't finish (its spend cap): fail with a summary that says so, rather than a
+    traceback and an empty PR check."""
+    md = "\n".join([
+        "## Injection gate — FAIL ❌", "",
+        f"**The run stopped before every attack was tried: {why}.**", "",
+        "Raise the gate's spend cap (`SENTINEL_SPEND_LIMIT_USD` in the workflow) if the run "
+        "legitimately needs more.",
+    ])
+    print(md)
+    if path := os.getenv("GITHUB_STEP_SUMMARY"):
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(md + "\n")
+
+
 def remeasure(report: dict, names: list[str], repeats: int) -> dict:
     """Re-run only the named configurations and merge them into an existing report — for a
     defence added or changed since the report was made. With "all", the user-side attacks are
@@ -604,10 +619,14 @@ def main() -> None:
         return
 
     if args.ci:
-        report = {
-            "injection": {"attacks": run_attacks(configs=(ALL,))},
-            "input": input_guard_eval(repeats=1),
-        }
+        try:
+            report = {
+                "injection": {"attacks": run_attacks(configs=(ALL,))},
+                "input": input_guard_eval(repeats=1),
+            }
+        except BudgetExceeded as exc:
+            _gate_stopped(str(exc))
+            sys.exit(1)
         _print(report)
         sys.exit(0 if _gate(report) else 1)
 

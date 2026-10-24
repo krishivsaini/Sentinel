@@ -464,7 +464,11 @@ def _ci_gate(result: EvalResult) -> bool:
     rel_ok = rel is None or not rel["applicable"] or rel["passed"]
     passed = enough and m.faithfulness >= gate and rel_ok
 
-    if not enough:
+    capped = settings.spend_limit_usd is not None and meter.usd >= settings.spend_limit_usd
+    if not enough and capped:
+        reason = (f"spend cap reached (${meter.usd:.3f} of ${settings.spend_limit_usd:.2f}) — "
+                  f"only {n}/{settings.ci_min_items} items scored")
+    elif not enough:
         reason = f"insufficient coverage — only {n}/{settings.ci_min_items} items scored"
     elif m.faithfulness < gate:
         reason = f"mean faithfulness {m.faithfulness:.3f} < {gate:.2f}"
@@ -474,7 +478,9 @@ def _ci_gate(result: EvalResult) -> bool:
     else:
         reason = f"mean faithfulness {m.faithfulness:.3f} >= {gate:.2f}"
 
-    if rel is None:
+    if not enough:
+        rel_rows = ["| vs main's baseline | not compared — too few items scored |"]
+    elif rel is None:
         rel_rows = ["| vs main's baseline | no baseline committed — absolute gate only |"]
     elif not rel["applicable"]:
         rel_rows = [f"| vs main's baseline | only {rel['shared']} questions in common — "

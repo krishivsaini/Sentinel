@@ -174,6 +174,21 @@ def test_ci_gate_writes_github_step_summary(tmp_path, monkeypatch) -> None:
     assert "Faithfulness gate" in text and "PASS" in text and "mean faithfulness" in text
 
 
+def test_ci_gate_says_when_the_spend_cap_stopped_the_run(tmp_path, monkeypatch) -> None:
+    """A capped run fails on coverage; the summary must name the cap, not send the reader
+    looking for a throttling problem, and must not claim there is no baseline."""
+    from sentinel.spend import meter
+
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(settings, "spend_limit_usd", 0.25)
+    monkeypatch.setattr(meter, "usd", 0.25)
+    assert run_eval._ci_gate(_result(3, 0.95)) is False
+    text = summary.read_text()
+    assert "spend cap reached" in text and "not compared" in text
+    assert "no baseline committed" not in text
+
+
 def test_gate_only_run_scores_faithfulness_alone_and_persists_nothing(tmp_store, monkeypatch):
     """--ci must call the judge for faithfulness only (the free-tier token budget can't cover all
     three metrics per PR) and must never checkpoint or export: its NaN relevance/recall would

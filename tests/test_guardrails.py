@@ -336,3 +336,25 @@ def test_remeasure_replaces_only_the_named_configurations(monkeypatch) -> None:
     assert sorted(r["config"] for r in att["results"]) == [
         "all", "hardening+output", "hardening+output+answer", "none"]
     assert rep["input"]["v"] == "new"   # "all" re-runs the user-side attacks too
+
+
+def test_injection_gate_fails_with_a_summary_when_its_spend_cap_stops_it(tmp_path, monkeypatch):
+    import sys
+
+    from sentinel.eval import run_guardrails as rg
+    from sentinel.spend import BudgetExceeded
+
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(sys, "argv", ["run_guardrails", "--ci"])
+    for name in ("configure_logging", "_ensure_adversarial_index", "warmup"):
+        monkeypatch.setattr(rg, name, lambda: None)
+
+    def capped(*args, **kwargs):
+        raise BudgetExceeded("spend limit reached: $0.2500 of $0.25 spent")
+
+    monkeypatch.setattr(rg, "run_attacks", capped)
+    with pytest.raises(SystemExit) as exit_:
+        rg.main()
+    assert exit_.value.code == 1
+    assert "FAIL" in summary.read_text() and "spend limit reached" in summary.read_text()
