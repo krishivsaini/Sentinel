@@ -31,7 +31,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from sentinel.config import BIPIA_DIR, BIPIA_INDEX_DIR, IndexPaths, settings
+from sentinel.config import BIPIA_DIR, BIPIA_INDEX_DIR, DASHBOARD_DATA_DIR, IndexPaths, settings
 from sentinel.eval.run_guardrails import CONFIGS, Config, _attack
 from sentinel.eval.stats import proportion
 from sentinel.generate import is_abstention
@@ -205,6 +205,9 @@ def report() -> dict:
                 "labelled_by": sorted({r.get("labelled_by") or "unrecorded" for r in sheet}),
             }
     REPORT_PATH.write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if REPORT_PATH.parent == BIPIA_DIR:   # the real report, not a test's: give the dashboard a copy
+        DASHBOARD_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        (DASHBOARD_DATA_DIR / "bipia.json").write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     return out
 
 

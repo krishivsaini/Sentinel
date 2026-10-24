@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-10-24T10:46:44+00:00",
+  "generated_utc": "2026-10-24T11:11:46+00:00",
   "source": "microsoft/BIPIA text_attack_test.json (MIT), see scripts/build_bipia.py",
   "generation_model": "openai/gpt-oss-20b",
   "judge": "bipia-judge:openai/gpt-oss-120b:0d9afac2",

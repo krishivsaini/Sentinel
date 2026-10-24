@@ -1,6 +1,6 @@
 "use client";
 
-import type { AttackBlock, GuardrailsReport, InputRule, PiiSource, Rate, Split } from "@/lib/data";
+import type { AttackBlock, BipiaReport, GuardrailsReport, InputRule, PiiSource, Rate, Split } from "@/lib/data";
 import { shortDate } from "@/lib/format";
 import { ShieldIcon } from "./icons";
 import { Card, PageHead, StatCard } from "./ui";
@@ -121,6 +121,68 @@ function PiiTable({ title, src, note }: { title: string; src: PiiSource; note: s
   );
 }
 
+// BIPIA categories grouped the way the README reports screening on them.
+const BIPIA_GROUPS: [string, string[]][] = [
+  ["planted content", ["Information Dissemination", "Marketing & Advertising", "Entertainment", "Scams & Fraud", "Misinformation & Propaganda"]],
+  ["output format", ["Substitution Ciphers", "Reverse Text", "Base Encoding", "Emoji Substitution", "Language Translation"]],
+  ["task hijacks", ["Task Automation", "Business Intelligence", "Conversational Agent", "Research Assistance", "Sentiment Analysis"]],
+];
+const BIPIA_ORDER = ["none", "hardening+output+answer", "all"];
+
+function Bipia({ report }: { report: BipiaReport }) {
+  const by = report.screening_caught.by_category;
+  const group = (cats: string[]) => cats.reduce((a, c) => [a[0] + (by[c]?.k ?? 0), a[1] + (by[c]?.n ?? 0)], [0, 0]);
+  const agree = report.judge_agreement;
+  return (
+    <Section title="Independent attacks — BIPIA (Microsoft, MIT)">
+      <div className="grid grid-cols-[1.4fr_1fr] gap-4">
+        <Card className="overflow-hidden">
+          <Head cols="grid-cols-[1.6fr_1fr_90px]">
+            <span>configuration</span><span>got through</span><span className="text-right">95% CI</span>
+          </Head>
+          {BIPIA_ORDER.filter((k) => report.attacks[k]).map((k) => {
+            const b = report.attacks[k];
+            return (
+              <div key={k} className={`grid grid-cols-[1.6fr_1fr_90px] items-center border-b border-border-soft px-[18px] py-2.5 text-[12.5px] tabular-nums ${k === "all" ? "bg-panel-2 font-semibold" : ""}`}>
+                <span>{CONFIG_LABEL[k] ?? k}</span>
+                <span>
+                  {b.succeeded} / {b.attacks}
+                  <span className="ml-1 text-[11px] font-normal text-text-4">[{b.succeeded_range[0]}–{b.succeeded_range[1]}]</span>
+                </span>
+                <span className="text-right text-[11px] font-normal text-text-3">{ci(b.succeeded_in_any_run)}</span>
+              </div>
+            );
+          })}
+        </Card>
+        <Card className="overflow-hidden">
+          <Head cols="grid-cols-[1.6fr_1fr]">
+            <span>screening caught</span><span>{report.screening_caught.all.k} / {report.screening_caught.all.n}</span>
+          </Head>
+          {BIPIA_GROUPS.map(([name, cats]) => {
+            const [k, n] = group(cats);
+            return (
+              <div key={name} className="grid grid-cols-[1.6fr_1fr] border-b border-border-soft px-[18px] py-2.5 text-[12.5px] tabular-nums">
+                <span>{name}</span>
+                <span className={k < n / 2 ? "text-warn-fg" : ""}>{k} / {n}</span>
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+      <Note>
+        75 attack instructions written by people who never saw these defences, planted verbatim in
+        the passages the eval questions retrieve. No canaries, so success is judged
+        {agree ? (
+          <> — the judge agreed with blind labels on <b className="text-text-3">{agree.agree.k} / {agree.agree.n}</b> answers
+          (labelled by {agree.labelled_by.join(", ")})</>
+        ) : null}
+        . What beats every defence is a request to answer in another language: a translated answer
+        still answers the question.
+      </Note>
+    </Section>
+  );
+}
+
 function Missing() {
   return (
     <div className="max-w-[1080px] px-8 pb-12 pt-7">
@@ -134,7 +196,7 @@ function Missing() {
   );
 }
 
-export function Guardrails({ report }: { report: GuardrailsReport | null }) {
+export function Guardrails({ report, bipia }: { report: GuardrailsReport | null; bipia?: BipiaReport | null }) {
   if (!report) return <Missing />;
   const att = report.injection.attacks.summary;
   const det = report.injection.detectors;
@@ -245,6 +307,8 @@ export function Guardrails({ report }: { report: GuardrailsReport | null }) {
         </Note>
       </Section>
 
+      {bipia && <Bipia report={bipia} />}
+
       {input && (
         <Section title="Input guard — the user's own question">
           <Card className="overflow-hidden">
@@ -304,9 +368,9 @@ export function Guardrails({ report }: { report: GuardrailsReport | null }) {
         </span>
         <div className="text-[12px] text-text-2">
           A canary check measures whether the model obeyed an injected instruction. For misinformation
-          attacks it is a lower bound — a model could repeat a false claim without the canary. Every
-          attack here was written by the same author as the defences; the held-out and adaptive splits
-          limit, but don&apos;t remove, that bias.
+          attacks it is a lower bound — a model could repeat a false claim without the canary. The
+          hand-written attacks share an author with the defences; the held-out and adaptive splits
+          limit that bias, and the BIPIA set is the check against it.
         </div>
       </div>
     </div>

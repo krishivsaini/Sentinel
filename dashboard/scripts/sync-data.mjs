@@ -10,7 +10,7 @@ const src = join(here, "..", "data");
 const dst = join(here, "..", "public", "data");
 mkdirSync(dst, { recursive: true });
 
-const files = ["latest.json", "history.json", "latency_report.json", "guardrails.json"];
+const files = ["latest.json", "history.json", "latency_report.json", "guardrails.json", "bipia.json"];
 let copied = 0;
 for (const f of files) {
   const from = join(src, f);

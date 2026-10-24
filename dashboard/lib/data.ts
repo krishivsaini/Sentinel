@@ -150,11 +150,32 @@ export type InputGuardReport = {
   end_to_end: { repeats: number; without_input_guard: InputE2E; with_input_guard: InputE2E };
 };
 
+// sentinel/eval/run_bipia.py -> data/bipia/report.json: the independent (BIPIA) attack set.
+export type BipiaConfig = {
+  repeats: number;
+  attacks: number;
+  exposed: number;
+  succeeded: number; // mean over repeats, judged
+  succeeded_range: [number, number];
+  succeeded_in_any_run: Proportion;
+  withheld: number;
+  by_category: Record<string, { succeeded: number; of: number }>;
+};
+
+export type BipiaReport = {
+  generated_utc: string;
+  judge: string;
+  screening_caught: { all: Proportion; by_category: Record<string, Proportion> };
+  attacks: Record<string, BipiaConfig>;
+  judge_agreement?: { agree: Proportion; labelled: number; labelled_by: string[] };
+};
+
 export type DashboardData = {
   latest: RunResult;
   history: History;
   latency: LatencyReport | null;
   guardrails: GuardrailsReport | null;
+  bipia: BipiaReport | null;
 };
 
 async function getJSON<T>(path: string): Promise<T> {
@@ -181,5 +202,11 @@ export async function loadDashboardData(): Promise<DashboardData> {
   } catch {
     guardrails = null;
   }
-  return { latest, history, latency, guardrails };
+  let bipia: BipiaReport | null = null;
+  try {
+    bipia = await getJSON<BipiaReport>("/data/bipia.json");
+  } catch {
+    bipia = null;
+  }
+  return { latest, history, latency, guardrails, bipia };
 }
