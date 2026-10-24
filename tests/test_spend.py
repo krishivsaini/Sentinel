@@ -12,7 +12,8 @@ from sentinel.spend import BudgetExceeded, SpendCallback, meter
 
 
 @pytest.fixture(autouse=True)
-def fresh_meter():
+def fresh_meter(monkeypatch):
+    monkeypatch.setattr(settings, "spend_limit_usd", None)   # whatever the environment sets
     meter.reset()
     yield
     meter.reset()
