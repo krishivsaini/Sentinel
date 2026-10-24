@@ -1,7 +1,10 @@
 # Sentinel — Architecture
 
-> Planning-stage architecture. Companion to [`requirement.md`](./requirement.md), [`product_design.md`](./product_design.md), and [`implementation_plan.md`](./implementation_plan.md).
-> **Note:** the build plan reserves a root-level [`ARCHITECTURE.md`](../ARCHITECTURE.md) as a *deliverable* artifact (diagram + LangChain rationale) written on Day 14. This doc is the fuller upstream design; the deliverable is its distilled, recruiter-facing summary.
+> Planning-stage architecture, kept as the record of the original design. **For the system as
+> built, read [`ARCHITECTURE.md`](../ARCHITECTURE.md)** — several choices here changed on
+> measurement (generation and the judge run on Groq gpt-oss, not Gemini Flash; the CI subset is
+> 24 items; screening runs at index build). Companion to [`requirement.md`](./requirement.md),
+> [`product_design.md`](./product_design.md), and [`implementation_plan.md`](./implementation_plan.md).
 > **Source of truth:** [`SENTINEL_BUILD_PLAN.md`](../SENTINEL_BUILD_PLAN.md).
 
 ---

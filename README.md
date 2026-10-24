@@ -11,7 +11,7 @@
 > and enforced as a **second CI gate**: a merge is also blocked if injected instructions start
 > getting through.
 >
-> [Results →](#results) · [Guardrails →](#10--guardrails--sentinelguardrails) · [Architecture →](docs/architecture.md) · [CI gates →](.github/workflows/eval-gate.yml) · [Dashboard →](dashboard/) · [Judge calibration →](data/ground_truth_audit.md)
+> [Results →](#results) · [Guardrails →](#10--guardrails--sentinelguardrails) · [Architecture →](ARCHITECTURE.md) · [CI gates →](.github/workflows/eval-gate.yml) · [Dashboard →](dashboard/) · [Judge calibration →](data/ground_truth_audit.md)
 
 ---
 
@@ -611,15 +611,18 @@ Sentinel/
 │   ├── llm.py               # provider-agnostic chat-model factory
 │   ├── serve.py             # FastAPI: JWT scopes, rate limiting, SSE, guardrails
 │   ├── retry.py             # shared retry policy for every rate-limited API call
+│   ├── spend.py             # meters every paid LLM call; caps a run in dollars
 │   ├── logging_config.py    # structured logging + per-stage timers
 │   ├── guardrails/
 │   │   ├── input.py         # screens the user's question before retrieval
 │   │   ├── injection.py     # index-time injection screening (Prompt Guard 2 + policy model)
 │   │   ├── pii.py           # PII detection + redaction
-│   │   └── output.py        # streaming output guard: links, images, PII, citations
+│   │   ├── output.py        # streaming output guard: links, images, PII, citations
+│   │   └── answer.py        # withholds answers that carried out a planted instruction
 │   └── eval/
 │       ├── run_eval.py      # Ragas pipeline, checkpointed + resumable, faithfulness gate
 │       ├── run_guardrails.py# attack evals, detector + PII metrics, injection gate
+│       ├── run_bipia.py     # the independent BIPIA attack set, judged, spend-capped
 │       ├── stats.py         # exact confidence intervals for small samples
 │       ├── attribution.py   # retrieval- vs generation-failure classifier
 │       └── store.py         # SQLite persistence + JSON export
@@ -631,6 +634,8 @@ Sentinel/
 │   ├── retrieval_ablation.json # dense / BM25 / fusion / rerank, per question
 │   ├── latency_report.json  # per-stage p50/p95/p99
 │   ├── adversarial/         # 50 labelled poisoned passages + questions (dev / held-out / adaptive)
+│   ├── bipia/               # 75 BIPIA attacks planted in RFC passages (MIT, pinned)
+│   ├── faithfulness_baseline.json # main's per-question scores, for the relative gate
 │   └── guardrails/          # screening verdicts, PII labels, user-side prompts, the report
 ├── scripts/
 │   ├── fetch_corpus.py              # download the corpus
@@ -640,11 +645,14 @@ Sentinel/
 │   ├── probe_judge.py               # does a candidate judge produce parseable output?
 │   ├── compare_judge_hosts.py       # same judge, two providers, identical inputs
 │   ├── retrieval_ablation.py        # does each retrieval stage earn its place?
+│   ├── answer_check_eval.py         # the answer check on every recorded answer
+│   ├── build_bipia.py               # fetch BIPIA (pinned) and plant it in RFC passages
 │   ├── bench_latency.py             # per-stage p50/p95/p99
 │   └── export_dashboard_data.py     # cross-run history for the dashboard
 ├── dashboard/               # Next.js + Tailwind eval dashboard
 ├── tests/                   # retrieval, scope, guardrails, generation, service, eval
-├── docs/                    # requirements, product design, architecture, plan
+├── ARCHITECTURE.md          # the system as built
+├── docs/                    # requirements, product design, original architecture, plan
 └── .github/workflows/eval-gate.yml
 ```
 
@@ -818,7 +826,8 @@ These are deliberate scope choices, stated plainly:
 |---|---|
 | [docs/requirement.md](docs/requirement.md) | Functional + non-functional requirements, acceptance criteria |
 | [docs/product_design.md](docs/product_design.md) | Product thesis, personas, surfaces, dashboard IA |
-| [docs/architecture.md](docs/architecture.md) | System design, data flow, stack rationale, deployment |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | The system as built: query path, indexes, trust boundaries, gates, models and cost, LangChain's role |
+| [docs/architecture.md](docs/architecture.md) | The original planning-stage design (superseded where they differ) |
 | [docs/implementation_plan.md](docs/implementation_plan.md) | Phased build plan, dependency graph, risk register |
 | [data/ground_truth_audit.md](data/ground_truth_audit.md) | Ground-truth review + judge calibration |
 | [SENTINEL_BUILD_PLAN.md](SENTINEL_BUILD_PLAN.md) | The original build brief |
