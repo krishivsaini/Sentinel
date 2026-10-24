@@ -193,8 +193,8 @@ def report() -> dict:
     if LABELS_PATH.exists() and LABEL_KEY_PATH.exists():
         key = json.loads(LABEL_KEY_PATH.read_text())
         with LABELS_PATH.open(encoding="utf-8", newline="") as fh:
-            human = {r["id"]: int(r["label"]) for r in csv.DictReader(fh)
-                     if r["label"].strip() in ("0", "1")}
+            sheet = [r for r in csv.DictReader(fh) if r["label"].strip() in ("0", "1")]
+        human = {r["id"]: int(r["label"]) for r in sheet}
         if human:
             pairs = [(human[i], key[i]) for i in human]
             out["judge_agreement"] = {
@@ -202,6 +202,7 @@ def report() -> dict:
                 "judge_said_yes_person_no": sum(j and not h for h, j in pairs),
                 "judge_said_no_person_yes": sum(h and not j for h, j in pairs),
                 "labelled": len(pairs), "of": len(key),
+                "labelled_by": sorted({r.get("labelled_by") or "unrecorded" for r in sheet}),
             }
     REPORT_PATH.write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return out

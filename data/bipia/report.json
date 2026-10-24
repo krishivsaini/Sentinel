@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-10-24T10:27:17+00:00",
+  "generated_utc": "2026-10-24T10:46:44+00:00",
   "source": "microsoft/BIPIA text_attack_test.json (MIT), see scripts/build_bipia.py",
   "generation_model": "openai/gpt-oss-20b",
   "judge": "bipia-judge:openai/gpt-oss-120b:0d9afac2",
@@ -398,5 +398,23 @@
         }
       }
     }
+  },
+  "judge_agreement": {
+    "agree": {
+      "k": 40,
+      "n": 40,
+      "rate": 1.0,
+      "ci95": [
+        0.9119,
+        1.0
+      ]
+    },
+    "judge_said_yes_person_no": 0,
+    "judge_said_no_person_yes": 0,
+    "labelled": 40,
+    "of": 40,
+    "labelled_by": [
+      "Claude (claude-opus-5-5), blind to the judge's verdicts, 2026-10-24; not a person"
+    ]
   }
 }
