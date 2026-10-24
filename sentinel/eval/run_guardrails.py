@@ -27,6 +27,8 @@ Honesty notes the report carries with it:
     python -m sentinel.eval.run_guardrails            # full report -> data/guardrails/report.json
     python -m sentinel.eval.run_guardrails --ci       # second CI gate: all defences on
     python -m sentinel.eval.run_guardrails --rescore  # re-score the recorded answers, no API
+    python -m sentinel.eval.run_guardrails --configs hardening+output+answer all
+                                                      # re-run some configurations, merge them in
 """
 
 from __future__ import annotations
@@ -538,6 +540,26 @@ def rescore(report: dict) -> dict:
     return report
 
 
+def remeasure(report: dict, names: list[str], repeats: int) -> dict:
+    """Re-run only the named configurations and merge them into an existing report — for a
+    defence added or changed since the report was made. With "all", the user-side attacks are
+    re-run too, since they go through the same full pipeline."""
+    new = run_attacks(configs=tuple(c for c in CONFIGS if c.name in names), repeats=repeats)
+    att = report["injection"]["attacks"]
+    att["results"] = [r for r in att["results"] if r["config"] not in names] + new["results"]
+    att["summary"] = {
+        c.name: new["summary"][c.name] if c.name in names else att["summary"][c.name]
+        for c in CONFIGS if c.name in names or c.name in att["summary"]
+    }
+    if "all" in names:
+        report["input"] = input_guard_eval(repeats=repeats)
+    report.setdefault("remeasured", []).append({
+        "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "configs": names, "repeats": repeats, "spend": meter.summary(),
+    })
+    return report
+
+
 def _write(report: dict) -> None:
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -558,6 +580,8 @@ def main() -> None:
                     help="runs per configuration for the full report (generation varies)")
     ap.add_argument("--rescore", action="store_true",
                     help="re-score the answers recorded in the report; no API calls")
+    ap.add_argument("--configs", nargs="+", choices=[c.name for c in CONFIGS], metavar="NAME",
+                    help="re-run only these configurations and merge them into the report")
     ap.add_argument("--max-spend", type=float, metavar="USD", default=None,
                     help="stop once this run's metered Groq spend reaches USD (sentinel.spend)")
     args = ap.parse_args()
@@ -571,6 +595,13 @@ def main() -> None:
         return
     _ensure_adversarial_index()
     warmup()
+    if args.configs:
+        report = remeasure(json.loads(REPORT_PATH.read_text(encoding="utf-8")), args.configs,
+                           args.repeats)
+        _write(report)
+        _print(report)
+        log.info("guardrails.remeasured", configs=args.configs, spend=meter.summary())
+        return
 
     if args.ci:
         report = {

@@ -305,3 +305,26 @@ def test_streaming_never_releases_a_prompt_leak(seed) -> None:
     pieces = [s.feed(t) for t in tokens] + [s.finish()]
     assert "".join(pieces) == sanitize(text)
     assert not any("Sentinel, a precise" in p or "rules exactly" in p for p in pieces)
+
+
+def test_remeasure_replaces_only_the_named_configurations(monkeypatch) -> None:
+    from sentinel.eval import run_guardrails as rg
+
+    old = {
+        "injection": {"attacks": {
+            "summary": {"none": {"v": "old"}, "hardening+output": {"v": "old"}, "all": {"v": "old"}},
+            "results": [{"config": "none"}, {"config": "hardening+output"}, {"config": "all"}],
+        }},
+        "input": {"v": "old"},
+    }
+    monkeypatch.setattr(rg, "run_attacks", lambda configs, repeats: {
+        "summary": {c.name: {"v": "new"} for c in configs},
+        "results": [{"config": c.name, "new": True} for c in configs]})
+    monkeypatch.setattr(rg, "input_guard_eval", lambda repeats: {"v": "new"})
+    rep = rg.remeasure(old, ["hardening+output+answer", "all"], repeats=1)
+    att = rep["injection"]["attacks"]
+    assert list(att["summary"]) == ["none", "hardening+output", "hardening+output+answer", "all"]
+    assert att["summary"]["none"]["v"] == "old" and att["summary"]["all"]["v"] == "new"
+    assert sorted(r["config"] for r in att["results"]) == [
+        "all", "hardening+output", "hardening+output+answer", "none"]
+    assert rep["input"]["v"] == "new"   # "all" re-runs the user-side attacks too
