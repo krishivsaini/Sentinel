@@ -44,3 +44,6 @@ data/ground_truth.review.jsonl
 data/judge_calibration.review.jsonl
 data/judge_calibration.blind.jsonl
 *.tsbuildinfo
+
+# --- Fine-tuning runs: checkpoints and logs (weights are never committed) ---
+runs/
