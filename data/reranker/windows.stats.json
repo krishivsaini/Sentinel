@@ -1,0 +1,28 @@
+{
+  "chunks": 2887,
+  "chunks_with_windows": 2503,
+  "windows": 4878,
+  "windows_per_chunk": {
+    "0": 384,
+    "1": 320,
+    "2": 1993,
+    "3": 188,
+    "4": 2
+  },
+  "window_tokens": {
+    "target": 300,
+    "median": 229.0,
+    "max": 319,
+    "model_input_limit": 320,
+    "over_limit": 0
+  },
+  "boilerplate_paragraphs_dropped": {
+    "reference": 1185,
+    "diagram": 368,
+    "licence": 309,
+    "toc": 115,
+    "contact": 112,
+    "header": 37
+  },
+  "tokenizer": "doc2query/msmarco-t5-base-v1@e673dca"
+}
