@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+
+# Once the dashboard is on Vercel, allow it to call the API:
+# cors_origins = ["https://your-dashboard.vercel.app"]
+
+# Optional budget alert (find the ID with: gcloud billing accounts list)
+# billing_account = "XXXXXX-XXXXXX-XXXXXX"
+# monthly_budget  = 5
+# budget_currency = "USD"   # must match the billing account's currency

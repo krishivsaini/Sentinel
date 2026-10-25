@@ -44,3 +44,10 @@ data/ground_truth.review.jsonl
 data/judge_calibration.review.jsonl
 data/judge_calibration.blind.jsonl
 *.tsbuildinfo
+
+# --- Terraform (deploy/terraform): local state and per-user values ---
+deploy/terraform/.terraform/
+deploy/terraform/*.tfstate
+deploy/terraform/*.tfstate.*
+deploy/terraform/terraform.tfvars
+deploy/terraform/.terraform.lock.hcl.bak
