@@ -234,7 +234,7 @@ def main() -> None:
     sub.add_parser("export", help="cut chunks into doc2query windows")
     b = sub.add_parser("build", help="clean, filter, mine negatives, split")
     b.add_argument("--queries", type=Path, default=OUT / "queries.jsonl.gz")
-    b.add_argument("--leak-threshold", type=float, default=0.85,
+    b.add_argument("--leak-threshold", type=float, default=0.80,
                    help="drop a synthetic query whose cosine similarity to any ground-truth "
                         "question reaches this")
     b.add_argument("--near-duplicate", type=float, default=0.95,

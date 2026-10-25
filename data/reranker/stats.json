@@ -1,0 +1,145 @@
+{
+  "queries_file": "queries.jsonl.gz",
+  "cleaning": {
+    "raw": 19512,
+    "bad_length": 296,
+    "duplicate": 425,
+    "ambiguous": 1278
+  },
+  "leakage": {
+    "threshold": 0.8,
+    "embedding": "BAAI/bge-small-en-v1.5",
+    "removed": 924,
+    "max_similarity_histogram": {
+      ">=0.7": 8262,
+      ">=0.75": 3448,
+      ">=0.8": 924,
+      ">=0.85": 201,
+      ">=0.9": 16,
+      ">=0.95": 3
+    },
+    "removed_examples": [
+      {
+        "similarity": 0.966,
+        "synthetic": "what is a connection id in QUIC",
+        "ground_truth": "What is a QUIC connection ID used for?"
+      },
+      {
+        "similarity": 0.955,
+        "synthetic": "QUIC why use connection id",
+        "ground_truth": "What is a QUIC connection ID used for?"
+      },
+      {
+        "similarity": 0.952,
+        "synthetic": "are octets in a uri a %encoded octet",
+        "ground_truth": "Which characters are allowed in a percent-encoded octet in a URI?"
+      },
+      {
+        "similarity": 0.942,
+        "synthetic": "what is a three way handshake in tcp",
+        "ground_truth": "How does the TCP three-way handshake establish a connection?"
+      },
+      {
+        "similarity": 0.932,
+        "synthetic": "what is base64url encoding",
+        "ground_truth": "How does base64url encoding differ from standard base64 encoding?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "what is the difference between tcp and quic",
+        "ground_truth": "What is a QUIC connection ID used for?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "how to format base64",
+        "ground_truth": "How does base64url encoding differ from standard base64 encoding?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "how to use base64url in jws",
+        "ground_truth": "How does base64url encoding differ from standard base64 encoding?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "can a client with preface and tls-alpn a new HTTP2 connection",
+        "ground_truth": "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "define subject alt names in certificate",
+        "ground_truth": "What information does the Subject field identify in an X.509 certificate?"
+      }
+    ],
+    "closest_kept": [
+      {
+        "similarity": 0.8,
+        "synthetic": "what is data storage dns",
+        "ground_truth": "What does an A resource record provide in the DNS?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "what is the window size in tcp",
+        "ground_truth": "What is the purpose of the TCP receive window?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "do cookies contain a server password?",
+        "ground_truth": "What does the Secure attribute of an HTTP cookie do?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "how do i know the tls is encrypted",
+        "ground_truth": "Which TLS 1.3 handshake message carries the server's certificate?"
+      },
+      {
+        "similarity": 0.8,
+        "synthetic": "how to ensure bearer tokens are secured",
+        "ground_truth": "How is an OAuth 2.0 bearer token presented in an HTTP request?"
+      }
+    ]
+  },
+  "round_trip": {
+    "kept": 14231,
+    "positive_not_in_pool": 2358,
+    "pool_size": 50
+  },
+  "negatives": {
+    "per_query_max": 30,
+    "per_query": {
+      "mean": 30,
+      "min": 30
+    },
+    "excluded": {
+      "neighbour": 13447,
+      "near_duplicate": 375
+    },
+    "near_duplicate_cosine": 0.95
+  },
+  "positive_pool_rank": {
+    "median": 3,
+    "top1_share": 0.304
+  },
+  "split": {
+    "by": "RFC (doc_id)",
+    "train": {
+      "queries": 12311,
+      "rfcs": 42,
+      "gold_positives": 322
+    },
+    "val": {
+      "queries": 1920,
+      "rfcs": 6,
+      "docs": [
+        "rfc3339",
+        "rfc6749",
+        "rfc8174",
+        "rfc8446",
+        "rfc8484",
+        "rfc9114"
+      ]
+    }
+  },
+  "chunks": 2887,
+  "gold_chunks": 72,
+  "seconds": 177.9
+}

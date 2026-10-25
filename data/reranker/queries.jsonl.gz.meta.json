@@ -1,0 +1,17 @@
+{
+  "model": "doc2query/msmarco-t5-base-v1",
+  "revision": "e673dca0dff1f19fda73ac62420eedf0219e692b",
+  "per_window": 4,
+  "batch_size": 64,
+  "max_input": 320,
+  "max_output": 64,
+  "top_p": 0.95,
+  "seed": 13,
+  "device": "cuda",
+  "gpu": "Tesla T4",
+  "torch": "2.11.0+cu130",
+  "transformers": "5.20.2",
+  "python": "3.13.16",
+  "windows": 4878,
+  "seconds_this_run": 418.3
+}
