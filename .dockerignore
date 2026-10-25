@@ -1,0 +1,27 @@
+# Only the package, the lock and the corpus inputs go into the image (see Dockerfile).
+.git
+.github
+.venv
+.env
+.env.*
+**/__pycache__
+**/.pytest_cache
+.ruff_cache
+indexes*/
+eval_runs.db
+dashboard/
+docs/
+tests/
+scripts/
+deploy/
+data/adversarial/
+data/bipia/
+data/*.jsonl
+data/*.json
+!data/corpus_manifest.json
+data/guardrails/*
+!data/guardrails/screening_cache.jsonl
+*.md
+!README.md
+"Sentinel Dashboard.dc.html"
+support.js
