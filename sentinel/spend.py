@@ -8,12 +8,16 @@ config.spend_limit_usd set, the next call after the limit raises BudgetExceeded 
 being sent: a run stops within the cost of the calls already in flight.
 
     SENTINEL_SPEND_LIMIT_USD=0.25 python -m ...     # or a runner's --max-spend flag
+
+The deployed API also has a per-day budget (config.daily_spend_limit_usd), checked when a request
+starts rather than per call, so a request either runs to completion or is turned away whole.
 """
 
 from __future__ import annotations
 
 import threading
 from collections import defaultdict
+from datetime import date, datetime, timezone
 from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -44,6 +48,13 @@ class _Meter:
         self.usd = 0.0
         self.calls: dict[str, int] = defaultdict(int)
         self.tokens: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+        self._day: date | None = None
+        self._usd_day = 0.0
+
+    def spent_today(self) -> float:
+        """USD recorded since 00:00 UTC (by this process)."""
+        with self._lock:
+            return self._usd_day if self._day == datetime.now(timezone.utc).date() else 0.0
 
     def check(self) -> None:
         limit = settings.spend_limit_usd
@@ -52,8 +63,13 @@ class _Meter:
 
     def record(self, model: str, input_tokens: int, output_tokens: int) -> None:
         p_in, p_out = PRICES.get(model, _FALLBACK)
+        cost = (input_tokens * p_in + output_tokens * p_out) / 1e6
+        today = datetime.now(timezone.utc).date()
         with self._lock:
-            self.usd += (input_tokens * p_in + output_tokens * p_out) / 1e6
+            if self._day != today:
+                self._day, self._usd_day = today, 0.0
+            self._usd_day += cost
+            self.usd += cost
             self.calls[model] += 1
             self.tokens[model][0] += input_tokens
             self.tokens[model][1] += output_tokens

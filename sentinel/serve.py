@@ -39,6 +39,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -54,6 +55,7 @@ from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_cita
 from sentinel.guardrails.pii import redact_chunks
 from sentinel.logging_config import configure_logging, log
 from sentinel.retrieve import Access, hybrid_retrieve_timed
+from sentinel.spend import meter
 from sentinel.schema import (
     Answer,
     GuardrailReport,
@@ -275,6 +277,13 @@ def create_app() -> FastAPI:
         description="Hybrid-retrieval RAG service with an eval gate.",
         lifespan=_lifespan,
     )
+    if settings.cors_origins:   # the deployed dashboard calls /token and /query from the browser
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(settings.cors_origins),
+            allow_methods=["GET", "POST"],
+            allow_headers=["Authorization", "Content-Type"],
+        )
     # Limiter is created per-app (fresh in-memory storage) so tests don't bleed rate state.
     limiter = Limiter(key_func=get_remote_address)
     app.state.limiter = limiter
@@ -304,6 +313,15 @@ def create_app() -> FastAPI:
         user: Principal = Depends(get_current_user),
         engine: QueryEngine = Depends(get_engine),
     ) -> EventSourceResponse:
+        # Checked before any work, so a request either runs whole or is turned away: a public
+        # demo must not be able to spend the API budget faster than the owner intends.
+        limit = settings.daily_spend_limit_usd
+        if limit is not None and meter.spent_today() >= limit:
+            log.warning("query.budget_exhausted", spent=round(meter.spent_today(), 4), limit=limit)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="The demo's daily API budget is used up; it resets at 00:00 UTC.",
+            )
         return EventSourceResponse(_query_events(engine, user, body))
 
     return app
@@ -315,7 +333,10 @@ app = create_app()
 def main() -> None:
     import uvicorn
 
-    uvicorn.run(app, host=settings.api_host, port=settings.api_port)
+    # Behind a proxy (Cloud Run), take the client address from X-Forwarded-For so the per-IP
+    # rate limit sees each caller rather than the proxy.
+    uvicorn.run(app, host=settings.api_host, port=settings.api_port,
+                proxy_headers=True, forwarded_allow_ips="*")
 
 
 if __name__ == "__main__":

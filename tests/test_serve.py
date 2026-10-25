@@ -282,3 +282,50 @@ def test_input_guard_fails_closed_when_the_classifier_is_unreachable(monkeypatch
     assert verdict.flagged and "503" in verdict.error
     monkeypatch.setattr(settings, "input_guard_fail_open", True)
     assert not input_guard.screen_question("What is HSTS?", detectors=[Down()]).flagged
+
+
+# --------------------------------------------------------------------------- public deployment
+
+
+def test_query_is_turned_away_whole_once_the_daily_budget_is_spent(monkeypatch) -> None:
+    from sentinel.spend import meter
+
+    monkeypatch.setattr(settings, "daily_spend_limit_usd", 0.10)
+    meter.reset()
+    engine = FakeEngine()
+    c = _client(engine)
+    headers = _auth_header(c)
+    _, answer = _done(c, headers)                       # under budget: served
+    assert answer["text"]
+    meter.record("openai/gpt-oss-120b", 0, 200_000)     # $0.12 today
+    r = c.post("/query", json={"question": "q"}, headers=headers)
+    assert r.status_code == 503 and "daily API budget" in r.json()["detail"]
+    assert len(engine.accesses) == 1                    # the refused request did no work
+    meter.reset()
+
+
+def test_spend_today_resets_at_midnight_utc(monkeypatch) -> None:
+    from datetime import date
+
+    from sentinel import spend
+
+    spend.meter.reset()
+    spend.meter.record("openai/gpt-oss-20b", 1_000_000, 0)
+    assert spend.meter.spent_today() == pytest.approx(0.075)
+    spend.meter._day = date(2000, 1, 1)                 # as if recorded on an earlier day
+    assert spend.meter.spent_today() == 0.0
+    spend.meter.record("openai/gpt-oss-20b", 1_000_000, 0)
+    assert spend.meter.spent_today() == pytest.approx(0.075)
+    assert spend.meter.usd == pytest.approx(0.15)       # the run total keeps counting
+    spend.meter.reset()
+
+
+def test_cors_allows_only_the_configured_dashboard(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "cors_origins", ("https://sentinel.example.app",))
+    c = _client(FakeEngine())
+    preflight = {"Access-Control-Request-Method": "POST",
+                 "Access-Control-Request-Headers": "authorization,content-type"}
+    ok = c.options("/query", headers={"Origin": "https://sentinel.example.app", **preflight})
+    assert ok.headers.get("access-control-allow-origin") == "https://sentinel.example.app"
+    other = c.options("/query", headers={"Origin": "https://evil.example", **preflight})
+    assert "access-control-allow-origin" not in other.headers

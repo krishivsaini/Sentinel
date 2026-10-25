@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # --- Paths (repo-root relative; indexes*/ and *.db are gitignored) ---
@@ -220,8 +220,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiry_minutes: int = 60
     rate_limit: str = "20/minute"          # slowapi per-IP limit; a test must prove it fires
+    # A public deployment: turn /query away once the day's metered LLM spend reaches this
+    # many USD (None = no cap), and the browser origins allowed to call the API (the dashboard).
+    daily_spend_limit_usd: float | None = None
+    cors_origins: tuple[str, ...] = ()
     api_host: str = "0.0.0.0"
-    api_port: int = 8000
+    # Cloud Run sets PORT; locally SENTINEL_API_PORT or the default.
+    api_port: int = Field(default=8000, validation_alias=AliasChoices("SENTINEL_API_PORT", "PORT"))
 
     # ---------------------------------------------------------------- Resilience (§5)
     # We do NOT storm-retry: each attempt is one real hit AFTER waiting out the window the server

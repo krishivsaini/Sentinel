@@ -23,6 +23,9 @@ dependencies = [
     "langchain-google-genai>=4.2,<5",     # kept as an alternate provider (see sentinel/llm.py)
     # --- Local models: embeddings + cross-encoder reranker (run at ₹0) ---
     "sentence-transformers>=5.6,<6",
+    # Declared directly (it comes in via sentence-transformers) so the CPU-only index below
+    # applies to it; pinned to the series every published number was measured on.
+    "torch>=2.12,<2.13",
     # --- Indexes ---
     "faiss-cpu>=1.14,<2",                  # dense vector index
     "rank-bm25>=0.2.2,<0.3",               # sparse BM25 index
@@ -53,6 +56,17 @@ dev = [
     "httpx>=0.28",                          # FastAPI TestClient / async API tests
     "ruff>=0.9",
 ]
+
+# PyTorch from its CPU-only index on Linux. The PyPI wheel pulls ~3 GB of CUDA libraries the
+# service never uses (local models run on CPU), which bloats the container and every CI install.
+# macOS keeps the PyPI wheel, which is already CPU/MPS-only.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["hatchling"]
