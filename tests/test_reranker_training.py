@@ -131,3 +131,30 @@ def test_gold_exclusion_removes_questions_and_negatives() -> None:
     assert [e["query"] for e in kept] == ["what is a stateless reset"]
     assert "rfc1#0004" not in kept[0]["negatives"]
     assert stats == {"questions_dropped": 1, "negatives_dropped": 1}
+
+
+# --------------------------------------------------------------------------- the switch
+
+
+def test_the_reranker_switch_selects_the_model(monkeypatch, tmp_path) -> None:
+    from sentinel import retrieve
+    from sentinel.config import settings
+
+    assert settings.reranker == "baseline"                     # the default is unchanged
+    assert retrieve.reranker_name() == settings.reranker_model
+    monkeypatch.setattr(settings, "reranker", "finetuned")
+    monkeypatch.setattr(retrieve, "REPO_ROOT", tmp_path)
+    (tmp_path / "runs" / "main" / "best").mkdir(parents=True)
+    monkeypatch.setattr(settings, "finetuned_reranker", "runs/main/best")
+    assert retrieve.reranker_name() == str(tmp_path / "runs" / "main" / "best")
+    monkeypatch.setattr(settings, "finetuned_reranker", "someone/rfc-reranker")   # a hub id
+    assert retrieve.reranker_name() == "someone/rfc-reranker"
+
+
+def test_an_unknown_reranker_choice_is_rejected() -> None:
+    from pydantic import ValidationError
+
+    from sentinel.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(reranker="best-one")

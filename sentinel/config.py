@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -101,6 +102,13 @@ class Settings(BaseSettings):
     # Local (₹0) models — verified stable HF model IDs.
     embedding_model: str = "BAAI/bge-small-en-v1.5"          # dense embeddings
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"  # cross-encoder rerank
+    # Which reranker the pipeline uses (SENTINEL_RERANKER): "baseline" is reranker_model, on
+    # which every published number was measured; "finetuned" is finetuned_reranker — a local
+    # path (relative to the repo root) or a Hugging Face model id — trained by
+    # scripts/train_reranker.py. The default changes only if the fine-tuned model wins on the
+    # ground truth (docs/reranker-finetune.md).
+    reranker: Literal["baseline", "finetuned"] = "baseline"
+    finetuned_reranker: str = "runs/main/best"
     # Device for the local embedder + reranker; None = sentence-transformers' pick (CUDA, else
     # Apple MPS, else CPU). Defaults to CPU: on a Mac, MPS memory grew across a long eval and a
     # 200-query latency benchmark until both died "MPS backend out of memory" — a long-running

@@ -37,7 +37,7 @@ import numpy as np
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 
-from sentinel.config import IndexPaths, settings
+from sentinel.config import REPO_ROOT, IndexPaths, settings
 from sentinel.ingest import bm25_tokenize
 from sentinel.schema import Chunk, RetrievedChunk
 
@@ -130,11 +130,20 @@ def _embedder():
     return SentenceTransformer(settings.embedding_model, device=settings.torch_device)
 
 
+def reranker_name() -> str:
+    """The model config.reranker selects: the baseline id, or the fine-tuned model's path (made
+    absolute if it exists under the repo root) or Hugging Face id."""
+    if settings.reranker == "baseline":
+        return settings.reranker_model
+    local = REPO_ROOT / settings.finetuned_reranker
+    return str(local) if local.exists() else settings.finetuned_reranker
+
+
 @lru_cache(maxsize=1)
 def _reranker():
     from sentence_transformers import CrossEncoder
 
-    return CrossEncoder(settings.reranker_model, device=settings.torch_device)
+    return CrossEncoder(reranker_name(), device=settings.torch_device)
 
 
 def warmup() -> None:
