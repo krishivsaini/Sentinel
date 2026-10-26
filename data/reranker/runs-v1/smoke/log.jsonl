@@ -1,0 +1,10 @@
+{"event": "config", "t": 10.3, "config": {"data_dir": "data/reranker", "out_dir": "runs/smoke", "base_model": "cross-encoder/ms-marco-MiniLM-L-6-v2", "base_revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a", "negatives": 3, "batch_size": 8, "max_length": 128, "lr": 2e-05, "weight_decay": 0.01, "warmup": 0.1, "epochs": 1, "clip": 1.0, "patience": 1, "eval_every": 0, "exclude_gold": false, "amp": true, "seed": 13, "device": "cuda", "num_workers": -1, "log_every": 1, "limit_train": 48, "limit_val": 24, "eval_batch_pairs": 64, "gt_path": "data/ground_truth.jsonl", "notes": {}}, "device": "cuda", "amp": true, "workers": 2, "train_questions": 48, "val_questions": 24, "steps_per_epoch": 6, "total_steps": 6, "data": {}, "torch": "2.11.0+cu130", "transformers": "5.20.2", "python": "3.13.16", "gpu": "Tesla T4"}
+{"event": "val", "t": 12.6, "step": 0, "epoch": 0.0, "mrr@10": 0.3855820105820105, "recall@1": 0.2916666666666667, "ndcg@10": 0.4326399907008212, "questions": 24}
+{"event": "train", "t": 13.7, "step": 1, "epoch": 0.167, "loss": 1.40799, "lr": 1.6666666666666667e-05, "grad_norm": 27.4123}
+{"event": "train", "t": 13.8, "step": 2, "epoch": 0.333, "loss": 1.46055, "lr": 1.3333333333333333e-05, "grad_norm": 29.8855}
+{"event": "train", "t": 13.8, "step": 3, "epoch": 0.5, "loss": 0.95719, "lr": 1e-05, "grad_norm": 20.2913}
+{"event": "train", "t": 13.9, "step": 4, "epoch": 0.667, "loss": 1.35191, "lr": 6.666666666666667e-06, "grad_norm": 20.9473}
+{"event": "train", "t": 13.9, "step": 5, "epoch": 0.833, "loss": 2.5063, "lr": 3.3333333333333333e-06, "grad_norm": 18.7257}
+{"event": "train", "t": 14.0, "step": 6, "epoch": 1.0, "loss": 0.16441, "lr": 0.0, "grad_norm": 8.1487}
+{"event": "val", "t": 15.2, "step": 6, "epoch": 1, "mrr@10": 0.3855820105820105, "recall@1": 0.2916666666666667, "ndcg@10": 0.4326399907008212, "questions": 24}
+{"event": "done", "t": 15.2, "best_step": 0, "best_val": {"mrr@10": 0.3855820105820105, "recall@1": 0.2916666666666667, "ndcg@10": 0.4326399907008212, "questions": 24}, "steps": 6, "stopped_early": false, "seconds": 15.2, "device": "cuda"}

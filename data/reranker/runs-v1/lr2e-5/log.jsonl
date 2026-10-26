@@ -1,0 +1,22 @@
+{"event": "config", "t": 2.1, "config": {"data_dir": "data/reranker", "out_dir": "runs/lr2e-5", "base_model": "cross-encoder/ms-marco-MiniLM-L-6-v2", "base_revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a", "negatives": 7, "batch_size": 16, "max_length": 512, "lr": 2e-05, "weight_decay": 0.01, "warmup": 0.1, "epochs": 3, "clip": 1.0, "patience": 1, "eval_every": 400, "exclude_gold": false, "amp": true, "seed": 13, "device": "auto", "num_workers": -1, "log_every": 50, "limit_train": 0, "limit_val": 0, "eval_batch_pairs": 256, "gt_path": "data/ground_truth.jsonl", "notes": {}}, "device": "cuda", "amp": true, "workers": 2, "train_questions": 12311, "val_questions": 1920, "steps_per_epoch": 769, "total_steps": 2307, "data": {}, "torch": "2.11.0+cu130", "transformers": "5.20.2", "python": "3.13.16", "gpu": "Tesla T4"}
+{"event": "val", "t": 189.5, "step": 0, "epoch": 0.0, "mrr@10": 0.5314351851851852, "recall@1": 0.39427083333333335, "ndcg@10": 0.6085109339351341, "questions": 1920}
+{"event": "train", "t": 191.2, "step": 1, "epoch": 0.001, "loss": 1.95152, "lr": 1.7391304347826088e-07, "grad_norm": 20.6291}
+{"event": "train", "t": 226.7, "step": 50, "epoch": 0.065, "loss": 1.87915, "lr": 4.434782608695653e-06, "grad_norm": 17.2044}
+{"event": "train", "t": 262.2, "step": 100, "epoch": 0.13, "loss": 1.19832, "lr": 8.782608695652174e-06, "grad_norm": 10.8982}
+{"event": "train", "t": 298.5, "step": 150, "epoch": 0.195, "loss": 0.74286, "lr": 1.3130434782608697e-05, "grad_norm": 6.8527}
+{"event": "train", "t": 334.2, "step": 200, "epoch": 0.26, "loss": 0.68745, "lr": 1.747826086956522e-05, "grad_norm": 7.5439}
+{"event": "train", "t": 370.1, "step": 250, "epoch": 0.325, "loss": 0.87093, "lr": 1.9807414540202216e-05, "grad_norm": 9.1391}
+{"event": "train", "t": 405.9, "step": 300, "epoch": 0.39, "loss": 0.81092, "lr": 1.9325950890707756e-05, "grad_norm": 8.1452}
+{"event": "train", "t": 441.8, "step": 350, "epoch": 0.455, "loss": 1.06023, "lr": 1.884448724121329e-05, "grad_norm": 10.1986}
+{"event": "train", "t": 477.7, "step": 400, "epoch": 0.52, "loss": 0.82375, "lr": 1.8363023591718826e-05, "grad_norm": 10.2291}
+{"event": "val", "t": 664.4, "step": 400, "epoch": 0.52, "mrr@10": 0.6022674851190476, "recall@1": 0.46145833333333336, "ndcg@10": 0.6760552387670695, "questions": 1920}
+{"event": "train", "t": 701.0, "step": 450, "epoch": 0.585, "loss": 0.77456, "lr": 1.7881559942224363e-05, "grad_norm": 10.2123}
+{"event": "train", "t": 736.7, "step": 500, "epoch": 0.65, "loss": 0.88053, "lr": 1.74000962927299e-05, "grad_norm": 11.0378}
+{"event": "train", "t": 772.6, "step": 550, "epoch": 0.715, "loss": 1.09415, "lr": 1.6918632643235436e-05, "grad_norm": 11.914}
+{"event": "train", "t": 808.8, "step": 600, "epoch": 0.78, "loss": 0.82222, "lr": 1.6437168993740973e-05, "grad_norm": 8.9403}
+{"event": "train", "t": 845.0, "step": 650, "epoch": 0.845, "loss": 0.95591, "lr": 1.595570534424651e-05, "grad_norm": 10.3177}
+{"event": "train", "t": 881.2, "step": 700, "epoch": 0.91, "loss": 0.41749, "lr": 1.5474241694752047e-05, "grad_norm": 7.0985}
+{"event": "train", "t": 917.3, "step": 750, "epoch": 0.975, "loss": 1.04487, "lr": 1.4992778045257583e-05, "grad_norm": 15.1399}
+{"event": "val", "t": 1117.8, "step": 769, "epoch": 1, "mrr@10": 0.6014508928571428, "recall@1": 0.459375, "ndcg@10": 0.6750039273109255, "questions": 1920}
+{"event": "early_stop", "t": 1117.8, "step": 769, "epoch": 1, "best_step": 400}
+{"event": "done", "t": 1117.8, "best_step": 400, "best_val": {"mrr@10": 0.6022674851190476, "recall@1": 0.46145833333333336, "ndcg@10": 0.6760552387670695, "questions": 1920}, "steps": 769, "stopped_early": true, "seconds": 1117.8, "device": "cuda"}

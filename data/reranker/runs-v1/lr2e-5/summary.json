@@ -1,0 +1,40 @@
+{
+  "best_step": 400,
+  "best_val": {
+    "mrr@10": 0.6022674851190476,
+    "recall@1": 0.46145833333333336,
+    "ndcg@10": 0.6760552387670695,
+    "questions": 1920
+  },
+  "steps": 769,
+  "stopped_early": true,
+  "seconds": 1117.8,
+  "device": "cuda",
+  "config": {
+    "data_dir": "data/reranker",
+    "out_dir": "runs/lr2e-5",
+    "base_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "base_revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a",
+    "negatives": 7,
+    "batch_size": 16,
+    "max_length": 512,
+    "lr": 2e-05,
+    "weight_decay": 0.01,
+    "warmup": 0.1,
+    "epochs": 3,
+    "clip": 1.0,
+    "patience": 1,
+    "eval_every": 400,
+    "exclude_gold": false,
+    "amp": true,
+    "seed": 13,
+    "device": "auto",
+    "num_workers": -1,
+    "log_every": 50,
+    "limit_train": 0,
+    "limit_val": 0,
+    "eval_batch_pairs": 256,
+    "gt_path": "data/ground_truth.jsonl",
+    "notes": {}
+  }
+}

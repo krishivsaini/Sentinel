@@ -1,0 +1,474 @@
+{
+  "questions": 48,
+  "pool_sizes": [
+    10,
+    20,
+    30,
+    40,
+    50
+  ],
+  "device": "cpu",
+  "ceiling_hit": {
+    "10": 0.9375,
+    "20": 0.9583,
+    "30": 0.9583,
+    "40": 0.9583,
+    "50": 0.9792
+  },
+  "rerankers": {
+    "baseline": {
+      "model": "baseline",
+      "by_pool": {
+        "10": {
+          "mrr@10": 0.7605,
+          "ndcg@10": 0.7166,
+          "recall@5": 0.7431,
+          "hit@5": 0.875
+        },
+        "20": {
+          "mrr@10": 0.7554,
+          "ndcg@10": 0.7403,
+          "recall@5": 0.8125,
+          "hit@5": 0.8958
+        },
+        "30": {
+          "mrr@10": 0.7547,
+          "ndcg@10": 0.7501,
+          "recall@5": 0.8021,
+          "hit@5": 0.875
+        },
+        "40": {
+          "mrr@10": 0.7547,
+          "ndcg@10": 0.7498,
+          "recall@5": 0.7951,
+          "hit@5": 0.875
+        },
+        "50": {
+          "mrr@10": 0.7651,
+          "ndcg@10": 0.7629,
+          "recall@5": 0.816,
+          "hit@5": 0.8958
+        }
+      },
+      "latency": {
+        "50": {
+          "p50_ms": 966.3,
+          "p95_ms": 1181.6
+        },
+        "20": {
+          "p50_ms": 388.8,
+          "p95_ms": 426.8
+        }
+      }
+    },
+    "main": {
+      "model": "runs/main/best",
+      "by_pool": {
+        "10": {
+          "mrr@10": 0.6031,
+          "ndcg@10": 0.6043,
+          "recall@5": 0.75,
+          "hit@5": 0.875
+        },
+        "20": {
+          "mrr@10": 0.5759,
+          "ndcg@10": 0.6246,
+          "recall@5": 0.7431,
+          "hit@5": 0.8125
+        },
+        "30": {
+          "mrr@10": 0.5754,
+          "ndcg@10": 0.6328,
+          "recall@5": 0.7465,
+          "hit@5": 0.8125
+        },
+        "40": {
+          "mrr@10": 0.5719,
+          "ndcg@10": 0.627,
+          "recall@5": 0.7361,
+          "hit@5": 0.8125
+        },
+        "50": {
+          "mrr@10": 0.5823,
+          "ndcg@10": 0.6401,
+          "recall@5": 0.7569,
+          "hit@5": 0.8333
+        }
+      },
+      "latency": {
+        "50": {
+          "p50_ms": 995.4,
+          "p95_ms": 1314.5
+        },
+        "20": {
+          "p50_ms": 394.7,
+          "p95_ms": 460.0
+        }
+      },
+      "vs_baseline": {
+        "mrr@10": {
+          "diff": -0.1828,
+          "ci95": [
+            -0.2781,
+            -0.0976
+          ]
+        },
+        "ndcg@10": {
+          "diff": -0.1228,
+          "ci95": [
+            -0.1887,
+            -0.06
+          ]
+        },
+        "recall@5": {
+          "diff": -0.059,
+          "ci95": [
+            -0.1424,
+            0.0208
+          ]
+        },
+        "hit@5": {
+          "diff": -0.0625,
+          "ci95": [
+            -0.1458,
+            0.0208
+          ]
+        },
+        "questions": {
+          "better": 4,
+          "worse": 20,
+          "same": 24
+        },
+        "changed": [
+          {
+            "question": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?",
+            "baseline_rank": 1,
+            "rank": 8
+          },
+          {
+            "question": "What does the key word MUST NOT mean in an RFC?",
+            "baseline_rank": 4,
+            "rank": 2
+          },
+          {
+            "question": "How does HTTP decide whether a stored cached response is still fresh?",
+            "baseline_rank": 2,
+            "rank": 3
+          },
+          {
+            "question": "What does the 308 Permanent Redirect status code mean?",
+            "baseline_rank": 2,
+            "rank": 6
+          },
+          {
+            "question": "What is the purpose of the dynamic table in HPACK header compression?",
+            "baseline_rank": 2,
+            "rank": 1
+          },
+          {
+            "question": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?",
+            "baseline_rank": 2,
+            "rank": 3
+          },
+          {
+            "question": "Which characters are allowed in a percent-encoded octet in a URI?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "How does a user agent decide whether a cookie's domain matches a request host?",
+            "baseline_rank": 2,
+            "rank": 3
+          },
+          {
+            "question": "What HTTP status code does a server return to complete the WebSocket opening handshake?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "What is a QUIC stateless reset and when is it used?",
+            "baseline_rank": 1,
+            "rank": 5
+          },
+          {
+            "question": "How does QUIC detect lost packets?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "Which TLS 1.3 handshake message carries the server's certificate?",
+            "baseline_rank": 3,
+            "rank": 10
+          },
+          {
+            "question": "How does a TLS client indicate the target server name using Server Name Indication (SNI)?",
+            "baseline_rank": 6,
+            "rank": 3
+          },
+          {
+            "question": "What information does the Subject field identify in an X.509 certificate?",
+            "baseline_rank": 1,
+            "rank": 3
+          },
+          {
+            "question": "What does an OCSP response tell a client about a certificate's status?",
+            "baseline_rank": 1,
+            "rank": 5
+          },
+          {
+            "question": "How does the ACME http-01 challenge validate control of a domain?",
+            "baseline_rank": 1,
+            "rank": 3
+          },
+          {
+            "question": "What does the invalid_grant error mean in OAuth 2.0?",
+            "baseline_rank": 17,
+            "rank": 10
+          },
+          {
+            "question": "How does PKCE protect the OAuth 2.0 authorization code flow?",
+            "baseline_rank": 1,
+            "rank": 6
+          },
+          {
+            "question": "How is an OAuth 2.0 bearer token presented in an HTTP request?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "How is a JWS Compact Serialization structured?",
+            "baseline_rank": 1,
+            "rank": 4
+          },
+          {
+            "question": "What does the alg (algorithm) header parameter specify in a JWS?",
+            "baseline_rank": 3,
+            "rank": 4
+          },
+          {
+            "question": "What structured data types does JSON define per RFC 8259?",
+            "baseline_rank": 2,
+            "rank": 4
+          },
+          {
+            "question": "How are DNS queries carried in DNS over HTTPS (DoH)?",
+            "baseline_rank": 1,
+            "rank": 2
+          }
+        ]
+      }
+    },
+    "nogold": {
+      "model": "runs/nogold/best",
+      "by_pool": {
+        "10": {
+          "mrr@10": 0.6052,
+          "ndcg@10": 0.6054,
+          "recall@5": 0.7292,
+          "hit@5": 0.8542
+        },
+        "20": {
+          "mrr@10": 0.5773,
+          "ndcg@10": 0.6255,
+          "recall@5": 0.7014,
+          "hit@5": 0.7917
+        },
+        "30": {
+          "mrr@10": 0.5732,
+          "ndcg@10": 0.6217,
+          "recall@5": 0.7049,
+          "hit@5": 0.7917
+        },
+        "40": {
+          "mrr@10": 0.5697,
+          "ndcg@10": 0.6161,
+          "recall@5": 0.7049,
+          "hit@5": 0.7917
+        },
+        "50": {
+          "mrr@10": 0.5801,
+          "ndcg@10": 0.6292,
+          "recall@5": 0.7257,
+          "hit@5": 0.8125
+        }
+      },
+      "latency": {
+        "50": {
+          "p50_ms": 957.2,
+          "p95_ms": 1003.7
+        },
+        "20": {
+          "p50_ms": 392.0,
+          "p95_ms": 529.9
+        }
+      },
+      "vs_baseline": {
+        "mrr@10": {
+          "diff": -0.185,
+          "ci95": [
+            -0.2788,
+            -0.1
+          ]
+        },
+        "ndcg@10": {
+          "diff": -0.1337,
+          "ci95": [
+            -0.1994,
+            -0.0726
+          ]
+        },
+        "recall@5": {
+          "diff": -0.0903,
+          "ci95": [
+            -0.184,
+            0.0
+          ]
+        },
+        "hit@5": {
+          "diff": -0.0833,
+          "ci95": [
+            -0.1875,
+            0.0
+          ]
+        },
+        "questions": {
+          "better": 5,
+          "worse": 20,
+          "same": 23
+        },
+        "changed": [
+          {
+            "question": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?",
+            "baseline_rank": 1,
+            "rank": 7
+          },
+          {
+            "question": "What does the key word MUST NOT mean in an RFC?",
+            "baseline_rank": 4,
+            "rank": 2
+          },
+          {
+            "question": "How does HTTP decide whether a stored cached response is still fresh?",
+            "baseline_rank": 2,
+            "rank": 3
+          },
+          {
+            "question": "What does the 308 Permanent Redirect status code mean?",
+            "baseline_rank": 2,
+            "rank": 6
+          },
+          {
+            "question": "What is the purpose of the dynamic table in HPACK header compression?",
+            "baseline_rank": 2,
+            "rank": 1
+          },
+          {
+            "question": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?",
+            "baseline_rank": 2,
+            "rank": 3
+          },
+          {
+            "question": "Which characters are allowed in a percent-encoded octet in a URI?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "How does a user agent decide whether a cookie's domain matches a request host?",
+            "baseline_rank": 2,
+            "rank": 3
+          },
+          {
+            "question": "What HTTP status code does a server return to complete the WebSocket opening handshake?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "What is the purpose of the Sec-WebSocket-Key request header?",
+            "baseline_rank": 21,
+            "rank": 20
+          },
+          {
+            "question": "What is a QUIC stateless reset and when is it used?",
+            "baseline_rank": 1,
+            "rank": 3
+          },
+          {
+            "question": "How does QUIC detect lost packets?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "Which TLS 1.3 handshake message carries the server's certificate?",
+            "baseline_rank": 3,
+            "rank": 14
+          },
+          {
+            "question": "How does a TLS client indicate the target server name using Server Name Indication (SNI)?",
+            "baseline_rank": 6,
+            "rank": 3
+          },
+          {
+            "question": "What information does the Subject field identify in an X.509 certificate?",
+            "baseline_rank": 1,
+            "rank": 3
+          },
+          {
+            "question": "What does an OCSP response tell a client about a certificate's status?",
+            "baseline_rank": 1,
+            "rank": 7
+          },
+          {
+            "question": "How does the ACME http-01 challenge validate control of a domain?",
+            "baseline_rank": 1,
+            "rank": 3
+          },
+          {
+            "question": "What does the invalid_grant error mean in OAuth 2.0?",
+            "baseline_rank": 17,
+            "rank": 12
+          },
+          {
+            "question": "How does PKCE protect the OAuth 2.0 authorization code flow?",
+            "baseline_rank": 1,
+            "rank": 6
+          },
+          {
+            "question": "How is an OAuth 2.0 bearer token presented in an HTTP request?",
+            "baseline_rank": 1,
+            "rank": 2
+          },
+          {
+            "question": "How is a JWS Compact Serialization structured?",
+            "baseline_rank": 1,
+            "rank": 4
+          },
+          {
+            "question": "What does the alg (algorithm) header parameter specify in a JWS?",
+            "baseline_rank": 3,
+            "rank": 4
+          },
+          {
+            "question": "What structured data types does JSON define per RFC 8259?",
+            "baseline_rank": 2,
+            "rank": 4
+          },
+          {
+            "question": "How are DNS queries carried in DNS over HTTPS (DoH)?",
+            "baseline_rank": 1,
+            "rank": 2
+          }
+        ]
+      }
+    }
+  }
+}
