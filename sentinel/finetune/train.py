@@ -16,6 +16,17 @@ cross-entropy:
     re-weighting, and on the RFCs some mined "negatives" are partly relevant: forcing them to
     an absolute 0 is a stronger (wrong) claim than ranking them below the positive.
 
+v2 — learning from a teacher. v1 trained on the synthetic labels alone and got worse on real
+questions: the passage a question was generated from is often not its best answer, and a mined
+"negative" often is. With teacher scores from a stronger cross-encoder (scripts/teacher_scores.py):
+  * denoising — a question is kept only if the teacher ranks its labelled positive in its top
+    `teacher_max_rank`, and a negative the teacher scores at or above the positive is dropped as
+    a likely correct answer (RocketQA- / InPars-style filtering);
+  * distillation — the loss adds KL(teacher || student) over each group's softmax, weighted by
+    `distill_weight`, so the student learns the teacher's graded judgement of every candidate
+    rather than only "the positive beats the rest", and stays anchored to sensible relevance.
+The student keeps its size, so serving cost does not change.
+
 Inputs are tokenized exactly as CrossEncoder.predict does at inference (question, passage;
 truncation to 512 tokens) — checked to reproduce its scores to 2e-6 — so the model is trained
 on what it will see. Only torch, transformers and numpy are needed, so this also runs on a
@@ -67,6 +78,10 @@ class TrainConfig:
     limit_val: int = 0
     eval_batch_pairs: int = 256
     gt_path: str = "data/ground_truth.jsonl"
+    teacher_path: str = ""           # teacher scores (v2); empty = labels only (v1)
+    teacher_max_rank: int = 3        # keep a question only if the teacher ranks its positive <= this
+    distill_weight: float = 0.5      # loss = (1 - w) * label cross-entropy + w * KL to the teacher
+    distill_temperature: float = 1.0
     notes: dict = field(default_factory=dict)
 
 
@@ -116,6 +131,32 @@ def exclude_gold(examples: list[dict], gold: set[str]) -> tuple[list[dict], dict
     return kept, {"questions_dropped": dropped_q, "negatives_dropped": dropped_n}
 
 
+def apply_teacher(examples: list[dict], teacher: dict[str, list[float]], max_rank: int
+                  ) -> tuple[list[dict], dict]:
+    """Attach the teacher's score to every candidate and drop what the teacher contradicts:
+    questions whose positive it ranks below `max_rank`, and negatives it scores at or above the
+    positive (likely correct answers mislabelled as negatives)."""
+    kept = []
+    stats = {"questions_in": len(examples), "no_teacher_scores": 0, "positive_ranked_low": 0,
+             "negatives_in": 0, "negatives_above_positive": 0}
+    for ex in examples:
+        scores = teacher.get(ex["qid"])
+        if scores is None:
+            stats["no_teacher_scores"] += 1
+            continue
+        by_id = dict(zip([ex["positive"], *ex["negatives"]], scores, strict=True))
+        pos = by_id[ex["positive"]]
+        if 1 + sum(by_id[n] > pos for n in ex["negatives"]) > max_rank:
+            stats["positive_ranked_low"] += 1
+            continue
+        negs = [n for n in ex["negatives"] if by_id[n] < pos]
+        stats["negatives_in"] += len(ex["negatives"])
+        stats["negatives_above_positive"] += len(ex["negatives"]) - len(negs)
+        kept.append({**ex, "negatives": negs, "teacher": by_id})
+    stats["questions_kept"] = len(kept)
+    return kept, stats
+
+
 # --------------------------------------------------------------------------- data
 
 
@@ -141,10 +182,13 @@ class GroupDataset(Dataset):
         ex = self.examples[i]
         rng = random.Random(f"{self.seed}:{self.epoch}:{i}")
         negs = rng.sample(ex["negatives"], self.negatives)
-        return {
+        item = {
             "query": ex["query"],
             "passages": [self.chunk_text[ex["positive"]]] + [self.chunk_text[n] for n in negs],
         }
+        if "teacher" in ex:
+            item["teacher"] = [ex["teacher"][c] for c in [ex["positive"], *negs]]
+        return item
 
 
 class Collate:
@@ -160,7 +204,10 @@ class Collate:
         passages = [p for item in batch for p in item["passages"]]
         enc = self.tokenizer(queries, passages, truncation=True, max_length=self.max_length,
                              padding=True, return_tensors="pt")
-        return {**enc, "group_size": len(batch[0]["passages"])}
+        out = {**enc, "group_size": len(batch[0]["passages"])}
+        if "teacher" in batch[0]:
+            out["teacher"] = torch.tensor([t for item in batch for t in item["teacher"]])
+        return out
 
 
 def grouped_softmax_loss(scores: torch.Tensor, group_size: int) -> torch.Tensor:
@@ -168,6 +215,15 @@ def grouped_softmax_loss(scores: torch.Tensor, group_size: int) -> torch.Tensor:
     logits = scores.view(-1, group_size).float()
     target = torch.zeros(logits.size(0), dtype=torch.long, device=logits.device)
     return torch.nn.functional.cross_entropy(logits, target)
+
+
+def distillation_loss(scores: torch.Tensor, teacher: torch.Tensor, group_size: int,
+                      temperature: float = 1.0) -> torch.Tensor:
+    """KL(teacher || student) between each group's softmax distributions (listwise distillation),
+    scaled by T^2 so its gradients keep their size as the temperature changes."""
+    s = torch.log_softmax(scores.view(-1, group_size).float() / temperature, dim=-1)
+    t = torch.softmax(teacher.view(-1, group_size).float() / temperature, dim=-1)
+    return torch.nn.functional.kl_div(s, t, reduction="batchmean") * temperature ** 2
 
 
 def linear_warmup_decay(warmup_steps: int, total_steps: int):
@@ -259,6 +315,10 @@ def train(cfg: TrainConfig) -> dict:
     train_ex = read_jsonl(data / "train.jsonl.gz")
     val_ex = read_jsonl(data / "val.jsonl.gz")
     data_notes = {}
+    if cfg.teacher_path:
+        teacher = {r["qid"]: r["scores"] for r in read_jsonl(Path(cfg.teacher_path))}
+        train_ex, data_notes["train_teacher_filter"] = apply_teacher(train_ex, teacher, cfg.teacher_max_rank)
+        val_ex, data_notes["val_teacher_filter"] = apply_teacher(val_ex, teacher, cfg.teacher_max_rank)
     if cfg.exclude_gold:
         gold = gold_chunk_ids(Path(cfg.gt_path), chunk_text)
         train_ex, data_notes["train_gold_exclusion"] = exclude_gold(train_ex, gold)
@@ -306,10 +366,16 @@ def train(cfg: TrainConfig) -> dict:
         model.train()
         for batch in loader:
             group = batch.pop("group_size")
+            teacher = batch.pop("teacher", None)
             batch = {k: v.to(device, non_blocking=True) for k, v in batch.items()}
             with torch.autocast("cuda" if use_amp else "cpu", dtype=torch.float16, enabled=use_amp):
                 scores = model(**batch).logits.squeeze(-1)
-                loss = grouped_softmax_loss(scores, group)
+                ce = grouped_softmax_loss(scores, group)
+                if teacher is None:
+                    kd, loss = None, ce
+                else:
+                    kd = distillation_loss(scores, teacher.to(device), group, cfg.distill_temperature)
+                    loss = (1 - cfg.distill_weight) * ce + cfg.distill_weight * kd
             optimizer.zero_grad(set_to_none=True)
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)            # clip the true gradients, not scaled ones
@@ -319,8 +385,9 @@ def train(cfg: TrainConfig) -> dict:
             scheduler.step()
             step += 1
             if step % cfg.log_every == 0 or step == 1:
+                parts = {} if kd is None else {"ce": round(ce.item(), 5), "kd": round(kd.item(), 5)}
                 log("train", step=step, epoch=round(step / steps_per_epoch, 3),
-                    loss=round(loss.item(), 5), lr=scheduler.get_last_lr()[0],
+                    loss=round(loss.item(), 5), **parts, lr=scheduler.get_last_lr()[0],
                     grad_norm=round(float(grad_norm), 4))
             if cfg.eval_every and step % cfg.eval_every == 0 and step % steps_per_epoch:
                 m = validate(step, step / steps_per_epoch)

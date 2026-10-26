@@ -158,3 +158,68 @@ def test_an_unknown_reranker_choice_is_rejected() -> None:
 
     with pytest.raises(ValidationError):
         Settings(reranker="best-one")
+
+
+# --------------------------------------------------------------------------- v2: the teacher
+
+
+def test_distillation_loss_is_kl_between_group_softmaxes() -> None:
+    from sentinel.finetune.train import distillation_loss
+
+    student = torch.tensor([2.0, 0.0, 1.0, 0.0])
+    teacher = torch.tensor([1.0, 1.0, 3.0, 0.0])
+    p = torch.softmax(teacher.view(2, 2), -1)
+    q = torch.softmax(student.view(2, 2), -1)
+    by_hand = (p * (p.log() - q.log())).sum(-1).mean()
+    assert distillation_loss(student, teacher, 2).item() == pytest.approx(by_hand.item(), rel=1e-6)
+    assert distillation_loss(teacher, teacher, 2).item() == pytest.approx(0.0, abs=1e-7)
+
+
+def test_the_teacher_filter_drops_what_it_contradicts() -> None:
+    from sentinel.finetune.train import apply_teacher
+
+    examples = [
+        {"qid": "a", "positive": "p", "negatives": ["n1", "n2", "n3"]},   # positive 1st: kept
+        {"qid": "b", "positive": "p", "negatives": ["n1", "n2", "n3"]},   # positive 3rd: kept,
+        {"qid": "c", "positive": "p", "negatives": ["n1", "n2", "n3"]},   #   minus the 2 above it
+        {"qid": "d", "positive": "p", "negatives": ["n1"]},               # no teacher scores
+    ]
+    teacher = {"a": [5.0, 1.0, 2.0, 0.0], "b": [2.0, 3.0, 4.0, 1.0], "c": [0.0, 3.0, 2.0, 1.0]}
+    kept, stats = apply_teacher(examples, teacher, max_rank=3)
+    assert [e["qid"] for e in kept] == ["a", "b"]
+    assert kept[1]["negatives"] == ["n3"]                      # n1, n2 scored above the positive
+    assert kept[0]["teacher"] == {"p": 5.0, "n1": 1.0, "n2": 2.0, "n3": 0.0}
+    assert stats["positive_ranked_low"] == 1 and stats["no_teacher_scores"] == 1
+    assert stats["negatives_above_positive"] == 2
+
+
+def test_teacher_scores_stay_aligned_with_their_passages(base) -> None:
+    tok, _ = base
+    ex = [{**EXAMPLES[0], "qid": "x",
+           "teacher": {"rfc1#0002": 9.0, "rfc1#0004": 4.0, "rfc1#0001": 1.0, "rfc1#0003": 3.0}}]
+    ds = GroupDataset(ex, CHUNKS, negatives=2, seed=1)
+    item = ds[0]
+    text_to_id = {t: c for c, t in CHUNKS.items()}
+    assert item["teacher"] == [ex[0]["teacher"][text_to_id[p]] for p in item["passages"]]
+    batch = Collate(tok, max_length=32)([item, item])
+    assert batch["teacher"].shape == (6,) and batch["teacher"][0].item() == 9.0
+
+
+def test_distillation_pulls_the_student_toward_the_teacher(base) -> None:
+    from sentinel.finetune.train import distillation_loss
+
+    tok, make = base
+    torch.manual_seed(0)
+    model = make().train()
+    batch = _batch(tok)
+    group = batch.pop("group_size")
+    teacher = torch.tensor([0.0, 6.0, -3.0, 2.0] * 2)    # a ranking the base model doesn't hold
+    opt = torch.optim.AdamW(param_groups(model, 0.0), lr=1e-4)
+    first = None
+    for _ in range(20):
+        kd = distillation_loss(model(**batch).logits.squeeze(-1), teacher, group)
+        opt.zero_grad()
+        kd.backward()
+        opt.step()
+        first = first if first is not None else kd.item()
+    assert kd.item() < 0.2 * first
