@@ -1,0 +1,13 @@
+{
+  "model": "BAAI/bge-reranker-base",
+  "revision": "2cfc18c9415c912f9d8155881c133215df768a70",
+  "max_length": 512,
+  "device": "cuda",
+  "amp": true,
+  "questions": 14231,
+  "gpu": "Tesla T4",
+  "torch": "2.11.0+cu130",
+  "transformers": "5.20.2",
+  "python": "3.13.16",
+  "seconds_this_run": 4432.7
+}
