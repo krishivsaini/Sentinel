@@ -223,3 +223,71 @@ def test_distillation_pulls_the_student_toward_the_teacher(base) -> None:
         opt.step()
         first = first if first is not None else kd.item()
     assert kd.item() < 0.2 * first
+
+
+# --------------------------------------------------------------------------- v3: distil for speed
+
+
+def test_keep_layers_builds_a_smaller_model_that_reloads_as_a_cross_encoder(base, tmp_path) -> None:
+    """The student is the base model with fewer encoder layers: kept layers carry their trained
+    weights, it is smaller, and the saved checkpoint reloads with CrossEncoder at that depth."""
+    from sentence_transformers import CrossEncoder
+
+    from sentinel.finetune.train import keep_layers
+
+    tok, make = base
+    full, student = make().eval(), keep_layers(make(), [0, 5]).eval()
+    assert len(student.base_model.encoder.layer) == 2 and student.config.num_hidden_layers == 2
+    size = lambda m: sum(p.numel() for p in m.parameters())  # noqa: E731
+    assert size(student) < 0.8 * size(full)
+    assert torch.equal(student.base_model.encoder.layer[1].output.dense.weight,
+                       full.base_model.encoder.layer[5].output.dense.weight)
+    student.save_pretrained(tmp_path)
+    tok.save_pretrained(tmp_path)
+    ce = CrossEncoder(str(tmp_path), device="cpu")
+    assert ce.model.config.num_hidden_layers == 2
+    query, passage = "what is a stateless reset", CHUNKS["rfc1#0004"]
+    with torch.inference_mode():
+        raw = student(**tok([query], [passage], return_tensors="pt")).logits.item()
+    scored = ce.predict([(query, passage)], activation_fn=torch.nn.Identity())[0]
+    assert scored == pytest.approx(raw, abs=1e-4)
+
+
+@pytest.mark.parametrize("layers", [[], [3, 1], [0, 6], [2, 2]])
+def test_keep_layers_rejects_bad_selections(base, layers) -> None:
+    from sentinel.finetune.train import keep_layers
+
+    with pytest.raises(ValueError):
+        keep_layers(base[1](), layers)
+
+
+def test_pure_distillation_keeps_every_question_and_candidate() -> None:
+    from sentinel.finetune.train import apply_teacher
+
+    ex = [{"qid": "q1", "query": "x", "positive": "a", "negatives": ["b", "c"]}]
+    kept, stats = apply_teacher(ex, {"q1": [0.1, 5.0, 3.0]}, max_rank=0)   # teacher disagrees
+    assert kept[0]["negatives"] == ["b", "c"]
+    assert kept[0]["teacher"] == {"a": 0.1, "b": 5.0, "c": 3.0}
+    assert stats["questions_kept"] == 1 and stats["negatives_in"] == 2
+
+
+def test_teacher_agreement_scores_how_the_student_ranks_the_teachers_choice() -> None:
+    """A stub 'model' returning fixed scores: the teacher's top candidate is the student's 2nd."""
+    import numpy as np
+
+    import sentinel.finetune.train as train_mod
+
+    chunks = {c: c for c in "abcdef"}
+    ex = [{"qid": "q", "query": "q", "positive": "a", "negatives": list("bcdef"),
+           "teacher": dict(zip("abcdef", [0.0, 9.0, 1.0, 2.0, 3.0, 4.0], strict=True))}]
+    student = np.array([5.0, 4.0, 3.0, 2.0, 1.0, 0.0], dtype=np.float32)   # order a b c d e f
+    orig = train_mod.score_pairs
+    train_mod.score_pairs = lambda *a, **k: student
+    try:
+        cfg = train_mod.TrainConfig()
+        m = train_mod.evaluate_candidates(None, None, ex, chunks, "cpu", cfg, False)
+    finally:
+        train_mod.score_pairs = orig
+    assert m["mrr@10"] == 1.0                         # the labelled positive is first
+    assert m["teacher_mrr@10"] == 0.5                 # the teacher's pick (b) is second
+    assert m["teacher_top5"] == pytest.approx(4 / 5)  # teacher {b,f,e,d,c}, student {a,b,c,d,e}

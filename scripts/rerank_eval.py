@@ -1,7 +1,8 @@
 """Baseline vs fine-tuned reranker on the ground truth — identical pipeline, no LLM calls.
 
     python scripts/rerank_eval.py                                   # baseline vs runs/main, runs/nogold
-    python scripts/rerank_eval.py --reranker main=runs/main/best    # any name=path (or model id)
+    python scripts/rerank_eval.py --reranker main=runs/main/best    # any name=path
+    python scripts/rerank_eval.py --reranker teacher=hf:BAAI/bge-reranker-base --timing-repeats 0
 
 For every ground-truth question the first-stage candidates are computed ONCE (dense + BM25 ->
 RRF, the service's own functions) and every reranker scores the same candidates; the relevant
@@ -47,8 +48,20 @@ DEFAULT_RERANKERS = ("main=runs/main/best", "nogold=runs/nogold/best")
 def load_reranker(spec: str, device: str):
     from sentence_transformers import CrossEncoder
 
+    if spec.startswith("int8:"):                    # dynamic int8 quantization of any other spec
+        import torch
+
+        if torch.backends.quantized.engine == "none":
+            torch.backends.quantized.engine = torch.backends.quantized.supported_engines[-1]
+        model = load_reranker(spec[5:], "cpu")
+        torch.ao.quantization.quantize_dynamic(model.model, {torch.nn.Linear}, dtype=torch.qint8,
+                                               inplace=True)
+        return model
     if spec == "baseline":
         return CrossEncoder(settings.reranker_model, revision=BASE_REVISION, device=device)
+    if spec.startswith("hf:"):                      # a Hugging Face id, optionally @revision
+        name, _, revision = spec[3:].partition("@")
+        return CrossEncoder(name, revision=revision or None, device=device)
     return CrossEncoder(spec, device=device)
 
 
@@ -68,7 +81,7 @@ def main() -> None:
     specs = {"baseline": "baseline"}
     for item in args.reranker or DEFAULT_RERANKERS:
         name, _, path = item.partition("=")
-        if Path(path).exists():
+        if path.startswith(("hf:", "int8:")) or path == "baseline" or Path(path).exists():
             specs[name] = path
         else:
             print(f"skipping {name}: {path} not found")
@@ -108,7 +121,7 @@ def main() -> None:
                     "first_rank": [first_relevant_rank(r, it["relevant"]) for r, it in zip(ranked, items, strict=True)],
                 }
         timing = {}
-        for p in (50, 20):
+        for p in (50, 20) if args.timing_repeats else ():
             runs = []
             for _ in range(args.timing_repeats):
                 for it in items:
@@ -118,9 +131,10 @@ def main() -> None:
             timing[str(p)] = {"p50_ms": round(float(np.percentile(runs, 50)), 1),
                               "p95_ms": round(float(np.percentile(runs, 95)), 1)}
         results["rerankers"][name] = {"model": spec, "by_pool": by_pool, "latency": timing}
+        speed = (f"   rerank p50 {timing['50']['p50_ms']} ms (pool 20: {timing['20']['p50_ms']} ms)"
+                 if timing else "")
         print(f"{name:10} pool 50: " + "  ".join(f"{k} {by_pool['50'][k]:.3f}" for k in METRICS)
-              + f"   rerank p50 {timing['50']['p50_ms']} ms (pool 20: {timing['20']['p50_ms']} ms)",
-              flush=True)
+              + speed, flush=True)
 
     base = per_q["baseline"]
     for name in per_q:

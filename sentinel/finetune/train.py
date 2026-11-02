@@ -27,6 +27,19 @@ questions: the passage a question was generated from is often not its best answe
     rather than only "the positive beats the rest", and stays anchored to sensible relevance.
 The student keeps its size, so serving cost does not change.
 
+v3 — distilling for speed. v1 and v2 tried to beat the baseline and could not: on these RFCs
+the baseline is a better judge than the synthetic labels or a larger off-the-shelf teacher. The
+measured problem is cost, not quality — reranking 50 candidates takes ~1 s on CPU, as long as
+the LLM. So the baseline becomes the teacher and a smaller student learns to reproduce its
+rankings on in-domain candidate pools:
+  * `student_layers` builds the student by keeping only some of a model's transformer layers
+    (model surgery on the encoder's ModuleList), or `base_model` names a small model to start from;
+  * `teacher_max_rank = 0` turns the label filter off — pure distillation needs no labels, so
+    every question and every candidate is used, with `distill_weight = 1`;
+  * `select_metric` picks checkpoints by agreement with the teacher on held-out questions
+    (`teacher_mrr@10`: where the student ranks the teacher's top candidate) rather than by the
+    noisy labels.
+
 Inputs are tokenized exactly as CrossEncoder.predict does at inference (question, passage;
 truncation to 512 tokens) — checked to reproduce its scores to 2e-6 — so the model is trained
 on what it will see. Only torch, transformers and numpy are needed, so this also runs on a
@@ -82,6 +95,8 @@ class TrainConfig:
     teacher_max_rank: int = 3        # keep a question only if the teacher ranks its positive <= this
     distill_weight: float = 0.5      # loss = (1 - w) * label cross-entropy + w * KL to the teacher
     distill_temperature: float = 1.0
+    student_layers: str = ""         # e.g. "0,5": keep only these encoder layers; empty = all
+    select_metric: str = "mrr@10"    # validation metric for checkpoints / early stopping
     notes: dict = field(default_factory=dict)
 
 
@@ -135,7 +150,8 @@ def apply_teacher(examples: list[dict], teacher: dict[str, list[float]], max_ran
                   ) -> tuple[list[dict], dict]:
     """Attach the teacher's score to every candidate and drop what the teacher contradicts:
     questions whose positive it ranks below `max_rank`, and negatives it scores at or above the
-    positive (likely correct answers mislabelled as negatives)."""
+    positive (likely correct answers mislabelled as negatives). `max_rank <= 0` only attaches
+    the scores: pure distillation keeps everything."""
     kept = []
     stats = {"questions_in": len(examples), "no_teacher_scores": 0, "positive_ranked_low": 0,
              "negatives_in": 0, "negatives_above_positive": 0}
@@ -146,6 +162,10 @@ def apply_teacher(examples: list[dict], teacher: dict[str, list[float]], max_ran
             continue
         by_id = dict(zip([ex["positive"], *ex["negatives"]], scores, strict=True))
         pos = by_id[ex["positive"]]
+        if max_rank <= 0:
+            stats["negatives_in"] += len(ex["negatives"])
+            kept.append({**ex, "teacher": by_id})
+            continue
         if 1 + sum(by_id[n] > pos for n in ex["negatives"]) > max_rank:
             stats["positive_ranked_low"] += 1
             continue
@@ -155,6 +175,22 @@ def apply_teacher(examples: list[dict], teacher: dict[str, list[float]], max_ran
         kept.append({**ex, "negatives": negs, "teacher": by_id})
     stats["questions_kept"] = len(kept)
     return kept, stats
+
+
+def keep_layers(model, layers: list[int]):
+    """Shrink a BERT-style encoder to the given layers, in order, keeping embeddings and the
+    classifier head. Each kept layer brings its trained weights, so the student starts close to
+    the model it came from rather than from scratch. Fewer layers = proportionally less compute."""
+    encoder = model.base_model.encoder
+    n = len(encoder.layer)
+    if not layers or sorted(set(layers)) != layers or not 0 <= layers[0] <= layers[-1] < n:
+        raise ValueError(f"layers must be increasing indices into {n} layers: {layers}")
+    encoder.layer = torch.nn.ModuleList(encoder.layer[i] for i in layers)
+    for new_index, layer in enumerate(encoder.layer):        # attention caches key on the index
+        if hasattr(layer.attention.self, "layer_idx"):
+            layer.attention.self.layer_idx = new_index
+    model.config.num_hidden_layers = len(layers)
+    return model
 
 
 # --------------------------------------------------------------------------- data
@@ -270,22 +306,35 @@ def evaluate_candidates(model, tokenizer, examples: list[dict], chunk_text: dict
                         device: str, cfg: TrainConfig, amp: bool) -> dict:
     """Validation: rerank each question's full mined candidate set (positive + all its hard
     negatives) and report MRR@10, recall@1 and nDCG@10 of the positive. Fixed candidates, so the
-    numbers are comparable across evaluations."""
-    pairs, spans = [], []
+    numbers are comparable across evaluations. With teacher scores, also agreement with the
+    teacher: teacher_mrr@10 (reciprocal rank of the teacher's top candidate in the student's
+    order) and teacher_top5 (share of the teacher's top 5 that the student also puts in its)."""
+    pairs, spans, teacher = [], [], []
     for ex in examples:
         cands = [ex["positive"]] + ex["negatives"]
         spans.append((len(pairs), len(cands)))
         pairs.extend((ex["query"], chunk_text[c]) for c in cands)
+        if "teacher" in ex:
+            teacher.append(np.array([ex["teacher"][c] for c in cands], dtype=np.float32))
     scores = score_pairs(model, tokenizer, pairs, device, cfg.max_length, cfg.eval_batch_pairs, amp)
-    mrr, r1, ndcg = [], [], []
-    for start, n in spans:
+    mrr, r1, ndcg, t_mrr, t_top5 = [], [], [], [], []
+    for q, (start, n) in enumerate(spans):
         s = scores[start: start + n]
         rank = 1 + int((s[1:] > s[0]).sum())          # rank of the positive (index 0)
         mrr.append(1.0 / rank if rank <= 10 else 0.0)
         r1.append(float(rank == 1))
         ndcg.append(1.0 / math.log2(rank + 1) if rank <= 10 else 0.0)
-    return {"mrr@10": float(np.mean(mrr)), "recall@1": float(np.mean(r1)),
-            "ndcg@10": float(np.mean(ndcg)), "questions": len(examples)}
+        if teacher:
+            t = teacher[q]
+            top = int(np.argmax(t))
+            t_rank = 1 + int((np.delete(s, top) > s[top]).sum())
+            t_mrr.append(1.0 / t_rank if t_rank <= 10 else 0.0)
+            t_top5.append(len(set(np.argsort(-t)[:5]) & set(np.argsort(-s)[:5])) / 5)
+    out = {"mrr@10": float(np.mean(mrr)), "recall@1": float(np.mean(r1)),
+           "ndcg@10": float(np.mean(ndcg)), "questions": len(examples)}
+    if teacher:
+        out |= {"teacher_mrr@10": float(np.mean(t_mrr)), "teacher_top5": float(np.mean(t_top5))}
+    return out
 
 
 # --------------------------------------------------------------------------- training
@@ -330,7 +379,10 @@ def train(cfg: TrainConfig) -> dict:
 
     tokenizer = AutoTokenizer.from_pretrained(cfg.base_model, revision=cfg.base_revision)
     model = AutoModelForSequenceClassification.from_pretrained(
-        cfg.base_model, revision=cfg.base_revision).to(device)
+        cfg.base_model, revision=cfg.base_revision)
+    if cfg.student_layers:
+        keep_layers(model, [int(i) for i in cfg.student_layers.split(",")])
+    model.to(device)
 
     dataset = GroupDataset(train_ex, chunk_text, cfg.negatives, cfg.seed)
     workers = cfg.num_workers if cfg.num_workers >= 0 else (2 if device == "cuda" else 0)
@@ -349,6 +401,7 @@ def train(cfg: TrainConfig) -> dict:
         train_questions=len(dataset), val_questions=len(val_ex), steps_per_epoch=steps_per_epoch,
         total_steps=total_steps, data=data_notes, torch=torch.__version__,
         transformers=transformers.__version__, python=platform.python_version(),
+        parameters=sum(p.numel() for p in model.parameters()),
         gpu=torch.cuda.get_device_name(0) if device == "cuda" else None)
 
     def validate(step: int, epoch: float) -> dict:
@@ -356,6 +409,7 @@ def train(cfg: TrainConfig) -> dict:
         log("val", step=step, epoch=round(epoch, 3), **m)
         return m
 
+    key = cfg.select_metric
     best = validate(0, 0.0)               # the base model, before any training
     best_step, stale, step, stopped_early = 0, 0, 0, False
     model.save_pretrained(out / "best")
@@ -391,13 +445,13 @@ def train(cfg: TrainConfig) -> dict:
                     grad_norm=round(float(grad_norm), 4))
             if cfg.eval_every and step % cfg.eval_every == 0 and step % steps_per_epoch:
                 m = validate(step, step / steps_per_epoch)
-                if m["mrr@10"] > best["mrr@10"]:
+                if m[key] > best[key]:
                     best, best_step, stale = m, step, 0
                     model.save_pretrained(out / "best")
                     tokenizer.save_pretrained(out / "best")
                 model.train()
         m = validate(step, epoch + 1)
-        if m["mrr@10"] > best["mrr@10"]:
+        if m[key] > best[key]:
             best, best_step, stale = m, step, 0
             model.save_pretrained(out / "best")
             tokenizer.save_pretrained(out / "best")
