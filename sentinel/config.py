@@ -213,7 +213,7 @@ class Settings(BaseSettings):
     answer_check: bool = True
     answer_check_fail_open: bool = False
     # Hold the answer until the check has passed, so a withheld answer never reaches the client
-    # (the SSE stream then carries it as one token after a `checking` event). False streams
+    # (the SSE stream then sends its tokens after a `checking` event). False streams
     # tokens as they're generated and retracts in the `done` event — a client that ignores the
     # retraction would still show the answer.
     answer_check_blocks: bool = True

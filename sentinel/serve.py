@@ -21,8 +21,9 @@ Guardrails (v2), applied here in the service layer so every engine gets them:
     never reach the client — and citations are checked at the end (v2-R3);
   * the finished answer is checked for carried-out passage instructions
     (sentinel.guardrails.answer), and a flagged answer is withheld. By default the answer is
-    held until the check passes: the stream is `retrieved` -> `checking` -> one `token` (the
-    answer, or the withheld message) -> `done`, so a withheld answer never reaches the client.
+    held until the check passes: the stream is `retrieved` -> `checking` -> `token`* (the
+    answer's own tokens, or the withheld message alone) -> `done`, so a withheld answer never
+    reaches the client.
     With config.answer_check_blocks off, tokens stream as generated and the `done` event's text
     replaces them; clients must show it instead.
 The `done` event carries a GuardrailReport of everything that was changed or flagged; its text
@@ -220,9 +221,12 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
         latency["answer_check"] = (time.perf_counter() - t) * 1000.0
         if verdict.flagged:
             text = WITHHELD_MESSAGE
-    if blocking and text:
-        yield {"event": "token", "data": text}
     withheld = verdict is not None and verdict.flagged
+    if blocking:
+        # Released as the model's own tokens, so clients can still render word by word; a
+        # withheld answer goes out as the replacement alone.
+        for part in [WITHHELD_MESSAGE] if withheld else parts:
+            yield {"event": "token", "data": part}
     citations = [] if abstained or withheld else parse_citations(text, chunks)
     guardrails = GuardrailReport(context_redactions=redactions, **report.as_dict())
     if withheld:

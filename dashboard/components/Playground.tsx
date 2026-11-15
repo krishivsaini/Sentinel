@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { RunResult } from "@/lib/data";
 import { docLabel } from "@/lib/format";
 import { SearchIcon } from "./icons";
@@ -103,9 +103,27 @@ export function Playground({ latest }: { latest: RunResult }) {
   const [query, setQuery] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [answer, setAnswer] = useState("");
+  // What's on screen: the answer revealed word by word. The API sends a checked answer's tokens
+  // in a burst once the answer check passes, so pacing here keeps it reading like a stream.
+  const [revealed, setRevealed] = useState("");
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [done, setDone] = useState<Done | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!answer.startsWith(revealed)) {
+      setRevealed(""); // the text was replaced (a withheld answer, a new question): start over
+      return;
+    }
+    if (revealed.length === answer.length) return;
+    const id = setTimeout(() => {
+      const words = answer.slice(revealed.length).match(/\s*\S+/g) ?? [answer.slice(revealed.length)];
+      // One word per tick, faster for a long backlog so no answer takes more than ~2 s to show.
+      setRevealed(revealed + words.slice(0, Math.max(1, Math.ceil(words.length / 60))).join(""));
+    }, 30);
+    return () => clearTimeout(id);
+  }, [answer, revealed]);
+  const revealing = revealed.length < answer.length;
 
   async function ask(q: string) {
     if (!q.trim()) return;
@@ -215,13 +233,13 @@ export function Playground({ latest }: { latest: RunResult }) {
               <span className="ml-auto font-mono text-[10.5px] text-text-4">grounded · cited</span>
             </div>
             <div className="min-h-[96px] p-[18px] text-[14px] leading-[1.7] text-text-1">
-              {answer}
+              {revealed}
               {phase === "checking" && !answer && (
                 <span className="text-text-4">Generated. Holding it until the answer check passes.</span>
               )}
-              {phase === "streaming" && <span className="text-accent">▍</span>}
+              {(phase === "streaming" || revealing) && <span className="text-accent">▍</span>}
             </div>
-            {done && <AnswerFooter done={done} />}
+            {done && !revealing && <AnswerFooter done={done} />}
           </Card>
           <Card className="overflow-hidden">
             <div className="border-b border-border-hair px-4 py-3 text-[12.5px] font-semibold">

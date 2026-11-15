@@ -232,6 +232,10 @@ def _kinds(client: TestClient) -> list[str | None]:
     return [ev for ev, _ in _parse_sse(r.text)]
 
 
+# Long enough that the output guard's held-back tail doesn't swallow the whole answer.
+_LONG = [f"Sentence {i} of a longer answer about status codes. " for i in range(20)]
+
+
 def test_flagged_answer_never_reaches_the_client() -> None:
     engine = FakeEngine()
     engine.withhold = True
@@ -244,15 +248,15 @@ def test_flagged_answer_never_reaches_the_client() -> None:
     assert g["answer_withheld"] is True and g["flagged"] is True
 
 
-def test_answer_is_released_after_the_check_in_one_token(client) -> None:
-    assert _kinds(client) == ["retrieved", "checking", "token", "done"]
-    tokens, answer = _done(client, _auth_header(client))
-    assert tokens == [answer["text"]] and answer["guardrails"]["answer_withheld"] is False
-    assert answer["text"] == "The 429 status code means too many requests [rfc6585#0002]"
-
-
-# Long enough that the output guard's held-back tail doesn't swallow the whole answer.
-_LONG = [f"Sentence {i} of a longer answer about status codes. " for i in range(20)]
+def test_answer_tokens_are_released_only_after_the_check() -> None:
+    engine = FakeEngine(tokens=_LONG)
+    c = _client(engine)
+    kinds = _kinds(c)
+    assert kinds[:2] == ["retrieved", "checking"] and kinds[-1] == "done"
+    assert set(kinds[2:-1]) == {"token"} and len(kinds[2:-1]) > 1   # still word by word
+    tokens, answer = _done(c, _auth_header(c))
+    assert "".join(tokens) == answer["text"] == "".join(_LONG)
+    assert answer["guardrails"]["answer_withheld"] is False
 
 
 def test_streaming_mode_retracts_in_the_done_event(monkeypatch) -> None:

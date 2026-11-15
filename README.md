@@ -229,7 +229,7 @@ flowchart LR
 | **[Ingestion](sentinel/ingest.py)** | clean → chunk (512 tokens, 12% overlap) → embed locally → FAISS **and** BM25 over the same chunk ids; idempotent |
 | **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen |
 | **[Generation](sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
-| **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token` → `done`), per-IP rate limit |
+| **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), per-IP rate limit |
 | **[Evaluation](sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
 | **[CI gates](.github/workflows/eval-gate.yml)** | tests · faithfulness gate · injection gate, path-filtered and spend-capped |
 | **[Dashboard](dashboard/)** | Next.js: trends, drill-down, attribution, live playground, guardrails — from exported JSON, no backend |
@@ -310,7 +310,7 @@ flowchart LR
 - **The task-hijack policy is a separate detector, not an edit** to the first policy: the first one's cached verdicts stay valid, and what the new one adds is measured on its own.
 - **"Only allow links from the passages" can't work** — a poisoned passage carries its own link — so links go through an allowlist.
 - **The stream can't leak half a link.** The guard holds back a short tail; a property test checks the streamed output always equals the full-text result.
-- **A withheld answer is never sent.** The service holds the answer until the check passes, then sends it whole, so a client can't show what the check stopped. The price is the first word: it now arrives after generation and the check rather than with the first token. On 7 live queries before this change, generation took 0.4–2.6 s and the whole guard stage (input guard and answer check together) 410–512 ms, beside 9–14 s of reranking. The check is now timed on its own (`latency_ms.answer_check`). `answer_check_blocks=false` brings back token streaming, with the retraction in `done`.
+- **A withheld answer is never sent.** The service holds the answer until the check passes, then sends its tokens, so a client can't show what the check stopped. The words still stream, but the first one now arrives after generation and the check rather than with the first token; the dashboard paces the released tokens word by word. On 7 live queries before this change, generation took 0.4–2.6 s and the whole guard stage (input guard and answer check together) 410–512 ms, beside 9–14 s of reranking. The check is now timed on its own (`latency_ms.answer_check`). `answer_check_blocks=false` brings back token streaming, with the retraction in `done`.
 - **Attack corpora are segregated** into their own indexes and scopes; the service index never contains a poisoned chunk.
 
 </details>
@@ -475,7 +475,7 @@ Stated plainly:
 | **Screening** | Can still be written around: 6 of 10 adaptive attacks pass it. The task-hijack policy costs 2 false flags in 2,888 real chunks (a TLS 1.3 checklist written as questions to the reader). |
 | **Backup layers** | Still let 2% through when screening misses — mostly a planted false claim phrased as RFC errata, which no check here can recognise. |
 | **Classifiers** | Vary run to run even at temperature 0; every rate is a mean of 3 runs. |
-| **Answer check** | Holding the answer until it passes means no token-by-token streaming. Wrongly withheld 3 of ~600 clean answers. |
+| **Answer check** | Holding the answer until it passes delays the first word by generation plus the check; the words that follow are a paced replay, not live generation. Wrongly withheld 3 of ~600 clean answers. |
 | **PII** | Lists named after a working group (`hybi@ietf.org`) still look personal and are redacted. Names are found only in private documents and miss lone first or last names, `Smith, J.` references and names absent from the Wikidata list (`Raj Patel`); only US/UK-style street addresses are found; IP addresses are out of scope. The private set was written before the name detector, but by its author. |
 | **Infra** | FAISS in memory; reranking ~1 s per query on CPU; a paid Groq key for CI. |
 

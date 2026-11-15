@@ -68,9 +68,9 @@ Three properties hold throughout:
 | Output guard | [`guardrails/output.py`](sentinel/guardrails/output.py) | on the token stream: link allowlist (scheme-less too), images removed, PII, prompt-leak filter; citations checked at the end | Holds back a short tail so half a link never escapes; a property test proves stream = full-text result |
 | Answer check | [`guardrails/answer.py`](sentinel/guardrails/answer.py) | safeguard model reads question + finished answer — never the passages — and withholds answers carrying out a planted instruction | The backup for an attack screening missed |
 
-The answer is held until the answer check passes, then sent as one `token` after a `checking`
-event, so a withheld answer never leaves the service. That gives up token-by-token streaming:
-the first word arrives after generation and the check. `answer_check_blocks=false` streams
+The answer is held until the answer check passes, then its tokens are sent after a `checking`
+event, so a withheld answer never leaves the service. Words still stream, but the first one
+arrives after generation and the check; the dashboard paces the released tokens. `answer_check_blocks=false` streams
 instead, and the check can then only retract: the `done` event carries the replacement and a
 `withheld` flag, which clients must honour (the dashboard does).
 
