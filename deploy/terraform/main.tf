@@ -201,6 +201,12 @@ resource "google_cloud_run_v2_service" "api" {
         startup_cpu_boost = true # faster model loading on a cold start
       }
 
+      # PyTorch sizes its thread pool from the host's cores, not the 2 vCPUs this container is
+      # allowed; the surplus threads contend and the reranker slows by an order of magnitude.
+      env {
+        name  = "OMP_NUM_THREADS"
+        value = "2"
+      }
       env {
         name  = "SENTINEL_DAILY_SPEND_LIMIT_USD"
         value = tostring(var.daily_spend_limit_usd)
