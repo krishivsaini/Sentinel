@@ -16,7 +16,7 @@ answers stay grounded, and that instructions planted in documents or questions d
 flowchart TB
     subgraph offline["Offline: build once, rebuild when the corpus changes"]
         RFC["data/corpus/<br/>48 RFCs"] --> CH["clean + chunk<br/>512 tokens, 12% overlap"]
-        CH --> SC["injection screening<br/>Prompt Guard 2 + safeguard policy<br/>(verdicts cached + committed)"]
+        CH --> SC["injection screening<br/>Prompt Guard 2 + two safeguard policies<br/>(verdicts cached + committed)"]
         SC --> EMB["embed<br/>bge-small, local"]
         EMB --> IDX[("indexes/<br/>FAISS + BM25<br/>shared chunk ids")]
     end
@@ -84,8 +84,11 @@ align them. Rebuilding is idempotent.
 Screening runs here, not per query: the corpus is static, so a verdict computed once is reused
 forever and costs the query path nothing. Verdicts are cached by chunk text in
 `data/guardrails/screening_cache.jsonl` and committed — rebuilding an unchanged corpus, locally
-or in CI, makes no API calls. A chunk flagged by either detector is **quarantined**: kept for
-audit, never retrieved.
+or in CI, makes no API calls. Three detectors run: Prompt Guard 2, and the safeguard model under
+two written policies (text addressing an AI; requests for an unrelated task or reply format). A
+chunk flagged by any of them is **quarantined**: kept for audit, never retrieved. A classifier
+reply that isn't a bare label also quarantines: a passage that can redirect the screener is an
+injection by demonstration.
 
 | Index | Contents | Read by | Why separate |
 |---|---|---|---|

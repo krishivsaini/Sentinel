@@ -1,53 +1,53 @@
 {
-  "generated_utc": "2026-10-24T11:11:46+00:00",
+  "generated_utc": "2026-11-15T15:11:00+00:00",
   "source": "microsoft/BIPIA text_attack_test.json (MIT), see scripts/build_bipia.py",
   "generation_model": "openai/gpt-oss-20b",
   "judge": "bipia-judge:openai/gpt-oss-120b:0d9afac2",
   "screening_caught": {
     "all": {
-      "k": 44,
+      "k": 74,
       "n": 75,
-      "rate": 0.5867,
+      "rate": 0.9867,
       "ci95": [
-        0.467,
-        0.6992
+        0.9279,
+        0.9997
       ]
     },
     "by_category": {
       "Base Encoding": {
-        "k": 2,
+        "k": 5,
         "n": 5,
-        "rate": 0.4,
+        "rate": 1.0,
         "ci95": [
-          0.0527,
-          0.8534
+          0.4782,
+          1.0
         ]
       },
       "Business Intelligence": {
-        "k": 1,
+        "k": 5,
         "n": 5,
-        "rate": 0.2,
+        "rate": 1.0,
         "ci95": [
-          0.0051,
-          0.7164
+          0.4782,
+          1.0
         ]
       },
       "Conversational Agent": {
-        "k": 2,
+        "k": 5,
         "n": 5,
-        "rate": 0.4,
+        "rate": 1.0,
         "ci95": [
-          0.0527,
-          0.8534
+          0.4782,
+          1.0
         ]
       },
       "Emoji Substitution": {
-        "k": 2,
+        "k": 5,
         "n": 5,
-        "rate": 0.4,
+        "rate": 1.0,
         "ci95": [
-          0.0527,
-          0.8534
+          0.4782,
+          1.0
         ]
       },
       "Entertainment": {
@@ -69,12 +69,12 @@
         ]
       },
       "Language Translation": {
-        "k": 2,
+        "k": 4,
         "n": 5,
-        "rate": 0.4,
+        "rate": 0.8,
         "ci95": [
-          0.0527,
-          0.8534
+          0.2836,
+          0.9949
         ]
       },
       "Marketing & Advertising": {
@@ -96,21 +96,21 @@
         ]
       },
       "Research Assistance": {
-        "k": 0,
+        "k": 5,
         "n": 5,
-        "rate": 0.0,
+        "rate": 1.0,
         "ci95": [
-          0.0,
-          0.5218
+          0.4782,
+          1.0
         ]
       },
       "Reverse Text": {
-        "k": 4,
+        "k": 5,
         "n": 5,
-        "rate": 0.8,
+        "rate": 1.0,
         "ci95": [
-          0.2836,
-          0.9949
+          0.4782,
+          1.0
         ]
       },
       "Scams & Fraud": {
@@ -123,12 +123,12 @@
         ]
       },
       "Sentiment Analysis": {
-        "k": 0,
+        "k": 5,
         "n": 5,
-        "rate": 0.0,
+        "rate": 1.0,
         "ci95": [
-          0.0,
-          0.5218
+          0.4782,
+          1.0
         ]
       },
       "Substitution Ciphers": {
@@ -141,12 +141,12 @@
         ]
       },
       "Task Automation": {
-        "k": 1,
+        "k": 5,
         "n": 5,
-        "rate": 0.2,
+        "rate": 1.0,
         "ci95": [
-          0.0051,
-          0.7164
+          0.4782,
+          1.0
         ]
       }
     }
