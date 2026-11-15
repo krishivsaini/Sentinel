@@ -28,6 +28,16 @@ provider "google" {
   region  = var.region
 }
 
+# The Budgets API rejects user credentials (gcloud auth application-default login) unless the
+# call names a project to bill its quota to; only the budget uses this provider.
+provider "google" {
+  alias                 = "billing"
+  project               = var.project_id
+  region                = var.region
+  user_project_override = true
+  billing_project       = var.project_id
+}
+
 data "google_project" "this" {}
 
 locals {
@@ -38,6 +48,8 @@ locals {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
+    "cloudresourcemanager.googleapis.com", # needed by the quota-project override above
+    "serviceusage.googleapis.com",
   ]
   secrets = {
     groq_api_key = "sentinel-groq-api-key"
@@ -238,8 +250,9 @@ resource "google_cloud_run_v2_service" "api" {
   }
 
   lifecycle {
-    # Images are rolled out by GitHub Actions; Terraform owns everything else.
-    ignore_changes = [template[0].containers[0].image, client, client_version]
+    # Images are rolled out by GitHub Actions; Terraform owns everything else. The API fills in
+    # a service-level scaling block with defaults, which would otherwise show as drift.
+    ignore_changes = [template[0].containers[0].image, client, client_version, scaling]
   }
 
   depends_on = [google_secret_manager_secret_iam_member.runtime_reads]
@@ -256,6 +269,7 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
 # --------------------------------------------------------------------------- budget alert
 
 resource "google_billing_budget" "monthly" {
+  provider        = google.billing
   count           = var.billing_account == "" ? 0 : 1
   billing_account = var.billing_account
   display_name    = "Sentinel monthly budget"
