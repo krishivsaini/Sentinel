@@ -23,6 +23,7 @@ from collections.abc import Iterator
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from sentinel.config import settings
+from sentinel.rfc_status import standing
 from sentinel.schema import Citation, RetrievedChunk
 
 # Verbatim sentence the model must emit when the context can't answer the question (FR-G3).
@@ -146,14 +147,18 @@ def generate(
 
 def parse_citations(text: str, chunks: list[RetrievedChunk]) -> list[Citation]:
     """Extract inline [chunk_id] markers, keep only IDs actually in the retrieved set
-    (drops hallucinated citations), de-duplicated in first-seen order."""
+    (drops hallucinated citations), de-duplicated in first-seen order. Each carries its RFC's
+    standing, so an outdated source is marked rather than presented as current."""
     valid = {c.chunk_id for c in chunks}
     out: list[Citation] = []
     seen: set[str] = set()
     for cid in _CITATION_RE.findall(text):
         if cid in valid and cid not in seen:
             seen.add(cid)
-            out.append(Citation(chunk_id=cid, doc_id=cid.split("#", 1)[0]))
+            doc_id = cid.split("#", 1)[0]
+            st = standing(doc_id)
+            out.append(Citation(chunk_id=cid, doc_id=doc_id, obsoleted_by=list(st.obsoleted_by),
+                                updated_by=list(st.updated_by)))
     return out
 
 

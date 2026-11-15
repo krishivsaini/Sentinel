@@ -19,6 +19,7 @@ data/bipia/
 data/*.jsonl
 data/*.json
 !data/corpus_manifest.json
+!data/rfc_status.json
 data/guardrails/*
 !data/guardrails/screening_cache.jsonl
 *.md

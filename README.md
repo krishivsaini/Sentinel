@@ -234,7 +234,7 @@ flowchart LR
 <summary><b>Why this corpus</b></summary>
 
 - **Full of exact tokens** — status codes (`429`), header names (`Sec-WebSocket-Key`), error codes (`invalid_grant`). That's where pure semantic search fails, so it's an honest test of hybrid retrieval.
-- **Unambiguous answers** — obsoleted RFCs are excluded, so every question has one authoritative source.
+- **Mostly current, and honest where it isn't** — the corpus was chosen to avoid replaced RFCs, but standards keep moving. RFC 2818 is obsoleted by RFC 9110 (both in the corpus), and RFC 8446, TLS 1.3, was obsoleted by RFC 9846 after the corpus was fetched. A RAG system quotes such text faithfully and still answers out of date, and no faithfulness check notices. So every citation carries its RFC's standing (`obsoleted_by`, `updated_by`), recorded from the RFC Editor's metadata ([`scripts/fetch_rfc_status.py`](scripts/fetch_rfc_status.py) → [`data/rfc_status.json`](data/rfc_status.json)), and the playground flags an outdated source instead of presenting it as current.
 - **Cleanly licensed** — the IETF Trust permits verbatim reproduction.
 
 </details>

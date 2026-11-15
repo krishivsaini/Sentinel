@@ -18,7 +18,16 @@ type Guardrails = {
   uncited: boolean;
   answer_withheld?: boolean;
 };
-type Done = { text: string; latency_ms: Record<string, number>; guardrails?: Guardrails | null };
+// A citation carries its RFC's standing: later RFCs that replaced (obsoleted_by) or amended it.
+type Citation = { chunk_id: string; doc_id: string; obsoleted_by?: string[]; updated_by?: string[] };
+type Done = {
+  text: string;
+  citations?: Citation[];
+  latency_ms: Record<string, number>;
+  guardrails?: Guardrails | null;
+};
+
+const rfc = (docId: string) => docId.replace(/^rfc/i, "RFC ");
 
 // Streams from the real Sentinel API: POST /token (demo creds) -> JWT, then POST /query and parse
 // the SSE frames (`retrieved` -> chunks, `token` -> text, `done` -> latency + guardrail report).
@@ -231,8 +240,28 @@ function AnswerFooter({ done }: { done: Done }) {
     if (g.uncited) notes.push("no valid citation");
     if (g.answer_withheld) notes.push("answer withheld by the answer check");
   }
+  // One line per cited RFC, at most: replaced outright is a warning, amended is a note.
+  const seen = new Set<string>();
+  const sources = (done.citations ?? []).filter((c) => !seen.has(c.doc_id) && seen.add(c.doc_id));
+  const outdated = sources.filter((c) => c.obsoleted_by?.length);
+  const amended = sources.filter((c) => !c.obsoleted_by?.length && c.updated_by?.length);
   return (
     <div className="border-t border-border-hair px-[18px] py-3">
+      {outdated.map((c) => (
+        <div key={c.doc_id} className="mb-2 rounded-[6px] bg-warn-bg px-2.5 py-1.5 text-[11.5px] text-warn-fg">
+          Cites {rfc(c.doc_id)}, which is obsoleted by {c.obsoleted_by!.map(rfc).join(", ")}; check the
+          current specification.
+        </div>
+      ))}
+      {amended.length > 0 && (
+        <div className="mb-2 text-[11.5px] text-text-4">
+          {amended
+            .map((c) => `${rfc(c.doc_id)} is updated by ${c.updated_by!.length > 3
+              ? `${c.updated_by!.length} later RFCs`
+              : c.updated_by!.map(rfc).join(", ")}`)
+            .join(" · ")}
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5">
         {Object.entries(done.latency_ms).map(([stage, ms]) => (
           <span key={stage} className="rounded-[5px] bg-chip px-1.5 py-0.5 font-mono text-[10.5px] text-text-3">

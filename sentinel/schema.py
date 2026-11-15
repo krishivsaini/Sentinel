@@ -65,6 +65,10 @@ class Citation(BaseModel):
     chunk_id: str
     doc_id: str
     span: tuple[int, int] | None = None  # char offsets into the chunk text, if resolvable
+    # The cited RFC's standing (sentinel/rfc_status.py): later RFCs that replaced or amended it.
+    # A non-empty obsoleted_by means the citation is accurate to its source but out of date.
+    obsoleted_by: list[str] = Field(default_factory=list)
+    updated_by: list[str] = Field(default_factory=list)
 
 
 class LatencyMs(BaseModel):
