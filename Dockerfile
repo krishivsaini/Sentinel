@@ -42,6 +42,7 @@ COPY --from=builder --chown=sentinel /app/hf hf
 COPY --from=builder --chown=sentinel /app/indexes indexes
 COPY --chown=sentinel sentinel/ sentinel/
 COPY --chown=sentinel data/rfc_status.json data/
+COPY --chown=sentinel data/guardrails/given_names.txt data/guardrails/
 USER sentinel
 EXPOSE 8080
 CMD ["python", "-m", "sentinel.serve"]

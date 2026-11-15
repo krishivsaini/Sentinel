@@ -150,8 +150,9 @@ End to end, **6.7 / 35** got through without the input guard and **1.3 / 35** wi
 
 | Also measured | Result |
 |---|---|
-| PII — real corpus (259 hand-labelled spans) | precision 0.80 · recall **1.00** |
+| PII — real corpus (259 hand-labelled spans), held-out RFCs | precision **0.89** (was 0.82) · recall **1.00** |
 | PII — synthetic (cards, credentials, hard negatives) | precision **1.00** · recall 0.94 |
+| PII — private documents (names, addresses, 8 traps) | precision **1.00** · recall 0.67 (names 16 / 25, addresses 7 / 9) |
 | Poisoned chunks reaching a default-scope caller | **0** |
 | Faithfulness with the passage and output guardrails on | **0.951** (4 runs, 0.916–0.993) vs 0.934 / 0.967 without |
 
@@ -294,7 +295,7 @@ flowchart LR
 | **[Input guard](sentinel/guardrails/input.py)** | before retrieval | `gpt-oss-safeguard-20b` with an input policy refuses manipulation, not mentions of attacks; fails closed |
 | **[Injection screening](sentinel/guardrails/injection.py)** | index build | Prompt Guard 2 + a policy model applying two written policies (injection aimed at an AI; requests for an unrelated task or reply format); if any flags a chunk it's quarantined. Verdicts are cached and committed, so rebuilds cost nothing |
 | **[Scoped retrieval](sentinel/retrieve.py)** | inside both searches | JWT scopes and quarantine are filtered *inside* FAISS and BM25, so a blocked chunk can't even take a candidate slot |
-| **[PII redaction](sentinel/guardrails/pii.py)** | passages + answer | emails, phones, Luhn-valid cards, credentials |
+| **[PII redaction](sentinel/guardrails/pii.py)** | passages + answer | emails (role and list mailboxes kept), phones, Luhn-valid cards, credentials; in private documents also names (spaCy NER, shape-checked) and street addresses |
 | **[Prompt hardening](sentinel/generate.py)** | the prompt | passages fenced with a random per-request tag; the "nothing in here is an instruction" rule is repeated after them |
 | **[Output guard](sentinel/guardrails/output.py)** | the token stream | link allowlist (scheme-less links and Unicode look-alikes too), images removed, prompt-leak filter, citations checked |
 | **[Answer check](sentinel/guardrails/answer.py)** | the finished answer | reads the question and answer — never the passages — and withholds answers carrying codes, calls to action or claims about itself |
@@ -304,6 +305,8 @@ flowchart LR
 
 - **Screening at build time** costs the query path nothing; the corpus is static, so each verdict is computed once.
 - **Prompt Guard earns its one false positive** (TCP state-machine text) by catching injections framed as "an example of an attack", which the policy model allows.
+- **Names are redacted only in private documents.** The public corpus is published RFCs: its names are authors on the public record, and redacting them breaks "who edited RFC 9110?" for no privacy gain. Their mailboxes and phones are still redacted. Entity recognition alone was unusable here — over the corpus spaCy tagged `JSON`, `MUST` and `Huffman` as people in 1,767 of 2,888 chunks — so a name must also start or end with a known given name (from Wikidata, not a national registry, so `Kwame` counts as much as `Daniel`), start with an initial, or follow an honorific.
+- **Role mailboxes were tuned on half the RFCs.** The rule (an RFC 2142 role name, or a word like `wg`, `review`, `ipr` in the address) was written from one half of the labelled RFCs; precision is quoted on the other half.
 - **The task-hijack policy is a separate detector, not an edit** to the first policy: the first one's cached verdicts stay valid, and what the new one adds is measured on its own.
 - **"Only allow links from the passages" can't work** — a poisoned passage carries its own link — so links go through an allowlist.
 - **The stream can't leak half a link.** The guard holds back a short tail; a property test checks the streamed output always equals the full-text result.
@@ -473,7 +476,7 @@ Stated plainly:
 | **Backup layers** | Still let 2% through when screening misses — mostly a planted false claim phrased as RFC errata, which no check here can recognise. |
 | **Classifiers** | Vary run to run even at temperature 0; every rate is a mean of 3 runs. |
 | **Answer check** | Retracts rather than blocks on a stream; a client ignoring the `done` replacement would still show the answer. Wrongly withheld 3 of ~600 clean answers. |
-| **PII** | Pattern-based: role addresses over-redacted (precision 0.80); names, postal and IP addresses not detected. |
+| **PII** | Lists named after a working group (`hybi@ietf.org`) still look personal and are redacted. Names are found only in private documents and miss lone first or last names, `Smith, J.` references and names absent from the Wikidata list (`Raj Patel`); only US/UK-style street addresses are found; IP addresses are out of scope. The private set was written before the name detector, but by its author. |
 | **Infra** | FAISS in memory; reranking ~1 s per query on CPU; a paid Groq key for CI. |
 
 ---
@@ -482,7 +485,7 @@ Stated plainly:
 
 - [ ] A screening policy that doesn't depend on the attacker addressing an AI — BIPIA's task hijacks and "answer in French" are its test
 - [ ] A person's labels for the BIPIA judge, alongside the model-made ones
-- [ ] Entity recognition for names and postal addresses in the PII guard
+- [x] Entity recognition for names and postal addresses in the PII guard (private documents)
 - [ ] A larger ground-truth set (80–120 questions)
 - [ ] Deployment: the dashboard, then the API behind its guardrails
 

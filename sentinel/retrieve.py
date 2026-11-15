@@ -293,6 +293,7 @@ def hybrid_retrieve_timed(
             sparse_score=sparse_map.get(cid),
             fused_score=fused_map.get(cid),
             rerank_score=float(score),
+            scope=idx.id2chunk[cid].scope,
         )
         for cid, score in reranked
     ]

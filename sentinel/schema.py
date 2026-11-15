@@ -54,6 +54,9 @@ class RetrievedChunk(BaseModel):
     sparse_score: float | None = None
     fused_score: float | None = None   # RRF
     rerank_score: float | None = None  # cross-encoder
+    # The source document's access scope. Names and addresses are redacted only outside "public"
+    # (sentinel.guardrails.pii); retrieval has already checked the caller may see it.
+    scope: str = "public"
 
 
 # --------------------------------------------------------------------------- Generation

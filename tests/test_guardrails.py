@@ -415,3 +415,46 @@ def test_policy_classifier_empty_reply_is_an_error_not_a_verdict(monkeypatch) ->
     monkeypatch.setattr(injection, "chat", lambda *a, **k: "  ")
     with pytest.raises(ValueError):
         PolicyClassifier().score("passage")
+
+
+# --------------------------------------------------------------------------- PII v2: roles, names
+
+
+@pytest.mark.parametrize(("address", "role"), [
+    ("iesg@ietf.org", True), ("ietf-http-wg@w3.org", True), ("oauth-ext-review@ietf.org", True),
+    ("HOSTMASTER@SRI-NIC.ARPA", True), ("ipr@ietf.org", True),
+    ("fielding@gbiv.com", False), ("jri.ietf@gmail.com", False), ("ops-oncall@contoso.io", False),
+])
+def test_role_and_list_mailboxes_are_told_from_personal_ones(address, role) -> None:
+    assert pii.is_role_address(address) is role
+    assert bool(pii.find_emails(f"write to {address} today")) is not role
+
+
+@pytest.mark.parametrize(("name", "person"), [
+    ("Wei Zhang", True), ("Tomás Herrera", True), ("J. Reschke", True), ("Margaret O'Neill", True),
+    ("Header Parameter", False), ("JSON Web Token", False), ("MUST", False), ("Huffman", False),
+    ("Diffie-Hellman", False), ("J. R.", False),
+])
+def test_person_spans_must_look_like_names(name, person) -> None:
+    """spaCy alone tags JSON, MUST and Huffman as people on RFC text; the shape check doesn't."""
+    assert pii.looks_like_person(name) is person
+
+
+def test_honorific_names_and_street_addresses() -> None:
+    text = "Dr. Okafor moved to 1420 Maple Avenue, Apt 3B, Portland, OR 97205, effective May."
+    found = {(text[s.start:s.end], s.kind) for s in pii.find_pii(text, entities=True)}
+    street = "1420 Maple Avenue, Apt 3B, Portland, OR 97205"
+    assert found == {("Okafor", "person"), (street, "address")}
+    assert pii.find_pii(text) == []  # pattern-only (the answer stream) leaves both alone
+
+
+def test_names_are_redacted_only_outside_the_public_scope() -> None:
+    """RFC authors are on the public record; a tenant's customers are not. Mailboxes are
+    redacted either way."""
+    body = "Notes from the call with Priya Raman (priya.raman@northwind-traders.com)."
+    public = RetrievedChunk(chunk_id="rfc1#0001", text=body)
+    private = RetrievedChunk(chunk_id="crm#0001", text=body, scope="tenant:acme")
+    (pub, priv), counts = pii.redact_chunks([public, private])
+    assert "Priya Raman" in pub.text and "[REDACTED email]" in pub.text
+    assert "Priya Raman" not in priv.text and "[REDACTED person]" in priv.text
+    assert counts["person"] == 1 and counts["email"] == 2

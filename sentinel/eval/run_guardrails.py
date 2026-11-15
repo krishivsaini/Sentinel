@@ -34,6 +34,7 @@ Honesty notes the report carries with it:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -368,22 +369,42 @@ def _overlaps(a, b) -> bool:
     return inter > 0 and inter >= 0.5 * (b["end"] - b["start"])
 
 
+def pii_split(rec: dict) -> str:
+    """Corpus labels are split by RFC, half "dev" and half "heldout", fixed by a hash. Detector
+    rules written after the labels existed (the role-mailbox rule) were shaped on dev only, so
+    heldout is the number to quote for them."""
+    doc = rec["chunk_id"].split("#", 1)[0]
+    return "heldout" if int(hashlib.sha256(doc.encode()).hexdigest(), 16) % 2 else "dev"
+
+
 def pii_metrics() -> dict:
     """Precision / recall of the PII detector against the hand labels, per source and kind. A
     detection matches a label of the same kind covering at least half of the label."""
     id2text = {c.chunk_id: c.text for c in _chunks(INDEXES_DIR)}
+    labels = _load_jsonl(PII_LABELS_PATH)
+    groups = {
+        "corpus": [r for r in labels if r["source"] == "corpus"],
+        "corpus_dev": [r for r in labels if r["source"] == "corpus" and pii_split(r) == "dev"],
+        "corpus_heldout": [r for r in labels
+                           if r["source"] == "corpus" and pii_split(r) == "heldout"],
+        "synthetic": [r for r in labels if r["source"] == "synthetic"],
+        # Private-document snippets with names and addresses, written before the name/address
+        # detectors existed; scored with them on, as redact_chunks does outside the public scope.
+        "private": [r for r in labels if r["source"] == "private"],
+    }
     out: dict = {}
-    for source in ("corpus", "synthetic"):
+    for source, recs in groups.items():
         tp, fp, fn = Counter(), Counter(), Counter()
         misses, false_alarms, stale = [], [], 0
-        for rec in (r for r in _load_jsonl(PII_LABELS_PATH) if r["source"] == source):
+        for rec in recs:
             text = rec.get("text") or id2text.get(rec.get("chunk_id"))
             if text is None or (rec.get("sha256") and text_key(text) != rec["sha256"]):
                 stale += 1   # the chunk changed since labelling — skip rather than mis-score
                 continue
             labels = rec["spans"]
             found = [
-                {"start": s.start, "end": s.end, "kind": s.kind} for s in pii.find_pii(text)
+                {"start": s.start, "end": s.end, "kind": s.kind}
+                for s in pii.find_pii(text, entities=source == "private")
             ]
             for lab in labels:
                 if any(f["kind"] == lab["kind"] and _overlaps(f, lab) for f in found):

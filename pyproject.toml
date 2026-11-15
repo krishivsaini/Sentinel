@@ -47,6 +47,8 @@ dependencies = [
     "structlog>=25.1",                     # structured logging + per-stage latency
     "numpy>=2.0",
     "httpx>=0.28",                         # guardrail classifiers (Groq REST, sentinel.guardrails)
+    "spacy>=3.8,<3.9",
+    "en-core-web-sm",
 ]
 
 [dependency-groups]
@@ -62,6 +64,7 @@ dev = [
 # macOS keeps the PyPI wheel, which is already CPU/MPS-only.
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
