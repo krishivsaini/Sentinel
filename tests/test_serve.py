@@ -111,8 +111,9 @@ def _parse_sse(text: str) -> list[tuple[str | None, str]]:
     return events
 
 
-def test_healthz(client: TestClient) -> None:
-    r = client.get("/healthz")
+@pytest.mark.parametrize("path", ["/healthz", "/health"])
+def test_healthz(client: TestClient, path: str) -> None:
+    r = client.get(path)
     assert r.status_code == 200
     assert r.json() == {"status": "ok"}
 

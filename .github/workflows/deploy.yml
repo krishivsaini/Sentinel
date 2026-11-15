@@ -4,7 +4,8 @@
 # token is exchanged for the deployer service account through Workload Identity Federation, so
 # no cloud credential is stored anywhere — the provider only accepts tokens from this
 # repository's main branch. The image is built here (linux/amd64, as Cloud Run runs it) and
-# tagged with the commit; the rollout then waits for a live /healthz.
+# tagged with the commit; the rollout then waits for a live /health (not /healthz: Cloud Run's
+# front end reserves paths ending in "z").
 #
 # Repository variables (Settings → Secrets and variables → Actions → Variables), from
 # `terraform output github_variables`: GCP_PROJECT_ID, GCP_REGION, GCP_WIF_PROVIDER, GCP_DEPLOYER_SA.
@@ -67,5 +68,5 @@ jobs:
         env:
           URL: ${{ steps.deploy.outputs.url }}
         run: |
-          curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$URL/healthz"
+          curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$URL/health"
           echo "### Deployed \`${GITHUB_SHA::7}\` → $URL" >> "$GITHUB_STEP_SUMMARY"

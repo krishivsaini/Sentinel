@@ -3,7 +3,9 @@
 Endpoints:
     POST /token   -> issue a JWT for the single demo user (OAuth2 password form).
     POST /query   -> Answer, SSE-streamed tokens; JWT-protected; rate-limited.
-    GET  /healthz -> liveness.
+    GET  /healthz -> liveness (Cloud Run's probes call it inside the container).
+    GET  /health  -> the same, for checks from outside: Cloud Run's front end reserves paths
+                     ending in "z" and answers /healthz with its own 404.
 
 Production hygiene: JWT auth (FR-S3), slowapi per-IP rate limit (FR-S4, a test proves it
 fires), structured per-stage-latency logging (FR-S5), Pydantic validation everywhere (FR-S6).
@@ -290,6 +292,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     @app.get("/healthz")
+    @app.get("/health")
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
 

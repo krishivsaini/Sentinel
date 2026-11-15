@@ -82,7 +82,7 @@ gh workflow run deploy.yml --ref main
 gh run watch                                      # ~10–15 min the first time, faster after
 ```
 
-The run's summary shows the service URL; `curl <URL>/healthz` should return `{"status":"ok"}`.
+The run's summary shows the service URL; `curl <URL>/health` should return `{"status":"ok"}`. (Not `/healthz`: Cloud Run's front end reserves paths ending in `z` and answers them with its own 404; the container's probes still use `/healthz` internally.)
 
 **6. The dashboard on Vercel**
 
