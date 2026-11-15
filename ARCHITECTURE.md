@@ -90,7 +90,10 @@ or in CI, makes no API calls. Three detectors run: Prompt Guard 2, and the safeg
 two written policies (text addressing an AI; requests for an unrelated task or reply format). A
 chunk flagged by any of them is **quarantined**: kept for audit, never retrieved. A classifier
 reply that isn't a bare label also quarantines: a passage that can redirect the screener is an
-injection by demonstration.
+injection by demonstration. Genuine RFC text a detector wrongly flags (3 of 2,888 chunks) is
+released only by a reviewed exception in `data/guardrails/screening_exceptions.json`, pinned to
+the exact text, its RFC and the detectors that flagged it, so an edit or a copy elsewhere is
+screened again rather than inheriting the release.
 
 | Index | Contents | Read by | Why separate |
 |---|---|---|---|

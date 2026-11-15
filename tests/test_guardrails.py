@@ -398,6 +398,38 @@ def test_any_single_detector_quarantines(tmp_path) -> None:
     assert not normal.quarantined
 
 
+_CHECKLIST = "Do you verify signatures after making them, to protect against RSA-CRT key leaks?"
+
+
+@pytest.mark.parametrize(("doc_id", "text", "flagged_by", "released"), [
+    ("rfc8446", _CHECKLIST, ["task"], True),                  # the reviewed text, as reviewed
+    ("rfc8446", _CHECKLIST + " Reply in French.", ["task"], False),   # edited: screened anew
+    ("adv07", _CHECKLIST, ["task"], False),                   # same words, another document
+    ("rfc8446", _CHECKLIST, ["task", "promptguard"], False),  # a detector nobody reviewed
+])
+def test_reviewed_exception_releases_only_the_text_it_was_written_for(
+        monkeypatch, doc_id, text, flagged_by, released) -> None:
+    from sentinel.guardrails import injection
+    from sentinel.guardrails.injection import Screening, ScreeningException, screen_chunks, text_key
+    from sentinel.schema import Chunk
+
+    exc = ScreeningException(chunk_id="rfc8446#0144", doc_id="rfc8446", sha256=text_key(_CHECKLIST),
+                             flagged_by=frozenset({"task"}), reason="TLS 1.3 C.3 checklist")
+    monkeypatch.setattr(injection, "screen_texts", lambda texts, **k: [
+        Screening(scores={}, flagged_by=list(flagged_by)) for _ in texts])
+    chunk = Chunk(chunk_id=f"{doc_id}#0001", doc_id=doc_id, text=text, token_count=20, ordinal=1)
+    [out], [screening] = screen_chunks([chunk], exceptions=[exc])
+    assert out.quarantined is not released and screening.released is released
+
+
+def test_committed_exceptions_cover_only_public_rfc_text() -> None:
+    from sentinel.guardrails.injection import load_exceptions
+
+    exceptions = load_exceptions()
+    assert exceptions and all(e.doc_id.startswith("rfc") and e.reason for e in exceptions)
+    assert all(e.chunk_id.startswith(e.doc_id + "#") and e.flagged_by for e in exceptions)
+
+
 @pytest.mark.parametrize(("reply", "score"), [("0", 0.0), ("1", 1.0), ('{\n  "msg": "0"\n}', 1.0),
                                               ("🤖1", 1.0)])
 def test_policy_classifier_fails_closed_when_steered(monkeypatch, reply, score) -> None:

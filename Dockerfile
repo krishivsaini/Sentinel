@@ -26,7 +26,7 @@ RUN uv sync --frozen --no-dev
 # The service index (FAISS + BM25, screened) and the embedding + rerank models.
 COPY data/corpus/ data/corpus/
 COPY data/corpus_manifest.json data/
-COPY data/guardrails/screening_cache.jsonl data/guardrails/
+COPY data/guardrails/screening_cache.jsonl data/guardrails/screening_exceptions.json data/guardrails/
 RUN .venv/bin/python -m sentinel.ingest \
  && .venv/bin/python -c "from sentinel.retrieve import warmup; warmup()"
 

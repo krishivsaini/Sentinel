@@ -241,8 +241,10 @@ def _screen(chunks: list[Chunk], label: str) -> list[Chunk]:
     unscreened (pass --no-screen to build without screening)."""
     from sentinel.guardrails.injection import screen_chunks
 
-    chunks, _ = screen_chunks(chunks, offline=not settings.groq_api_key)
-    print(f"[screen] {label}: {sum(c.quarantined for c in chunks)} of {len(chunks)} quarantined")
+    chunks, screenings = screen_chunks(chunks, offline=not settings.groq_api_key)
+    released = sum(s.released for s in screenings)
+    print(f"[screen] {label}: {sum(c.quarantined for c in chunks)} of {len(chunks)} quarantined"
+          + (f" ({released} flagged but released by a reviewed exception)" if released else ""))
     return chunks
 
 

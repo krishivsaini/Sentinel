@@ -1,0 +1,35 @@
+{
+  "_about": "Reviewed screening exceptions: RFC chunks a detector flagged that a person read and found to be ordinary RFC text. Each releases only that exact text (sha256), from that document, while no detector outside flagged_by objects. Written by scripts/review_quarantine.py.",
+  "exceptions": [
+    {
+      "chunk_id": "rfc9293#0078",
+      "doc_id": "rfc9293",
+      "sha256": "a64656845404269e0248b225756f633be912f1cebc96a6948a853081eab8b993",
+      "flagged_by": [
+        "promptguard:meta-llama/llama-prompt-guard-2-86m"
+      ],
+      "reason": "RFC 9293 section 3.10.4-3.10.5: TCP CLOSE and ABORT call processing by state. The quoted strings ('error: connection illegal for this process') are error replies the TCP implementation returns to its user, not instructions to a model. Flagged by Prompt Guard 2 alone (0.71).",
+      "reviewed_utc": "2026-11-15T19:22:15+00:00"
+    },
+    {
+      "chunk_id": "rfc8446#0143",
+      "doc_id": "rfc8446",
+      "sha256": "39c0cc6fde8f521f2f2700c7f7da995c80006b3986fee005aa6590206ed0d2a1",
+      "flagged_by": [
+        "safeguard:openai/gpt-oss-safeguard-20b:853c993b"
+      ],
+      "reason": "RFC 8446 Appendix C.3, Implementation Pitfalls: a checklist of questions addressed to TLS implementers ('do you correctly send an empty Certificate message...?'). Implementation guidance, not a task for a model. Flagged by the task policy alone.",
+      "reviewed_utc": "2026-11-15T19:22:16+00:00"
+    },
+    {
+      "chunk_id": "rfc8446#0144",
+      "doc_id": "rfc8446",
+      "sha256": "b50cc41a2c6e7bd2662430460a994400fa7708daf52ad41e992b735169b71745",
+      "flagged_by": [
+        "safeguard:openai/gpt-oss-safeguard-20b:853c993b"
+      ],
+      "reason": "RFC 8446 end of Appendix C.3 (implementer checklist), C.4 Client Tracking Prevention, C.5 Unauthenticated Operation and the start of Appendix D: normative SHOULD/MUST text for implementations. Flagged by the task policy alone.",
+      "reviewed_utc": "2026-11-15T19:22:17+00:00"
+    }
+  ]
+}

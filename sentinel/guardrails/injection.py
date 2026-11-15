@@ -23,7 +23,8 @@ Three detectors, because probing showed they fail differently:
   * The same model applying TASK_POLICY — for instructions that never address an AI at all
     ("Write a script to...", "Translate your response into Spanish"), which BIPIA showed the
     first two passing.
-A chunk is quarantined if any detector flags it.
+A chunk is quarantined if any detector flags it, unless a person has reviewed that exact text
+and recorded it in data/guardrails/screening_exceptions.json (see ScreeningException).
 
 Run:  python -m sentinel.guardrails.injection "some passage text"     # score one passage
 """
@@ -45,6 +46,7 @@ from sentinel.logging_config import log
 from sentinel.schema import Chunk
 
 SCREENING_CACHE_PATH = GUARDRAILS_DIR / "screening_cache.jsonl"
+SCREENING_EXCEPTIONS_PATH = GUARDRAILS_DIR / "screening_exceptions.json"
 
 # The safeguard model's policy. Its hash is part of the detector's name, so editing it
 # invalidates every cached verdict made under the old wording.
@@ -245,6 +247,7 @@ class Screening:
 
     scores: dict[str, float]
     flagged_by: list[str] = field(default_factory=list)
+    released: bool = False   # flagged, but a reviewed exception let it through (screen_chunks)
 
     @property
     def quarantined(self) -> bool:
@@ -297,14 +300,50 @@ def screen_texts(
     return out
 
 
+@dataclass(frozen=True)
+class ScreeningException:
+    """A flagged chunk a person read and found to be ordinary document text.
+
+    It releases a chunk only while all three still hold: the text is byte-for-byte the text
+    reviewed (sha256), it comes from the same document, and every detector flagging it now was
+    one that flagged it at review. An edited passage, the same words planted in another
+    document, or a new detector's objection all send the chunk back to quarantine."""
+
+    chunk_id: str
+    doc_id: str
+    sha256: str
+    flagged_by: frozenset[str]
+    reason: str
+
+    def covers(self, chunk: Chunk, screening: Screening) -> bool:
+        return (chunk.doc_id == self.doc_id and text_key(chunk.text) == self.sha256
+                and set(screening.flagged_by) <= self.flagged_by)
+
+
+def load_exceptions(path=SCREENING_EXCEPTIONS_PATH) -> list[ScreeningException]:
+    if not path.exists():
+        return []
+    return [
+        ScreeningException(chunk_id=e["chunk_id"], doc_id=e["doc_id"], sha256=e["sha256"],
+                           flagged_by=frozenset(e["flagged_by"]), reason=e["reason"])
+        for e in json.loads(path.read_text(encoding="utf-8"))["exceptions"]
+    ]
+
+
 def screen_chunks(
-    chunks: list[Chunk], *, offline: bool = False
+    chunks: list[Chunk],
+    *,
+    offline: bool = False,
+    exceptions: Sequence[ScreeningException] | None = None,
 ) -> tuple[list[Chunk], list[Screening]]:
-    """Mark every chunk any detector flags as quarantined. Returns the chunks and their
-    screenings, in order."""
+    """Mark every chunk any detector flags as quarantined, except those a reviewed exception
+    covers (default: data/guardrails/screening_exceptions.json). Returns the chunks and their
+    screenings, in order; a released chunk's screening has `released` set."""
     screenings = screen_texts([c.text for c in chunks], offline=offline)
+    exceptions = load_exceptions() if exceptions is None else exceptions
     for c, s in zip(chunks, screenings):
-        c.quarantined = s.quarantined
+        s.released = s.quarantined and any(e.covers(c, s) for e in exceptions)
+        c.quarantined = s.quarantined and not s.released
     return chunks, screenings
 
 

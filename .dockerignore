@@ -22,6 +22,7 @@ data/*.json
 !data/rfc_status.json
 data/guardrails/*
 !data/guardrails/screening_cache.jsonl
+!data/guardrails/screening_exceptions.json
 !data/guardrails/given_names.txt
 *.md
 !README.md
