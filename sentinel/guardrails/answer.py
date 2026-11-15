@@ -10,9 +10,10 @@ The check reads only the QUESTION and the ANSWER, never the passages: a poisoned
 written to manipulate whatever reads it, and the checker should not be one of its readers. It
 does not judge truth: a planted false claim phrased as RFC content is out of its reach.
 
-A flagged answer is withheld and replaced with a fixed message. On the SSE stream the answer
-has already gone out token by token, so the `done` event carries the replacement and a
-`withheld` flag; clients must render it in place of the streamed text.
+A flagged answer is withheld and replaced with a fixed message. The service holds the answer
+until this check passes (config.answer_check_blocks), so a withheld answer is never sent. With
+that off, the answer streams token by token and the `done` event carries the replacement and a
+`withheld` flag, which clients must render in place of the streamed text.
 
     python -m sentinel.guardrails.answer "question" "answer"     # check one answer
 """

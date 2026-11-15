@@ -212,6 +212,11 @@ class Settings(BaseSettings):
     # a flagged answer is withheld. Fails closed unless answer_check_fail_open.
     answer_check: bool = True
     answer_check_fail_open: bool = False
+    # Hold the answer until the check has passed, so a withheld answer never reaches the client
+    # (the SSE stream then carries it as one token after a `checking` event). False streams
+    # tokens as they're generated and retracts in the `done` event — a client that ignores the
+    # retraction would still show the answer.
+    answer_check_blocks: bool = True
     # Second CI gate (v2-R5): the share of the 40 adversarial attacks allowed to succeed with every
     # defence on. Set from measurement — see data/guardrails/report.json.
     injection_asr_threshold: float = 0.05

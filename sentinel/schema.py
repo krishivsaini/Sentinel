@@ -80,7 +80,8 @@ class LatencyMs(BaseModel):
     retrieve: float
     rerank: float
     generate: float
-    guard: float = 0.0  # context redaction + output sanitising + checks (v2)
+    guard: float = 0.0  # input guard, context redaction, output sanitising, citation check (v2)
+    answer_check: float = 0.0  # the answer check; while it blocks, the client waits this long
 
 
 class GuardrailReport(BaseModel):

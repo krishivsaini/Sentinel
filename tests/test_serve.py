@@ -143,7 +143,7 @@ def test_authenticated_query_streams_wellformed_answer(client: TestClient) -> No
     assert "429" in answer["text"]
     assert [c["chunk_id"] for c in answer["citations"]] == ["rfc6585#0002"]
     # per-stage latency present and never blended into one number (NFR-3)
-    assert set(answer["latency_ms"]) == {"retrieve", "rerank", "generate", "guard"}
+    assert set(answer["latency_ms"]) == {"retrieve", "rerank", "generate", "guard", "answer_check"}
     assert answer["retrieved"][0]["chunk_id"] == "rfc6585#0002"
     assert answer["guardrails"]["flagged"] is False
 
@@ -227,20 +227,52 @@ def test_flagged_question_is_refused_before_retrieval_or_generation() -> None:
     assert engine.accesses == [] and engine.generated is False   # nothing downstream ran
 
 
-def test_flagged_answer_is_withheld_in_the_done_event() -> None:
+def _kinds(client: TestClient) -> list[str | None]:
+    r = client.post("/query", json={"question": "q"}, headers=_auth_header(client))
+    return [ev for ev, _ in _parse_sse(r.text)]
+
+
+def test_flagged_answer_never_reaches_the_client() -> None:
     engine = FakeEngine()
     engine.withhold = True
     c = _client(engine)
     tokens, answer = _done(c, _auth_header(c))
-    assert "".join(tokens) == "".join(engine.tokens)   # already streamed: done replaces it
+    assert tokens == [WITHHELD_MESSAGE]                # nothing of the answer was sent
     assert engine.checked == ["".join(engine.tokens)]
     assert answer["text"] == WITHHELD_MESSAGE and answer["citations"] == []
-    assert answer["guardrails"]["answer_withheld"] is True and answer["guardrails"]["flagged"] is True
+    g = answer["guardrails"]
+    assert g["answer_withheld"] is True and g["flagged"] is True
 
 
-def test_clean_answer_passes_the_answer_check_unchanged(client) -> None:
+def test_answer_is_released_after_the_check_in_one_token(client) -> None:
+    assert _kinds(client) == ["retrieved", "checking", "token", "done"]
     tokens, answer = _done(client, _auth_header(client))
-    assert answer["text"] == "".join(tokens) and answer["guardrails"]["answer_withheld"] is False
+    assert tokens == [answer["text"]] and answer["guardrails"]["answer_withheld"] is False
+    assert answer["text"] == "The 429 status code means too many requests [rfc6585#0002]"
+
+
+# Long enough that the output guard's held-back tail doesn't swallow the whole answer.
+_LONG = [f"Sentence {i} of a longer answer about status codes. " for i in range(20)]
+
+
+def test_streaming_mode_retracts_in_the_done_event(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "answer_check_blocks", False)
+    engine = FakeEngine(tokens=_LONG)
+    engine.withhold = True
+    c = _client(engine)
+    tokens, answer = _done(c, _auth_header(c))
+    assert len(tokens) > 1 and "".join(tokens) == "".join(_LONG)   # streamed; done replaces it
+    assert answer["text"] == WITHHELD_MESSAGE and answer["guardrails"]["answer_withheld"]
+    assert "checking" not in _kinds(c)
+
+
+def test_without_the_answer_check_tokens_stream(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "answer_check", False)
+    engine = FakeEngine(tokens=_LONG)
+    c = _client(engine)
+    tokens, answer = _done(c, _auth_header(c))
+    assert len(tokens) > 1 and engine.checked == []   # nothing to wait for
+    assert answer["text"] == "".join(tokens)
 
 
 def test_abstentions_skip_the_answer_check() -> None:
@@ -249,8 +281,9 @@ def test_abstentions_skip_the_answer_check() -> None:
     engine = FakeEngine(tokens=[ABSTAIN_MESSAGE])
     engine.withhold = True
     c = _client(engine)
-    _, answer = _done(c, _auth_header(c))
+    tokens, answer = _done(c, _auth_header(c))
     assert engine.checked == [] and answer["text"] == ABSTAIN_MESSAGE
+    assert tokens == [ABSTAIN_MESSAGE] and "checking" not in _kinds(c)
 
 
 def test_answer_check_fails_closed_when_the_classifier_is_unreachable(monkeypatch) -> None:

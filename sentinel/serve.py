@@ -20,9 +20,13 @@ Guardrails (v2), applied here in the service layer so every engine gets them:
   * the token stream passes through the output sanitiser — untrusted links, images and PII
     never reach the client — and citations are checked at the end (v2-R3);
   * the finished answer is checked for carried-out passage instructions
-    (sentinel.guardrails.answer). A flagged answer is withheld: the tokens have already
-    streamed, so the `done` event's text is the replacement and clients must show it instead.
-The `done` event carries a GuardrailReport of everything that was changed or flagged.
+    (sentinel.guardrails.answer), and a flagged answer is withheld. By default the answer is
+    held until the check passes: the stream is `retrieved` -> `checking` -> one `token` (the
+    answer, or the withheld message) -> `done`, so a withheld answer never reaches the client.
+    With config.answer_check_blocks off, tokens stream as generated and the `done` event's text
+    replaces them; clients must show it instead.
+The `done` event carries a GuardrailReport of everything that was changed or flagged; its text
+is always the final answer.
 
 The retrieval+generation pipeline is injected as a `QueryEngine` dependency so tests can swap
 in an instant fake — that keeps the auth/rate-limit/contract tests hermetic (no models, no API).
@@ -180,6 +184,8 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
 
     report = OutputReport()
     sanitizer = StreamSanitizer(report) if settings.output_guard else None
+    # Blocking: tokens are collected, not sent, until the answer check has passed.
+    blocking = settings.answer_check and settings.answer_check_blocks
     parts: list[str] = []
     stream_guard_s = 0.0   # sanitising time inside the stream, reported as guard, not generate
     t0 = time.perf_counter()
@@ -190,10 +196,12 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
             stream_guard_s += time.perf_counter() - t
         if token:
             parts.append(token)
-            yield {"event": "token", "data": token}
+            if not blocking:
+                yield {"event": "token", "data": token}
     if sanitizer is not None and (tail := sanitizer.finish()):
         parts.append(tail)
-        yield {"event": "token", "data": tail}
+        if not blocking:
+            yield {"event": "token", "data": tail}
     latency["generate"] = (time.perf_counter() - t0 - stream_guard_s) * 1000.0
     guard_s += stream_guard_s
 
@@ -201,13 +209,19 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
     t = time.perf_counter()
     check_citations(text, chunks, report)
     abstained = is_abstention(text)
-    verdict = None
-    if settings.answer_check and not abstained:
-        verdict = engine.check_answer(req.question, text)
-        if verdict.flagged:
-            text = WITHHELD_MESSAGE
     guard_s += time.perf_counter() - t
     latency["guard"] = guard_s * 1000.0
+    verdict = None
+    if settings.answer_check and not abstained:
+        if blocking:
+            yield {"event": "checking", "data": ""}   # lets a client say why it's waiting
+        t = time.perf_counter()
+        verdict = engine.check_answer(req.question, text)
+        latency["answer_check"] = (time.perf_counter() - t) * 1000.0
+        if verdict.flagged:
+            text = WITHHELD_MESSAGE
+    if blocking and text:
+        yield {"event": "token", "data": text}
     withheld = verdict is not None and verdict.flagged
     citations = [] if abstained or withheld else parse_citations(text, chunks)
     guardrails = GuardrailReport(context_redactions=redactions, **report.as_dict())

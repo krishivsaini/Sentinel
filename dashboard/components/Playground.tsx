@@ -8,7 +8,7 @@ import { Card, PageHead } from "./ui";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-type Phase = "idle" | "streaming" | "done" | "error";
+type Phase = "idle" | "streaming" | "checking" | "done" | "error";
 type Chunk = { chunk_id: string; rerank_score?: number | null };
 // The `done` event's Answer, the parts this view shows.
 type Guardrails = {
@@ -30,13 +30,14 @@ type Done = {
 const rfc = (docId: string) => docId.replace(/^rfc/i, "RFC ");
 
 // Streams from the real Sentinel API: POST /token (demo creds) -> JWT, then POST /query and parse
-// the SSE frames (`retrieved` -> chunks, `token` -> text, `done` -> latency + guardrail report).
-// No API configured => idle state.
+// the SSE frames (`retrieved` -> chunks, `checking` -> the answer check is running, `token` ->
+// text, `done` -> final text + latency + guardrail report). No API configured => idle state.
 async function streamAnswer(
   question: string,
   onChunks: (c: Chunk[]) => void,
   onToken: (t: string) => void,
   onDone: (d: Done) => void,
+  onChecking: () => void,
 ): Promise<void> {
   const tokenRes = await fetch(`${API}/token`, {
     method: "POST",
@@ -82,6 +83,8 @@ async function streamAnswer(
         } catch {
           /* ignore malformed frame */
         }
+      } else if (event === "checking") {
+        onChecking();
       } else if (event === "token") {
         onToken(payload);
       } else if (event === "done") {
@@ -116,11 +119,21 @@ export function Playground({ latest }: { latest: RunResult }) {
     setChunks([]);
     setDone(null);
     try {
-      await streamAnswer(q, setChunks, (t) => setAnswer((a) => a + t), (d) => {
-        // The answer check runs after the stream: a withheld answer is replaced, not appended to.
-        if (d.guardrails?.answer_withheld) setAnswer(d.text);
-        setDone(d);
-      });
+      await streamAnswer(
+        q,
+        setChunks,
+        (t) => {
+          setPhase("streaming");
+          setAnswer((a) => a + t);
+        },
+        (d) => {
+          // The done event's text is final. The API holds the answer until the answer check
+          // passes; if it's configured to stream instead, a withheld answer is replaced here.
+          setAnswer(d.text);
+          setDone(d);
+        },
+        () => setPhase("checking"),
+      );
       setPhase("done");
     } catch (e) {
       setError(String(e));
@@ -132,7 +145,7 @@ export function Playground({ latest }: { latest: RunResult }) {
     <div className="max-w-[1080px] px-8 pb-12 pt-7">
       <PageHead
         title="Query playground"
-        sub="POST /query · JWT-authed · SSE token stream · hybrid retrieval → rerank → grounded generation."
+        sub="POST /query · JWT-authed · SSE token stream · hybrid retrieval → rerank → grounded generation → answer check."
       />
 
       <div className="mb-3 flex gap-2.5">
@@ -191,16 +204,21 @@ export function Playground({ latest }: { latest: RunResult }) {
         </div>
       )}
 
-      {(phase === "streaming" || phase === "done") && (
+      {(phase === "streaming" || phase === "checking" || phase === "done") && (
         <div className="grid grid-cols-[1fr_360px] items-start gap-4">
           <Card className="overflow-hidden">
             <div className="flex items-center gap-2 border-b border-border-hair px-[18px] py-3">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: phase === "streaming" ? "var(--warn-fg)" : "var(--ok-fg)" }} />
-              <span className="text-[12.5px] font-semibold">{phase === "streaming" ? "streaming · SSE" : "answer"}</span>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: phase === "done" ? "var(--ok-fg)" : "var(--warn-fg)" }} />
+              <span className="text-[12.5px] font-semibold">
+                {phase === "streaming" ? "streaming · SSE" : phase === "checking" ? "checking the answer…" : "answer"}
+              </span>
               <span className="ml-auto font-mono text-[10.5px] text-text-4">grounded · cited</span>
             </div>
             <div className="min-h-[96px] p-[18px] text-[14px] leading-[1.7] text-text-1">
               {answer}
+              {phase === "checking" && !answer && (
+                <span className="text-text-4">Generated. Holding it until the answer check passes.</span>
+              )}
               {phase === "streaming" && <span className="text-accent">▍</span>}
             </div>
             {done && <AnswerFooter done={done} />}
