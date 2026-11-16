@@ -51,3 +51,6 @@ deploy/terraform/*.tfstate
 deploy/terraform/*.tfstate.*
 deploy/terraform/terraform.tfvars
 deploy/terraform/.terraform.lock.hcl.bak
+
+# --- Reader feedback (holds readers questions; only reviewed items reach ground_truth.jsonl) ---
+data/feedback/

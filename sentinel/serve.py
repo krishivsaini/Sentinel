@@ -3,6 +3,7 @@
 Endpoints:
     POST /token   -> issue a JWT for the single demo user (OAuth2 password form).
     POST /query   -> Answer, SSE-streamed tokens; JWT-protected; rate-limited.
+    POST /feedback -> a thumbs up/down (and optional comment) on one answer, by its answer_id.
     GET  /healthz -> liveness (Cloud Run's probes call it inside the container).
     GET  /health  -> the same, for checks from outside: Cloud Run's front end reserves paths
                      ending in "z" and answers /healthz with its own 404.
@@ -40,6 +41,7 @@ from __future__ import annotations
 import json
 import secrets
 import time
+import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -59,12 +61,13 @@ from sentinel.generate import generate, is_abstention, parse_citations
 from sentinel.guardrails.answer import WITHHELD_MESSAGE, AnswerCheck, check_answer
 from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening, screen_question
 from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_citations
-from sentinel.guardrails.pii import redact_chunks
+from sentinel.guardrails.pii import redact, redact_chunks
 from sentinel.logging_config import configure_logging, log
 from sentinel.retrieve import Access, hybrid_retrieve_timed
 from sentinel.spend import meter
 from sentinel.schema import (
     Answer,
+    FeedbackRequest,
     GuardrailReport,
     LatencyMs,
     QueryRequest,
@@ -143,9 +146,19 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Principal:
 # --------------------------------------------------------------------------- SSE query stream
 
 
+# How much of an answer the query log keeps: enough for feedback review, bounded per entry.
+_LOGGED_ANSWER_CHARS = 4000
+
+
+def _scrub(text: str) -> str:
+    """Pattern PII (emails, phones, cards, credentials) out of text bound for the logs."""
+    return redact(text)[0]
+
+
 def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> Iterator[dict]:
     """Sync generator of SSE events: retrieved -> token* -> done. Runs in a threadpool (the
     LLM stream is sync), so it never blocks the event loop."""
+    answer_id = uuid.uuid4().hex   # ties a later POST /feedback to this answer's log entry
     latency: dict[str, float] = {}
     guard_s = 0.0
     if settings.input_guard:
@@ -153,7 +166,7 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
         screening = engine.screen_input(req.question)
         guard_s += time.perf_counter() - t
         if screening.flagged:
-            yield from _refusal(user, req, screening, guard_s)
+            yield from _refusal(user, req, screening, guard_s, answer_id)
             return
     chunks, latency["retrieve"], latency["rerank"] = engine.retrieve(
         req.question, req.top_k, Access(scopes=user.scopes)
@@ -239,10 +252,18 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
         retrieved=chunks,
         latency_ms=LatencyMs(**latency),
         guardrails=guardrails,
+        answer_id=answer_id,
     )
 
+    # The question and answer are logged (PII scrubbed) so feedback can be reviewed against
+    # what was actually said; the answer already passed the output guard's PII redaction.
     log.info(
         "query",
+        answer_id=answer_id,
+        question=_scrub(req.question),
+        # For a withheld answer, what was generated (and held back), so a wrong withhold can be
+        # reviewed; the reader saw WITHHELD_MESSAGE.
+        answer="".join(parts)[:_LOGGED_ANSWER_CHARS],
         user=user.subject,
         scopes=sorted(user.scopes),
         chunk_ids=[c.chunk_id for c in chunks],
@@ -254,7 +275,8 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
     yield {"event": "done", "data": answer.model_dump_json()}
 
 
-def _refusal(user: Principal, req: QueryRequest, screening: InputScreening, guard_s: float):
+def _refusal(user: Principal, req: QueryRequest, screening: InputScreening, guard_s: float,
+             answer_id: str):
     """The SSE stream for a question the input guard refused: no retrieval, no generation."""
     report = GuardrailReport(input_flagged=True, input_error=screening.error, flagged=True)
     answer = Answer(
@@ -262,9 +284,12 @@ def _refusal(user: Principal, req: QueryRequest, screening: InputScreening, guar
         text=REFUSAL_MESSAGE,
         latency_ms=LatencyMs(retrieve=0.0, rerank=0.0, generate=0.0, guard=guard_s * 1000.0),
         guardrails=report,
+        answer_id=answer_id,
     )
     log.warning(
         "query.refused",
+        answer_id=answer_id,
+        question=_scrub(req.question),
         user=user.subject,
         input_scores=screening.scores,
         input_error=screening.error,
@@ -344,6 +369,25 @@ def create_app() -> FastAPI:
                 detail="The demo's daily API budget is used up; it resets at 00:00 UTC.",
             )
         return EventSourceResponse(_query_events(engine, user, body))
+
+    # Feedback is a log event, not a database row: the service stays stateless and adds no
+    # infrastructure, and scripts/feedback_candidates.py joins it to the query log by
+    # answer_id. An unknown id is accepted here and simply finds no match there.
+    @app.post("/feedback", status_code=status.HTTP_202_ACCEPTED)
+    @limiter.limit(settings.rate_limit)
+    async def feedback(
+        request: Request,
+        body: FeedbackRequest,
+        user: Principal = Depends(get_current_user),
+    ) -> dict[str, str]:
+        log.info(
+            "feedback",
+            answer_id=body.answer_id,
+            rating=body.rating,
+            comment=_scrub(body.comment) if body.comment else None,
+            user=user.subject,
+        )
+        return {"status": "recorded"}
 
     return app
 

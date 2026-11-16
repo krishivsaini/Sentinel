@@ -230,7 +230,7 @@ flowchart LR
 | **[Ingestion](sentinel/ingest.py)** | clean → chunk (512 tokens, 12% overlap) → embed locally → FAISS **and** BM25 over the same chunk ids; idempotent |
 | **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen |
 | **[Generation](sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
-| **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), per-IP rate limit |
+| **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, per-IP rate limit |
 | **[Evaluation](sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
 | **[CI gates](.github/workflows/eval-gate.yml)** | tests · faithfulness gate · injection gate, path-filtered and spend-capped |
 | **[Dashboard](dashboard/)** | Next.js: trends, drill-down, attribution, live playground, guardrails — from exported JSON, no backend |
@@ -326,6 +326,7 @@ flowchart LR
 - **Provider-agnostic, judge pinned.** Groq, OpenAI, DeepSeek, NVIDIA and Google are wired; the judge stays on the host it was calibrated on.
 - **Spend is metered and capped.** Every Groq call is priced from the tokens the API reports; each CI gate stops at $0.25 and reports its cost ([`spend.py`](sentinel/spend.py)).
 - **Partial evals mislead.** Throttled runs hid a whole class of retrieval failures that a complete run surfaced.
+- **Feedback without a database.** The playground's thumbs up/down goes to `POST /feedback`, which only writes a log line keyed by the answer's `answer_id`; every answer is logged under the same id (question and comment PII-scrubbed, and a withheld answer as it was generated). [`scripts/feedback_candidates.py`](scripts/feedback_candidates.py) joins the two from Cloud Logging and sorts the thumbs-downs by what they suggest: a wrong answer, a retrieval miss (abstained), or a false withhold or refusal. They're leads for review, not labels: a person writes the reference answer before anything enters the ground truth, and the review file is git-ignored because it holds readers' questions. The service stays stateless and adds no infrastructure.
 
 ---
 

@@ -25,6 +25,7 @@ type Done = {
   citations?: Citation[];
   latency_ms: Record<string, number>;
   guardrails?: Guardrails | null;
+  answer_id?: string | null;
 };
 
 const rfc = (docId: string) => docId.replace(/^rfc/i, "RFC ");
@@ -32,21 +33,24 @@ const rfc = (docId: string) => docId.replace(/^rfc/i, "RFC ");
 // Streams from the real Sentinel API: POST /token (demo creds) -> JWT, then POST /query and parse
 // the SSE frames (`retrieved` -> chunks, `checking` -> the answer check is running, `token` ->
 // text, `done` -> final text + latency + guardrail report). No API configured => idle state.
-async function streamAnswer(
-  question: string,
-  onChunks: (c: Chunk[]) => void,
-  onToken: (t: string) => void,
-  onDone: (d: Done) => void,
-  onChecking: () => void,
-): Promise<void> {
+async function getToken(): Promise<string> {
   const tokenRes = await fetch(`${API}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ username: "demo", password: "change-me" }),
   });
   if (!tokenRes.ok) throw new Error(`auth ${tokenRes.status}`);
-  const { access_token } = await tokenRes.json();
+  return (await tokenRes.json()).access_token;
+}
 
+async function streamAnswer(
+  access_token: string,
+  question: string,
+  onChunks: (c: Chunk[]) => void,
+  onToken: (t: string) => void,
+  onDone: (d: Done) => void,
+  onChecking: () => void,
+): Promise<void> {
   const res = await fetch(`${API}/query`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${access_token}` },
@@ -109,6 +113,7 @@ export function Playground({ latest }: { latest: RunResult }) {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [done, setDone] = useState<Done | null>(null);
   const [error, setError] = useState("");
+  const [token, setToken] = useState("");
 
   useEffect(() => {
     if (!answer.startsWith(revealed)) {
@@ -137,7 +142,10 @@ export function Playground({ latest }: { latest: RunResult }) {
     setChunks([]);
     setDone(null);
     try {
+      const t = await getToken(); // fresh per question (tokens expire); kept for its feedback
+      setToken(t);
       await streamAnswer(
+        t,
         q,
         setChunks,
         (t) => {
@@ -240,6 +248,9 @@ export function Playground({ latest }: { latest: RunResult }) {
               {(phase === "streaming" || revealing) && <span className="text-accent">▍</span>}
             </div>
             {done && !revealing && <AnswerFooter done={done} />}
+            {done && !revealing && done.answer_id && (
+              <Feedback key={done.answer_id} answerId={done.answer_id} token={token} />
+            )}
           </Card>
           <Card className="overflow-hidden">
             <div className="border-b border-border-hair px-4 py-3 text-[12.5px] font-semibold">
@@ -308,6 +319,63 @@ function AnswerFooter({ done }: { done: Done }) {
       <div className={`mt-2 text-[11.5px] ${notes.length ? "text-warn-fg" : "text-text-4"}`}>
         guardrails: {notes.length ? notes.join(" · ") : "no changes"}
       </div>
+    </div>
+  );
+}
+
+// Thumbs up/down on one answer, sent to POST /feedback by its answer_id. A thumbs-down may carry a
+// short comment; scripts/feedback_candidates.py turns them into eval candidates for review.
+function Feedback({ answerId, token }: { answerId: string; token: string }) {
+  const [state, setState] = useState<"ask" | "comment" | "sending" | "sent" | "failed">("ask");
+  const [comment, setComment] = useState("");
+
+  async function send(rating: "up" | "down") {
+    setState("sending");
+    try {
+      const res = await fetch(`${API}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ answer_id: answerId, rating, comment: comment.trim() || null }),
+      });
+      setState(res.ok ? "sent" : "failed");
+    } catch {
+      setState("failed");
+    }
+  }
+
+  const button =
+    "rounded-[6px] border border-border-2 bg-panel px-2.5 py-1 text-[11.5px] text-text-2 hover:bg-border-soft";
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-border-hair px-[18px] py-2.5 text-[11.5px] text-text-4">
+      {state === "ask" && (
+        <>
+          <span>Was this answer right?</span>
+          <button className={button} onClick={() => send("up")} aria-label="Yes, helpful">
+            👍 Yes
+          </button>
+          <button className={button} onClick={() => setState("comment")} aria-label="No, not helpful">
+            👎 No
+          </button>
+        </>
+      )}
+      {state === "comment" && (
+        <>
+          <input
+            value={comment}
+            onChange={(e) => setComment(e.target.value.slice(0, 500))}
+            onKeyDown={(e) => e.key === "Enter" && send("down")}
+            placeholder="What was wrong? (optional)"
+            className="min-w-[220px] flex-1 rounded-[6px] border border-input-bd bg-panel px-2.5 py-1 text-[12px] text-text"
+            autoFocus
+          />
+          <button className={button} onClick={() => send("down")}>
+            Send
+          </button>
+        </>
+      )}
+      {state === "sending" && <span>Sending…</span>}
+      {state === "sent" && <span>Thanks, recorded.</span>}
+      {state === "failed" && <span className="text-warn-fg">Couldn't send feedback.</span>}
     </div>
   );
 }

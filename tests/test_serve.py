@@ -367,3 +367,62 @@ def test_cors_allows_only_the_configured_dashboard(monkeypatch) -> None:
     assert ok.headers.get("access-control-allow-origin") == "https://sentinel.example.app"
     other = c.options("/query", headers={"Origin": "https://evil.example", **preflight})
     assert "access-control-allow-origin" not in other.headers
+
+
+# --------------------------------------------------------------------------- feedback
+
+
+def _logged(capsys, event: str) -> list[dict]:
+    lines = [ln for ln in capsys.readouterr().out.splitlines() if ln.startswith("{")]
+    return [e for e in map(json.loads, lines) if e.get("event") == event]
+
+
+def test_feedback_is_logged_against_the_answer_it_rates(capsys) -> None:
+    engine = FakeEngine()
+    c = _client(engine)
+    headers = _auth_header(c)
+    _, answer = _done(c, headers)
+    [query] = _logged(capsys, "query")
+    assert query["answer_id"] == answer["answer_id"] and len(answer["answer_id"]) == 32
+    assert query["question"] == "q" and query["answer"] == answer["text"]
+
+    r = c.post("/feedback", headers=headers, json={
+        "answer_id": answer["answer_id"], "rating": "down",
+        "comment": "Wrong section. Reach me at jane.doe@gmail.com"})
+    assert r.status_code == 202 and r.json() == {"status": "recorded"}
+    [fb] = _logged(capsys, "feedback")
+    assert fb["answer_id"] == answer["answer_id"] and fb["rating"] == "down"
+    assert "jane.doe@gmail.com" not in fb["comment"] and "Wrong section" in fb["comment"]
+
+
+def test_a_withheld_answer_is_logged_as_generated_for_review(capsys) -> None:
+    engine = FakeEngine()
+    engine.withhold = True
+    c = _client(engine)
+    _, answer = _done(c, _auth_header(c))
+    [query] = _logged(capsys, "query")
+    assert answer["text"] == WITHHELD_MESSAGE and query["outcome"] == "withheld"
+    assert query["answer"] == "".join(engine.tokens)   # what was held back, not the notice
+
+
+def test_a_refused_question_still_gets_an_answer_id(capsys) -> None:
+    engine = FakeEngine()
+    engine.refuse = True
+    c = _client(engine)
+    _, answer = _done(c, _auth_header(c))
+    [refused] = _logged(capsys, "query.refused")
+    assert refused["answer_id"] == answer["answer_id"]   # a wrong refusal can be thumbed down
+
+
+@pytest.mark.parametrize("body", [
+    {"answer_id": "not-an-id", "rating": "up"},
+    {"answer_id": "a" * 32, "rating": "meh"},
+    {"answer_id": "a" * 32, "rating": "down", "comment": "x" * 501},
+])
+def test_malformed_feedback_is_rejected(client, body) -> None:
+    assert client.post("/feedback", headers=_auth_header(client), json=body).status_code == 422
+
+
+def test_feedback_needs_a_token(client) -> None:
+    r = client.post("/feedback", json={"answer_id": "a" * 32, "rating": "up"})
+    assert r.status_code == 401

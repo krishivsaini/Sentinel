@@ -225,4 +225,6 @@ Built for a fixed corpus and one demo tenant; the seams for growing it:
 - **Tenancy** — scopes are enforced end to end, but there is no user store to grant them;
   one would issue JWTs with per-user scopes and nothing downstream changes.
 - **Statelessness** — the service holds no per-request state beyond the stream; it scales
-  horizontally behind a load balancer once the indexes are on shared storage.
+  horizontally behind a load balancer once the indexes are on shared storage. Reader feedback
+  keeps it that way: `POST /feedback` writes a log event keyed by the answer's `answer_id`, and
+  `scripts/feedback_candidates.py` joins it to the logged answer offline.

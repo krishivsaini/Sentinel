@@ -7,6 +7,7 @@ ingest -> Chunk, retrieve -> RetrievedChunk, generate -> Answer, eval -> EvalRes
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -108,6 +109,7 @@ class Answer(BaseModel):
     retrieved: list[RetrievedChunk] = Field(default_factory=list)
     latency_ms: LatencyMs
     guardrails: GuardrailReport | None = None
+    answer_id: str | None = None  # set by the service; POST /feedback refers to it
 
 
 # --------------------------------------------------------------------------- API I/O
@@ -118,6 +120,14 @@ class QueryRequest(BaseModel):
 
     question: str = Field(min_length=1, max_length=2000)
     top_k: int | None = None  # optional override of config.rerank_top_k
+
+
+class FeedbackRequest(BaseModel):
+    """Input to POST /feedback: a reader's verdict on one answer, by its answer_id."""
+
+    answer_id: str = Field(pattern=r"^[0-9a-f]{32}$")
+    rating: Literal["up", "down"]
+    comment: str | None = Field(default=None, max_length=500)
 
 
 class TokenResponse(BaseModel):
