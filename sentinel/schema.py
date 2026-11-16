@@ -83,6 +83,7 @@ class LatencyMs(BaseModel):
     generate: float
     guard: float = 0.0  # input guard, context redaction, output sanitising, citation check (v2)
     answer_check: float = 0.0  # the answer check; while it blocks, the client waits this long
+    plan: float = 0.0          # the query planner (sentinel.plan), when query planning is on
 
 
 class GuardrailReport(BaseModel):
@@ -110,6 +111,9 @@ class Answer(BaseModel):
     latency_ms: LatencyMs
     guardrails: GuardrailReport | None = None
     answer_id: str | None = None  # set by the service; POST /feedback refers to it
+    # The search queries a multi-part question was split into (sentinel.plan); empty when it was
+    # searched as asked.
+    sub_questions: list[str] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- API I/O

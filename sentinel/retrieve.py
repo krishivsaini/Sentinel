@@ -320,6 +320,44 @@ def hybrid_retrieve_timed(
     return results, retrieve_ms, rerank_ms
 
 
+def multi_retrieve_timed(
+    queries: list[str],
+    top_k: int | None = None,
+    *,
+    index_dir: Path | None = None,
+    access: Access = DEFAULT_ACCESS,
+    pool_size: int | None = None,
+) -> tuple[list[RetrievedChunk], float, float]:
+    """Hybrid retrieval for a question split into several search queries (sentinel.plan).
+
+    Each query runs the full pipeline on its own share of the rerank pool, ceil(pool / n), so the
+    cross-encoder scores about as many pairs as for one question. The per-query rankings are then
+    merged round-robin, skipping duplicates, into `top_k` passages (config.multistep_top_k):
+    every part of the question gets passages, best first, rather than the top 5 filling up from
+    whichever part matches best. Each passage keeps the scores from the query that found it.
+    One query is exactly hybrid_retrieve_timed. Returns (results, retrieve_ms, rerank_ms)."""
+    if len(queries) == 1:
+        return hybrid_retrieve_timed(queries[0], top_k, index_dir=index_dir, access=access,
+                                     pool_size=pool_size)
+    top_k = top_k or settings.multistep_top_k
+    share = -(-(pool_size or RERANK_POOL_SIZE) // len(queries))
+    rankings, retrieve_ms, rerank_ms = [], 0.0, 0.0
+    for q in queries:
+        ranked, r_ms, k_ms = hybrid_retrieve_timed(q, top_k, index_dir=index_dir, access=access,
+                                                   pool_size=share)
+        rankings.append(ranked)
+        retrieve_ms += r_ms
+        rerank_ms += k_ms
+    merged: list[RetrievedChunk] = []
+    seen: set[str] = set()
+    for rank in range(top_k):
+        for ranked in rankings:
+            if rank < len(ranked) and ranked[rank].chunk_id not in seen and len(merged) < top_k:
+                seen.add(ranked[rank].chunk_id)
+                merged.append(ranked[rank])
+    return merged, retrieve_ms, rerank_ms
+
+
 def hybrid_retrieve(
     question: str,
     top_k: int | None = None,

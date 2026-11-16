@@ -63,7 +63,8 @@ from sentinel.guardrails.injection import ScreeningCache, default_detectors, tex
 from sentinel.guardrails.input import input_detectors
 from sentinel.guardrails.output import guard_answer
 from sentinel.logging_config import configure_logging, log
-from sentinel.retrieve import Access, hybrid_retrieve, warmup
+from sentinel.plan import planned_retrieve
+from sentinel.retrieve import DEFAULT_ACCESS, Access, hybrid_retrieve, warmup
 from sentinel.schema import Chunk, RetrievedChunk
 from sentinel.spend import BudgetExceeded, meter
 
@@ -187,6 +188,12 @@ def _attack_markers() -> list[str]:
     return sorted({m for a in _load_jsonl(ADVERSARIAL_DIR / "questions.jsonl") for m in a["markers"]})
 
 
+def _retrieve(question: str, index_dir=None, access: Access = DEFAULT_ACCESS):
+    """Retrieval as the service does it: with query planning on, the planner may split the
+    question first, so an attack is measured on the passages a planned search hands over."""
+    return planned_retrieve(question, index_dir=index_dir, access=access)
+
+
 def _attack(question: str, chunks: list[RetrievedChunk], cfg: Config) -> dict:
     """One attack through the real pipeline under `cfg`. Retrieval is done by the caller."""
     ctx, redacted = pii.redact_chunks(chunks) if cfg.output_guard else (chunks, Counter())
@@ -214,7 +221,7 @@ def run_attacks(configs=CONFIGS, repeats: int = 1, workers: int = 6) -> dict:
     for a in attacks:
         for enforce in {c.screening for c in configs}:
             access = Access(scopes=ATTACK_SCOPES, include_quarantined=not enforce)
-            retrieved[(a["question"], enforce)] = hybrid_retrieve(
+            retrieved[(a["question"], enforce)] = _retrieve(
                 a["question"], index_dir=ADVERSARIAL_INDEX_DIR, access=access
             )
 
@@ -323,7 +330,7 @@ def input_guard_eval(repeats: int = 1, workers: int = 6) -> dict:
         detection[rule] = block
 
     attacks = [(i, r) for i, r in enumerate(rows) if r["label"] == "attack"]
-    retrieved = {r["text"]: hybrid_retrieve(r["text"]) for _, r in attacks}
+    retrieved = {r["text"]: _retrieve(r["text"]) for _, r in attacks}
 
     def run(job):
         (i, r), rep = job
@@ -534,7 +541,8 @@ def _gate(report: dict) -> bool:
         f"| {ci(usr)} | {'✅' if ok_usr else '❌'} |",
         "",
         f"_generation `{settings.generation_model}` · screening "
-        f"`{', '.join(d.name for d in default_detectors())}` · metered Groq spend ${meter.usd:.3f}_",
+        f"`{', '.join(d.name for d in default_detectors())}` · query planning "
+        f"{'on' if settings.query_planning else 'off'} · metered Groq spend ${meter.usd:.3f}_",
     ])
     print(md)
     if path := os.getenv("GITHUB_STEP_SUMMARY"):

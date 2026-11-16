@@ -22,7 +22,7 @@ from pathlib import Path
 ANSWER_EVENTS = ("query", "query.refused")
 ALL_EVENTS = (*ANSWER_EVENTS, "query.budget_exhausted", "feedback")
 # Per-stage timings, in pipeline order, then the two end-to-end ones a reader feels.
-STAGES = ("retrieve", "rerank", "generate", "guard", "answer_check")
+STAGES = ("plan", "retrieve", "rerank", "generate", "guard", "answer_check")
 END_TO_END = ("first_token", "request")
 
 

@@ -167,6 +167,17 @@ class Settings(BaseSettings):
     # quality falls (10: recall@5 0.743).
     rerank_pool_size: int = 50
     rerank_top_k: int = 5                  # cross-encoder output (fused top-N -> top-K)
+    # Multi-step questions (sentinel/plan.py): a small model splits a question that asks about
+    # several things into up to 3 search queries; each is retrieved and reranked on its own share
+    # of the rerank pool, and the results are merged round-robin into multistep_top_k passages.
+    # A question the planner doesn't split takes the single-question path unchanged. On by
+    # default: on 16 two-part questions it covered 22 / 32 parts vs 15 / 32 and cut abstentions
+    # from 6 to 1; it split 2 of the 48 ordinary questions without changing their results; the
+    # injection gate passed with it on (data/multistep_eval.json, data/guardrails/
+    # gate_with_planning.json). Costs one gpt-oss-20b call (~$0.0001, ~0.3 s) per question.
+    query_planning: bool = True
+    planner_model: str = "openai/gpt-oss-20b"   # on generation_provider
+    multistep_top_k: int = 6               # passages for a split question (2-3 per part)
 
     # ---------------------------------------------------------------- Eval + gate (§12/§13)
     faithfulness_threshold: float = 0.80   # CI gate fails below this

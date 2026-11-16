@@ -64,7 +64,9 @@ from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening, screen_qu
 from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_citations
 from sentinel.guardrails.pii import redact, redact_chunks
 from sentinel.logging_config import configure_logging, log
-from sentinel.retrieve import Access, hybrid_retrieve_timed
+from sentinel.plan import Plan
+from sentinel.plan import plan as plan_question
+from sentinel.retrieve import Access, hybrid_retrieve_timed, multi_retrieve_timed
 from sentinel.spend import meter, start_request_cost
 from sentinel.users import User, UserStore
 from sentinel.schema import (
@@ -90,6 +92,14 @@ class QueryEngine:
         self, question: str, top_k: int | None, access: Access
     ) -> tuple[list[RetrievedChunk], float, float]:
         return hybrid_retrieve_timed(question, top_k, access=access)
+
+    def plan(self, question: str) -> Plan:
+        return plan_question(question)
+
+    def retrieve_many(
+        self, queries: list[str], top_k: int | None, access: Access
+    ) -> tuple[list[RetrievedChunk], float, float]:
+        return multi_retrieve_timed(queries, top_k, access=access)
 
     def generate_tokens(self, question: str, chunks: list[RetrievedChunk]) -> Iterator[str]:
         return generate(question, chunks)
@@ -211,9 +221,16 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         if screening.flagged:
             yield from _refusal(user, req, screening, guard_s, answer_id, cost)
             return
-    chunks, latency["retrieve"], latency["rerank"] = engine.retrieve(
-        req.question, req.top_k, Access(scopes=user.scopes)
-    )
+    access = Access(scopes=user.scopes)
+    plan = engine.plan(req.question) if settings.query_planning else None
+    if plan is not None:
+        latency["plan"] = plan.latency_ms
+    if plan is not None and plan.multi:
+        chunks, latency["retrieve"], latency["rerank"] = engine.retrieve_many(
+            plan.queries, req.top_k, access)
+    else:
+        chunks, latency["retrieve"], latency["rerank"] = engine.retrieve(
+            req.question, req.top_k, access)
     t = time.perf_counter()
     redactions: dict[str, int] = {}
     if settings.redact_context_pii:
@@ -299,6 +316,7 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         latency_ms=LatencyMs(**latency),
         guardrails=guardrails,
         answer_id=answer_id,
+        sub_questions=plan.queries if plan is not None and plan.multi else [],
     )
 
     # The question and answer are logged (PII scrubbed) so feedback can be reviewed against
@@ -313,6 +331,8 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         user=user.subject,
         scopes=sorted(user.scopes),
         chunk_ids=[c.chunk_id for c in chunks],
+        sub_queries=len(plan.queries) if plan is not None else None,
+        plan_error=plan.error if plan is not None else None,
         latency_ms={k: round(v, 1) for k, v in latency.items()},
         # End to end inside the service: the first word the reader saw, and the whole request.
         first_token_ms=round((first_token[0] - t_request) * 1000.0, 1) if first_token else None,

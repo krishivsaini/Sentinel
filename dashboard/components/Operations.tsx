@@ -7,6 +7,7 @@ import { Card, PageHead, SectionLabel, StatCard } from "./ui";
 // the live service's own structured logs. Nothing is computed in the UI beyond formatting.
 
 const STAGE_LABEL: Record<string, string> = {
+  plan: "Plan — split a multi-part question",
   retrieve: "Retrieve — dense + BM25 + RRF",
   rerank: "Rerank — cross-encoder, 50 candidates",
   generate: "Generate — gpt-oss-20b",

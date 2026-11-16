@@ -95,6 +95,30 @@ Gold passages are exact chunk texts, so the first three columns need no judge ([
 - **The reranker earns its latency** — recall@5 +0.11, MRR 0.57 → 0.76 (6 questions rescued, 3 lost).
 - **The judged metric can't see it** — Ragas context recall credits *any* supporting passage, which is why the ablation also reports judge-free ranking metrics.
 
+### Multi-part questions
+
+"What port does DNS over TLS use, and which media type must DoH support?" needs passages from two RFCs. A single search's top 5 tends to fill up from whichever half matches best. With query planning on, a small model splits such a question into up to 3 standalone searches ([`plan.py`](sentinel/plan.py)). Each search is reranked on its share of the same 50-candidate budget, and the results are merged in turn, one from each search. Measured on [16 two-part questions](data/multistep_questions.jsonl) ([report](data/multistep_eval.json)):
+
+| | Single search (ships) | Planned |
+|---|---|---|
+| Parts with a gold passage retrieved | 15 / 32 | **22 / 32** |
+| Questions with every part covered | 4 / 16 | **7 / 16** |
+| Context recall (judge) | 0.688 | **0.844** |
+| Answers that abstained | 6 / 16 | **1 / 16** |
+| Faithfulness | 0.956 | 0.958 |
+| Retrieve + rerank, p50 | 993 ms | 967 ms, + 288 ms planner call |
+
+- **Not just one more passage:** a split question gets 6 passages, but a single search's top 6 covers the same 15 / 32 parts as its top 5.
+- **It rarely splits ordinary questions:** of the 48 single-topic ground-truth questions it split 2 (429 plus its header, and PATCH plus idempotency), and both kept their hit and recall.
+- **It isn't free of losses:** on one question the planned search lost the HS256 passage a single search had found (context recall 1.0 → 0.5), and it left 3 of the 16 questions whole.
+- **The gold lists are strict:** one to three chunks per part, fixed before the run. Several remaining "misses" retrieved a neighbouring chunk of the right RFC.
+- **The set is small and Claude-drafted:** Claude drafted the 16 questions and reference answers from the RFC text, then reviewed each claim against the gold passages and cut three that went beyond them. A loader checks each part's verbatim evidence quote, and that its gold list holds every chunk containing the quote (chunks overlap). No person has reviewed them.
+- **Fewer abstentions, not more faithful answers:** faithfulness is level. On the TCP/QUIC question the planned answer stopped abstaining, but part of it went beyond its passages (faithfulness 0.67).
+- **Three answers re-judged:** after the review, those three items' answers were generated and judged again, since generation varies between runs.
+- **What it cost:** the eval runs cost $0.090 in total.
+
+**It's on by default.** The injection gate was run with planning on, and it passed: 0 / 50 poisoned-document attacks and 0 / 35 attacks in the question got through with the input guard ([results](data/guardrails/gate_with_planning.json); one run, against 0 / 50 and 1.33 / 35 without planning, so read it as no worse, not better). The planner sees only questions that passed the input guard, and it can only choose search queries. Each question costs one extra `gpt-oss-20b` call (~$0.0001, ~0.3 s). The faithfulness eval and the injection gate retrieve the same way the service does. `SENTINEL_QUERY_PLANNING=false` turns it off.
+
 ### Is the judge trustworthy?
 
 `gpt-oss-120b` on Groq, compared with hand labels — the second time with every judge score hidden:
@@ -201,8 +225,9 @@ Reranking is the bottleneck. A [measured sweep](data/rerank_pool_sweep.json) sho
 
 ```mermaid
 flowchart LR
-    Q["Question"] --> D["Dense search<br/>FAISS · bge-small<br/>top-50"]
-    Q --> S["Sparse search<br/>BM25<br/>top-50"]
+    Q["Question"] --> PL["Query planner<br/>splits a multi-part<br/>question (≤ 3 searches)"]
+    PL --> D["Dense search<br/>FAISS · bge-small<br/>top-50"]
+    PL --> S["Sparse search<br/>BM25<br/>top-50"]
     D --> F["Reciprocal Rank<br/>Fusion (k=60)"]
     S --> F
     F --> R["Cross-encoder<br/>rerank → top-5"]
@@ -231,6 +256,7 @@ flowchart LR
 | **Corpus** | 48 current RFCs — HTTP, URIs, TLS 1.3, QUIC, TCP, DNS, cookies, WebSocket, OAuth, JOSE — in 16 clusters → **2,888 chunks** ([manifest](data/corpus_manifest.json)) |
 | **[Ingestion](sentinel/ingest.py)** | clean → chunk (512 tokens, 12% overlap) → embed locally → FAISS **and** BM25 over the same chunk ids; idempotent, and incremental: only new or changed RFCs are chunked, screened and embedded |
 | **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen. Dense search runs in FAISS, or in Postgres with [pgvector](sentinel/vectorstore.py) behind one setting |
+| **[Query planning](sentinel/plan.py)** | splits a multi-part question into up to 3 searches that share one rerank budget; a question it doesn't split takes the ordinary path, and a planner failure falls back to it |
 | **[Generation](sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
 | **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, `GET /me`; rate limited per account (per IP for the demo account and sign-in) |
 | **[Evaluation](sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
@@ -411,6 +437,7 @@ uv run python -m sentinel.eval.run_eval --write-baseline 4 # refresh main's base
 uv run python -m sentinel.eval.run_guardrails              # every guardrail, 3 runs each
 uv run python -m sentinel.eval.run_guardrails --ci         # the injection gate
 uv run python -m sentinel.eval.run_bipia --max-spend 0.60  # the independent attack set
+uv run python -m sentinel.eval.run_multistep --judge --max-spend 0.25  # multi-part questions, planned vs not
 uv run pytest                                              # tests (live-LLM tests skipped by default)
 ```
 
@@ -433,6 +460,7 @@ Everything tunable lives in [`config.py`](sentinel/config.py) and can be overrid
 | `SENTINEL_JWT_SECRET` | yes | signs API tokens |
 | `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | the shared demo account (default scope only) |
 | `SENTINEL_USERS_FILE` | no | named accounts: scrypt hashes and scopes, managed with `scripts/users.py` |
+| `SENTINEL_QUERY_PLANNING` | no | `false` turns off splitting multi-part questions into separate searches (on by default) |
 | `SENTINEL_VECTOR_STORE` / `SENTINEL_DATABASE_URL` | no | `faiss` (default) or `pgvector`, and the Postgres to use (default: the local container) |
 | `SENTINEL_SPEND_LIMIT_USD` | no | stop any run once its metered spend reaches this |
 | `SENTINEL_TORCH_DEVICE` | no | `cpu` (default), `mps` or `cuda` for the local models |
@@ -452,6 +480,7 @@ Sentinel/
 │   ├── ingest.py            # load → clean → chunk → embed → FAISS + BM25
 │   ├── retrieve.py          # dense + sparse → RRF → cross-encoder rerank
 │   ├── vectorstore.py       # dense search in Postgres + pgvector; incremental sync from an index
+│   ├── plan.py              # query planner: splits a multi-part question into searches
 │   ├── generate.py          # grounded, cited generation with abstention
 │   ├── llm.py               # provider-agnostic chat-model factory
 │   ├── serve.py             # FastAPI: JWT scopes, rate limiting, SSE, guardrails
@@ -469,6 +498,7 @@ Sentinel/
 │       ├── run_eval.py      # Ragas pipeline, checkpointed + resumable, faithfulness gate
 │       ├── run_guardrails.py# attack evals, detector + PII metrics, injection gate
 │       ├── run_bipia.py     # the independent BIPIA attack set, judged, spend-capped
+│       ├── run_multistep.py # multi-part questions: part coverage, over-splitting, judged answers
 │       ├── stats.py         # exact confidence intervals for small samples
 │       ├── attribution.py   # retrieval- vs generation-failure classifier
 │       └── store.py         # SQLite persistence + JSON export
@@ -476,6 +506,8 @@ Sentinel/
 │   ├── corpus/              # the 48 RFCs, verbatim
 │   ├── corpus_manifest.json # pinned RFC list + clusters
 │   ├── ground_truth.jsonl   # hand-built eval set
+│   ├── multistep_questions.jsonl # 16 two-part questions, gold chunks + evidence per part
+│   ├── multistep_eval.json  # single search vs planned, per question
 │   ├── ground_truth_audit.md# second-pass review + judge calibration
 │   ├── faithfulness_baseline.json # main's per-question scores, for the relative gate
 │   ├── retrieval_ablation.json # dense / BM25 / fusion / rerank, per question
@@ -518,6 +550,7 @@ Stated plainly:
 |---|---|
 | **Scope** | One corpus (IETF RFCs), 48 hand-built questions, one demo tenant. The pipeline is generic; the numbers aren't claimed to transfer. |
 | **Accounts** | A file, not a database: accounts are added by the operator (no sign-up, no password reset), and every instance re-reads the same file. Fine for a handful of accounts. The production RFC index holds only `public` chunks, so a named account's extra scopes have nothing more to retrieve there yet. |
+| **Multi-part questions** | Planning is measured on 16 two-part questions that Claude drafted and reviewed, with no person's review. It still covers every part of only 7 of them, and its gate run is a single run. |
 | **The judge** | A model, calibrated against one labeller (blind r = +0.78). Judged context recall is too coarse to tell fusion from reranking. |
 | **The CI gate** | Sees 24 of 48 questions, faithfulness only. The baseline comes from 4 runs, so about 1 healthy PR in 40 may fail by chance; regressions under ~0.07 pass. Refresh the baseline when main changes generation on purpose. |
 | **Attack sets** | The 85 hand-written attacks share an author with the defences; BIPIA showed the bias — screening caught 59% of its attacks vs 93% of our dev and held-out ones. A second policy now catches 74 / 75, but it was written because of that result, so BIPIA is no longer a fully independent test of screening. |

@@ -26,6 +26,8 @@ type Done = {
   latency_ms: Record<string, number>;
   guardrails?: Guardrails | null;
   answer_id?: string | null;
+  // The search queries a multi-part question was split into (query planning); empty otherwise.
+  sub_questions?: string[];
 };
 
 const rfc = (docId: string) => docId.replace(/^rfc/i, "RFC ");
@@ -337,8 +339,15 @@ function AnswerFooter({ done }: { done: Done }) {
             .join(" · ")}
         </div>
       )}
+      {(done.sub_questions?.length ?? 0) > 1 && (
+        <div className="mb-2 text-[11.5px] text-text-4">
+          searched in {done.sub_questions!.length} parts: {done.sub_questions!.map((q) => `“${q}”`).join(" · ")}
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5">
-        {Object.entries(done.latency_ms).map(([stage, ms]) => (
+        {Object.entries(done.latency_ms)
+          .filter(([stage, ms]) => stage !== "plan" || ms > 0)
+          .map(([stage, ms]) => (
           <span key={stage} className="rounded-[5px] bg-chip px-1.5 py-0.5 font-mono text-[10.5px] text-text-3">
             {stage} {Math.round(ms)} ms
           </span>

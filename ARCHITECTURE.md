@@ -23,7 +23,8 @@ flowchart TB
 
     subgraph online["Online: POST /query, SSE"]
         Q["question + JWT"] --> IN["input guard"]
-        IN --> RET["dense top-50 + BM25 top-50<br/>scope + quarantine filter inside both"]
+        IN --> PL["query planner<br/>multi-part question → ≤ 3 searches"]
+        PL --> RET["dense top-50 + BM25 top-50<br/>scope + quarantine filter inside both"]
         RET --> RRF["RRF fusion, k=60"] --> RR["cross-encoder rerank<br/>pool 50 → top 5"]
         RR --> PII["PII redaction of passages"]
         PII --> GEN["generation, gpt-oss-20b<br/>passages fenced as untrusted"]
@@ -59,6 +60,7 @@ Three properties hold throughout:
 |---|---|---|---|
 | Auth + rate limit | [`serve.py`](sentinel/serve.py), [`users.py`](sentinel/users.py) | JWT bearer with document scopes, issued from a user store (scrypt hashes); slowapi limit per named account, per IP for the shared demo account and sign-in | Scopes come from the signed token, never the request, and every token is re-checked against its account |
 | Input guard | [`guardrails/input.py`](sentinel/guardrails/input.py) | gpt-oss-safeguard-20b with an input policy; a flagged question gets a fixed refusal | Chosen over Prompt Guard by measurement: it refused 0 of 88 genuine questions, Prompt Guard 2 |
+| Query planning (on by default) | [`plan.py`](sentinel/plan.py) | one gpt-oss-20b call splits a multi-part question into up to 3 standalone searches; each is reranked on ceil(50 / n) candidates and the results are merged in turn, one from each search, into 6 passages. The answer is generated against the original question | A single search's top 5 fills up from one half of a two-part question (15 / 32 parts covered vs 22 / 32 planned). It fails open to the question as asked, and an unsplit question takes the ordinary path unchanged. The injection gate passed with it on, and both gates retrieve through it, as the service does |
 | Dense + sparse | [`retrieve.py`](sentinel/retrieve.py) | FAISS (bge-small) top 50 and BM25 top 50 | BM25 recovers exact terms — header names, status codes — that dense misses |
 | Access filter | `retrieve.Access` | scope and quarantine applied **inside** both searches (FAISS id selector or a pgvector `WHERE` clause; BM25 mask) | A post-filter would let a blocked chunk take a candidate slot or reach the reranker |
 | Fusion | `rrf_fuse` | Reciprocal Rank Fusion, k = 60 | The two retrievers' scores aren't comparable; ranks are |
@@ -160,7 +162,10 @@ flowchart LR
 - **Full reports run locally**: [`run_eval.py`](sentinel/eval/run_eval.py) (all 48, all three
   metrics), [`run_guardrails.py`](sentinel/eval/run_guardrails.py) (seven defence configurations
   × 3 repeats, exact Clopper–Pearson intervals), [`run_bipia.py`](sentinel/eval/run_bipia.py)
-  (the independent set, judged).
+  (the independent set, judged), [`run_multistep.py`](sentinel/eval/run_multistep.py) (16
+  two-part questions: per-part coverage against gold chunks whose evidence quotes are checked
+  against the index, an over-splitting check on the 48 ordinary questions, and judged answers
+  with planning on and off).
 - **Path-filtered CI** — a `changes` job runs the paid gates only when code or gate data changed.
 
 ---
@@ -198,7 +203,9 @@ tuning, measurement and the gates.
   chat models come through LangChain so generation and the Ragas judge share one factory.
 - **Not used where it hides what we measure:** `EnsembleRetriever` fuses internally and doesn't
   expose per-retriever ranks and scores, so the served path computes RRF explicitly to keep all
-  four scores per chunk. No agents or query planners — retrieval is one inspectable pipeline.
+  four scores per chunk. The optional query planner ([`plan.py`](sentinel/plan.py)) is one
+  direct model call returning JSON, not an agent loop: it can only choose search queries, never
+  tools or actions, and each query still runs the same inspectable pipeline.
 - **Not used for the guardrail classifiers:** they call Groq's REST API directly
   ([`_groq.py`](sentinel/guardrails/_groq.py)), because Prompt Guard rejects the output-token
   budget the LangChain client sends on every call.

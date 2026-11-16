@@ -1,0 +1,1396 @@
+{
+ "generated_utc": "2026-11-16T10:55:54Z",
+ "planner_model": "openai/gpt-oss-20b",
+ "multistep_top_k": 6,
+ "retrieval": {
+  "multi_part": {
+   "questions": 16,
+   "split_by_planner": 13,
+   "plan_errors": 0,
+   "single_top5": {
+    "parts_covered": "15/32",
+    "parts_covered_rate": 0.469,
+    "all_parts_covered": "4/16"
+   },
+   "single_top6": {
+    "parts_covered": "15/32",
+    "parts_covered_rate": 0.469,
+    "all_parts_covered": "4/16"
+   },
+   "planned": {
+    "parts_covered": "22/32",
+    "parts_covered_rate": 0.688,
+    "all_parts_covered": "7/16"
+   },
+   "latency_ms_p50": {
+    "plan": 287.9,
+    "single_retrieve_rerank": 998.5,
+    "planned_retrieve_rerank": 978.3
+   }
+  },
+  "single_topic": {
+   "questions": 48,
+   "split_by_planner": 2,
+   "plan_errors": 0,
+   "split_questions": [
+    {
+     "question": "What does the HTTP 429 status code indicate, and what header may the response include?",
+     "queries": [
+      "HTTP 429 status code meaning",
+      "HTTP 429 response header that may be included"
+     ],
+     "single": {
+      "hit": 1.0,
+      "recall": 1.0
+     },
+     "planned": {
+      "hit": 1.0,
+      "recall": 1.0
+     }
+    },
+    {
+     "question": "What is the HTTP PATCH method used for, and is it idempotent?",
+     "queries": [
+      "What is the HTTP PATCH method used for?",
+      "Is the HTTP PATCH method idempotent?"
+     ],
+     "single": {
+      "hit": 1.0,
+      "recall": 1.0
+     },
+     "planned": {
+      "hit": 1.0,
+      "recall": 1.0
+     }
+    }
+   ],
+   "hit_single": 2.0,
+   "hit_planned": 2.0
+  },
+  "per_question": [
+   {
+    "question": "What port does DNS over TLS use by default, and which media type must DNS over HTTPS clients and servers support?",
+    "queries": [
+     "DNS over TLS default port",
+     "DNS over HTTPS media type that clients and servers must support"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      false
+     ],
+     "single_top6": [
+      true,
+      false
+     ],
+     "planned": [
+      true,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc7858#0006",
+     "rfc8484#0003",
+     "rfc7858#0014",
+     "rfc8484#0011",
+     "rfc7858#0005",
+     "rfc7858#0015"
+    ],
+    "single_ids": [
+     "rfc7858#0006",
+     "rfc7858#0005",
+     "rfc8484#0003",
+     "rfc8484#0013",
+     "rfc7858#0009"
+    ]
+   },
+   {
+    "question": "How does a WebSocket server compute the Sec-WebSocket-Accept value, and what does the 101 Switching Protocols status code mean in HTTP?",
+    "queries": [
+     "RFC 6455 Sec-WebSocket-Accept computation",
+     "HTTP 101 Switching Protocols status code meaning"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      false
+     ],
+     "single_top6": [
+      true,
+      false
+     ],
+     "planned": [
+      true,
+      false
+     ]
+    },
+    "planned_ids": [
+     "rfc6455#0071",
+     "rfc6455#0012",
+     "rfc6455#0072",
+     "rfc6455#0032",
+     "rfc6455#0070",
+     "rfc6455#0060"
+    ],
+    "single_ids": [
+     "rfc6455#0032",
+     "rfc6455#0012",
+     "rfc6455#0011",
+     "rfc6455#0025",
+     "rfc6455#0033"
+    ]
+   },
+   {
+    "question": "How is an OAuth 2.0 bearer token sent in the Authorization header, and what does the invalid_token error mean?",
+    "queries": [
+     "How is an OAuth 2.0 bearer token sent in the Authorization header, and what does the invalid_token error mean?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      true
+     ],
+     "single_top6": [
+      true,
+      true
+     ],
+     "planned": [
+      true,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc6750#0004",
+     "rfc8628#0012",
+     "rfc6750#0009",
+     "rfc7636#0009",
+     "rfc6749#0047"
+    ],
+    "single_ids": [
+     "rfc6750#0004",
+     "rfc8628#0012",
+     "rfc6750#0009",
+     "rfc7636#0009",
+     "rfc6749#0047"
+    ]
+   },
+   {
+    "question": "How does PKCE derive the S256 code challenge from the code verifier, and what does the device authorization grant's verification_uri tell the user?",
+    "queries": [
+     "How does PKCE derive the S256 code challenge from the code verifier?",
+     "What does the device authorization grant's verification_uri tell the user?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      false
+     ],
+     "single_top6": [
+      true,
+      false
+     ],
+     "planned": [
+      true,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc7636#0008",
+     "rfc8628#0007",
+     "rfc7636#0007",
+     "rfc8628#0009",
+     "rfc7636#0010",
+     "rfc8628#0005"
+    ],
+    "single_ids": [
+     "rfc7636#0008",
+     "rfc7636#0007",
+     "rfc7636#0010",
+     "rfc7636#0018",
+     "rfc7636#0009"
+    ]
+   },
+   {
+    "question": "How does TCP establish a connection, and how does the QUIC handshake differ in what it negotiates?",
+    "queries": [
+     "TCP connection establishment process",
+     "QUIC handshake differences in negotiation compared to TCP"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      false,
+      false
+     ],
+     "single_top6": [
+      false,
+      false
+     ],
+     "planned": [
+      false,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc9293#0017",
+     "rfc9001#0046",
+     "rfc9113#0009",
+     "rfc9000#0007",
+     "rfc9293#0062",
+     "rfc9001#0007"
+    ],
+    "single_ids": [
+     "rfc9000#0030",
+     "rfc9114#0027",
+     "rfc9000#0040",
+     "rfc9114#0010",
+     "rfc9114#0009"
+    ]
+   },
+   {
+    "question": "What does the Secure attribute do for a cookie, and how does the HSTS includeSubDomains directive affect subdomains?",
+    "queries": [
+     "What does the Secure attribute do for a cookie?",
+     "How does the HSTS includeSubDomains directive affect subdomains?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      false,
+      false
+     ],
+     "single_top6": [
+      false,
+      false
+     ],
+     "planned": [
+      true,
+      false
+     ]
+    },
+    "planned_ids": [
+     "rfc6265#0014",
+     "rfc6797#0031",
+     "rfc6265#0004",
+     "rfc6797#0029",
+     "rfc6265#0013",
+     "rfc6797#0039"
+    ],
+    "single_ids": [
+     "rfc6797#0037",
+     "rfc6797#0029",
+     "rfc6797#0039",
+     "rfc6797#0031",
+     "rfc6265#0014"
+    ]
+   },
+   {
+    "question": "What does the exp claim mean in a JWT, and which JWS algorithm does HS256 identify?",
+    "queries": [
+     "What does the exp claim mean in a JWT?",
+     "Which JWS algorithm does HS256 identify?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      false
+     ],
+     "single_top6": [
+      true,
+      false
+     ],
+     "planned": [
+      true,
+      false
+     ]
+    },
+    "planned_ids": [
+     "rfc7519#0013",
+     "rfc7519#0021",
+     "rfc9068#0010",
+     "rfc7515#0048",
+     "rfc7519#0009",
+     "rfc7515#0009"
+    ],
+    "single_ids": [
+     "rfc7519#0009",
+     "rfc7519#0008",
+     "rfc7519#0017",
+     "rfc7515#0009",
+     "rfc7519#0013"
+    ]
+   },
+   {
+    "question": "How do the 301 and 308 status codes differ in whether a user agent may change the request method?",
+    "queries": [
+     "How do the 301 and 308 status codes differ in whether a user agent may change the request method?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      true
+     ],
+     "single_top6": [
+      true,
+      true
+     ],
+     "planned": [
+      true,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc9110#0178",
+     "rfc9110#0174",
+     "rfc9110#0177",
+     "rfc9110#0180",
+     "rfc9110#0181"
+    ],
+    "single_ids": [
+     "rfc9110#0178",
+     "rfc9110#0174",
+     "rfc9110#0177",
+     "rfc9110#0180",
+     "rfc9110#0181"
+    ]
+   },
+   {
+    "question": "What does a revoked status in an OCSP response mean, and what does the CRL distribution points extension in an X.509 certificate identify?",
+    "queries": [
+     "OCSP response revoked status meaning",
+     "CRL distribution points extension X.509 certificate identify"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      false,
+      false
+     ],
+     "single_top6": [
+      false,
+      false
+     ],
+     "planned": [
+      false,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc6960#0007",
+     "rfc5280#0055",
+     "rfc6960#0024",
+     "rfc5280#0085",
+     "rfc6960#0008",
+     "rfc5280#0072"
+    ],
+    "single_ids": [
+     "rfc6960#0007",
+     "rfc6960#0024",
+     "rfc6960#0017",
+     "rfc6960#0019",
+     "rfc6960#0023"
+    ]
+   },
+   {
+    "question": "How does the ACME dns-01 challenge prove control of a domain, and what are TXT resource records for in the DNS?",
+    "queries": [
+     "ACME dns-01 challenge how it proves control of a domain",
+     "TXT resource records purpose in DNS"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      false
+     ],
+     "single_top6": [
+      true,
+      false
+     ],
+     "planned": [
+      true,
+      false
+     ]
+    },
+    "planned_ids": [
+     "rfc8555#0069",
+     "rfc8555#0068",
+     "rfc8555#0070",
+     "rfc8555#0066",
+     "rfc1034#0005",
+     "rfc8555#0083"
+    ],
+    "single_ids": [
+     "rfc8555#0069",
+     "rfc8555#0068",
+     "rfc8555#0083",
+     "rfc8555#0070",
+     "rfc8555#0066"
+    ]
+   },
+   {
+    "question": "What does the no-store cache directive require of a cache, and what does the ETag response field provide?",
+    "queries": [
+     "What does the no-store cache directive require of a cache, and what does the ETag response field provide?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      false
+     ],
+     "single_top6": [
+      true,
+      false
+     ],
+     "planned": [
+      true,
+      false
+     ]
+    },
+    "planned_ids": [
+     "rfc9111#0031",
+     "rfc9111#0029",
+     "rfc9111#0030",
+     "rfc9111#0012",
+     "rfc9111#0032"
+    ],
+    "single_ids": [
+     "rfc9111#0031",
+     "rfc9111#0029",
+     "rfc9111#0030",
+     "rfc9111#0012",
+     "rfc9111#0032"
+    ]
+   },
+   {
+    "question": "Which ALPN protocol identifiers select HTTP/2 over TLS and HTTP/3?",
+    "queries": [
+     "ALPN protocol identifiers for HTTP/2 over TLS",
+     "ALPN protocol identifiers for HTTP/3"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      true
+     ],
+     "single_top6": [
+      true,
+      true
+     ],
+     "planned": [
+      true,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc9113#0008",
+     "rfc9114#0057",
+     "rfc7301#0006",
+     "rfc9114#0009",
+     "rfc9112#0045",
+     "rfc7301#0005"
+    ],
+    "single_ids": [
+     "rfc9113#0008",
+     "rfc9114#0009",
+     "rfc9114#0057",
+     "rfc9113#0009",
+     "rfc9113#0080"
+    ]
+   },
+   {
+    "question": "When must a TLS 1.3 server send a HelloRetryRequest, and what does the HostName in the server_name extension contain?",
+    "queries": [
+     "When must a TLS 1.3 server send a HelloRetryRequest?",
+     "What does the HostName in the server_name extension contain in TLS 1.3?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      false,
+      false
+     ],
+     "single_top6": [
+      false,
+      false
+     ],
+     "planned": [
+      false,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc8446#0040",
+     "rfc6066#0005",
+     "rfc8446#0032",
+     "rfc6066#0006",
+     "rfc8446#0031",
+     "rfc8446#0029"
+    ],
+    "single_ids": [
+     "rfc8446#0040",
+     "rfc8446#0031",
+     "rfc8446#0025",
+     "rfc8446#0032",
+     "rfc8446#0029"
+    ]
+   },
+   {
+    "question": "What does the {+var} reserved expansion do in a URI Template, and which characters are reserved in the generic URI syntax?",
+    "queries": [
+     "What does the {+var} reserved expansion do in a URI Template?",
+     "Which characters are reserved in the generic URI syntax?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      false,
+      false
+     ],
+     "single_top6": [
+      false,
+      false
+     ],
+     "planned": [
+      false,
+      false
+     ]
+    },
+    "planned_ids": [
+     "rfc6570#0034",
+     "rfc3986#0067",
+     "rfc6570#0005",
+     "rfc6570#0019",
+     "rfc6570#0030",
+     "rfc3986#0018"
+    ],
+    "single_ids": [
+     "rfc6570#0019",
+     "rfc6570#0005",
+     "rfc6570#0034",
+     "rfc6570#0014",
+     "rfc6570#0020"
+    ]
+   },
+   {
+    "question": "What does the kty parameter of a JSON Web Key identify, and what does the enc header parameter of a JWE identify?",
+    "queries": [
+     "kty parameter of a JSON Web Key identify",
+     "enc header parameter of a JWE identify"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      true
+     ],
+     "single_top6": [
+      true,
+      true
+     ],
+     "planned": [
+      true,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc7517#0008",
+     "rfc7516#0017",
+     "rfc7517#0009",
+     "rfc7516#0029",
+     "rfc7518#0040",
+     "rfc7518#0033"
+    ],
+    "single_ids": [
+     "rfc7516#0017",
+     "rfc7517#0009",
+     "rfc7517#0015",
+     "rfc7518#0040",
+     "rfc7517#0008"
+    ]
+   },
+   {
+    "question": "How is the relation type of a link conveyed in the HTTP Link header, and what path prefix do well-known URIs use?",
+    "queries": [
+     "How is the relation type of a link conveyed in the HTTP Link header?",
+     "What path prefix do well-known URIs use?"
+    ],
+    "plan_error": null,
+    "coverage": {
+     "single_top5": [
+      true,
+      false
+     ],
+     "single_top6": [
+      true,
+      false
+     ],
+     "planned": [
+      true,
+      true
+     ]
+    },
+    "planned_ids": [
+     "rfc8288#0012",
+     "rfc8615#0000",
+     "rfc8288#0006",
+     "rfc8615#0005",
+     "rfc8288#0015",
+     "rfc8615#0004"
+    ],
+    "single_ids": [
+     "rfc8288#0012",
+     "rfc8288#0015",
+     "rfc8288#0021",
+     "rfc8288#0006",
+     "rfc8288#0005"
+    ]
+   }
+  ],
+  "plans": {
+   "What port does DNS over TLS use by default, and which media type must DNS over HTTPS clients and servers support?": {
+    "queries": [
+     "DNS over TLS default port",
+     "DNS over HTTPS media type that clients and servers must support"
+    ],
+    "error": null,
+    "latency_ms": 488.5
+   },
+   "How does a WebSocket server compute the Sec-WebSocket-Accept value, and what does the 101 Switching Protocols status code mean in HTTP?": {
+    "queries": [
+     "RFC 6455 Sec-WebSocket-Accept computation",
+     "HTTP 101 Switching Protocols status code meaning"
+    ],
+    "error": null,
+    "latency_ms": 265.3
+   },
+   "How is an OAuth 2.0 bearer token sent in the Authorization header, and what does the invalid_token error mean?": {
+    "queries": [
+     "How is an OAuth 2.0 bearer token sent in the Authorization header, and what does the invalid_token error mean?"
+    ],
+    "error": null,
+    "latency_ms": 194.4
+   },
+   "How does PKCE derive the S256 code challenge from the code verifier, and what does the device authorization grant's verification_uri tell the user?": {
+    "queries": [
+     "How does PKCE derive the S256 code challenge from the code verifier?",
+     "What does the device authorization grant's verification_uri tell the user?"
+    ],
+    "error": null,
+    "latency_ms": 375.6
+   },
+   "How does TCP establish a connection, and how does the QUIC handshake differ in what it negotiates?": {
+    "queries": [
+     "TCP connection establishment process",
+     "QUIC handshake differences in negotiation compared to TCP"
+    ],
+    "error": null,
+    "latency_ms": 658.7
+   },
+   "What does the Secure attribute do for a cookie, and how does the HSTS includeSubDomains directive affect subdomains?": {
+    "queries": [
+     "What does the Secure attribute do for a cookie?",
+     "How does the HSTS includeSubDomains directive affect subdomains?"
+    ],
+    "error": null,
+    "latency_ms": 521.4
+   },
+   "What does the exp claim mean in a JWT, and which JWS algorithm does HS256 identify?": {
+    "queries": [
+     "What does the exp claim mean in a JWT?",
+     "Which JWS algorithm does HS256 identify?"
+    ],
+    "error": null,
+    "latency_ms": 192.8
+   },
+   "How do the 301 and 308 status codes differ in whether a user agent may change the request method?": {
+    "queries": [
+     "How do the 301 and 308 status codes differ in whether a user agent may change the request method?"
+    ],
+    "error": null,
+    "latency_ms": 180.1
+   },
+   "What does a revoked status in an OCSP response mean, and what does the CRL distribution points extension in an X.509 certificate identify?": {
+    "queries": [
+     "OCSP response revoked status meaning",
+     "CRL distribution points extension X.509 certificate identify"
+    ],
+    "error": null,
+    "latency_ms": 171.8
+   },
+   "How does the ACME dns-01 challenge prove control of a domain, and what are TXT resource records for in the DNS?": {
+    "queries": [
+     "ACME dns-01 challenge how it proves control of a domain",
+     "TXT resource records purpose in DNS"
+    ],
+    "error": null,
+    "latency_ms": 310.3
+   },
+   "What does the no-store cache directive require of a cache, and what does the ETag response field provide?": {
+    "queries": [
+     "What does the no-store cache directive require of a cache, and what does the ETag response field provide?"
+    ],
+    "error": null,
+    "latency_ms": 528.9
+   },
+   "Which ALPN protocol identifiers select HTTP/2 over TLS and HTTP/3?": {
+    "queries": [
+     "ALPN protocol identifiers for HTTP/2 over TLS",
+     "ALPN protocol identifiers for HTTP/3"
+    ],
+    "error": null,
+    "latency_ms": 524.7
+   },
+   "When must a TLS 1.3 server send a HelloRetryRequest, and what does the HostName in the server_name extension contain?": {
+    "queries": [
+     "When must a TLS 1.3 server send a HelloRetryRequest?",
+     "What does the HostName in the server_name extension contain in TLS 1.3?"
+    ],
+    "error": null,
+    "latency_ms": 265.5
+   },
+   "What does the {+var} reserved expansion do in a URI Template, and which characters are reserved in the generic URI syntax?": {
+    "queries": [
+     "What does the {+var} reserved expansion do in a URI Template?",
+     "Which characters are reserved in the generic URI syntax?"
+    ],
+    "error": null,
+    "latency_ms": 253.3
+   },
+   "What does the kty parameter of a JSON Web Key identify, and what does the enc header parameter of a JWE identify?": {
+    "queries": [
+     "kty parameter of a JSON Web Key identify",
+     "enc header parameter of a JWE identify"
+    ],
+    "error": null,
+    "latency_ms": 194.7
+   },
+   "How is the relation type of a link conveyed in the HTTP Link header, and what path prefix do well-known URIs use?": {
+    "queries": [
+     "How is the relation type of a link conveyed in the HTTP Link header?",
+     "What path prefix do well-known URIs use?"
+    ],
+    "error": null,
+    "latency_ms": 1109.6
+   },
+   "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?": {
+    "queries": [
+     "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?"
+    ],
+    "error": null,
+    "latency_ms": 178.3
+   },
+   "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?": {
+    "queries": [
+     "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?"
+    ],
+    "error": null,
+    "latency_ms": 639.7
+   },
+   "What does the key word MUST NOT mean in an RFC?": {
+    "queries": [
+     "What does the key word MUST NOT mean in an RFC?"
+    ],
+    "error": null,
+    "latency_ms": 171.4
+   },
+   "What does the HTTP 429 status code indicate, and what header may the response include?": {
+    "queries": [
+     "HTTP 429 status code meaning",
+     "HTTP 429 response header that may be included"
+    ],
+    "error": null,
+    "latency_ms": 184.4
+   },
+   "How does HTTP decide whether a stored cached response is still fresh?": {
+    "queries": [
+     "How does HTTP decide whether a stored cached response is still fresh?"
+    ],
+    "error": null,
+    "latency_ms": 152.1
+   },
+   "What does the 308 Permanent Redirect status code mean?": {
+    "queries": [
+     "What does the 308 Permanent Redirect status code mean?"
+    ],
+    "error": null,
+    "latency_ms": 186.4
+   },
+   "What is the purpose of the dynamic table in HPACK header compression?": {
+    "queries": [
+     "What is the purpose of the dynamic table in HPACK header compression?"
+    ],
+    "error": null,
+    "latency_ms": 148.0
+   },
+   "Why does QPACK use separate encoder and decoder streams in HTTP/3?": {
+    "queries": [
+     "Why does QPACK use separate encoder and decoder streams in HTTP/3?"
+    ],
+    "error": null,
+    "latency_ms": 229.0
+   },
+   "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?": {
+    "queries": [
+     "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?"
+    ],
+    "error": null,
+    "latency_ms": 175.8
+   },
+   "What is the HTTP PATCH method used for, and is it idempotent?": {
+    "queries": [
+     "What is the HTTP PATCH method used for?",
+     "Is the HTTP PATCH method idempotent?"
+    ],
+    "error": null,
+    "latency_ms": 183.4
+   },
+   "What does the 431 Request Header Fields Too Large status code indicate?": {
+    "queries": [
+     "What does the 431 Request Header Fields Too Large status code indicate?"
+    ],
+    "error": null,
+    "latency_ms": 149.5
+   },
+   "What does the max-age directive in the HSTS Strict-Transport-Security header specify?": {
+    "queries": [
+     "What does the max-age directive in the HSTS Strict-Transport-Security header specify?"
+    ],
+    "error": null,
+    "latency_ms": 349.2
+   },
+   "What are the main components of a URI's generic syntax?": {
+    "queries": [
+     "What are the main components of a URI's generic syntax?"
+    ],
+    "error": null,
+    "latency_ms": 142.2
+   },
+   "Which characters are allowed in a percent-encoded octet in a URI?": {
+    "queries": [
+     "Which characters are allowed in a percent-encoded octet in a URI?"
+    ],
+    "error": null,
+    "latency_ms": 214.8
+   },
+   "How does a URI Template expand a simple string variable such as {var}?": {
+    "queries": [
+     "How does a URI Template expand a simple string variable such as {var}?"
+    ],
+    "error": null,
+    "latency_ms": 178.9
+   },
+   "What does the Secure attribute of an HTTP cookie do?": {
+    "queries": [
+     "What does the Secure attribute of an HTTP cookie do?"
+    ],
+    "error": null,
+    "latency_ms": 188.9
+   },
+   "What is the effect of the HttpOnly attribute on a cookie?": {
+    "queries": [
+     "What is the effect of the HttpOnly attribute on a cookie?"
+    ],
+    "error": null,
+    "latency_ms": 182.1
+   },
+   "How does a user agent decide whether a cookie's domain matches a request host?": {
+    "queries": [
+     "How does a user agent decide whether a cookie's domain matches a request host?"
+    ],
+    "error": null,
+    "latency_ms": 152.3
+   },
+   "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?": {
+    "queries": [
+     "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?"
+    ],
+    "error": null,
+    "latency_ms": 157.1
+   },
+   "What HTTP status code does a server return to complete the WebSocket opening handshake?": {
+    "queries": [
+     "What HTTP status code does a server return to complete the WebSocket opening handshake?"
+    ],
+    "error": null,
+    "latency_ms": 170.6
+   },
+   "What is the purpose of the Sec-WebSocket-Key request header?": {
+    "queries": [
+     "What is the purpose of the Sec-WebSocket-Key request header?"
+    ],
+    "error": null,
+    "latency_ms": 172.9
+   },
+   "What is a QUIC stateless reset and when is it used?": {
+    "queries": [
+     "What is a QUIC stateless reset and when is it used?"
+    ],
+    "error": null,
+    "latency_ms": 351.2
+   },
+   "How does QUIC detect lost packets?": {
+    "queries": [
+     "How does QUIC detect lost packets?"
+    ],
+    "error": null,
+    "latency_ms": 362.2
+   },
+   "What is a QUIC connection ID used for?": {
+    "queries": [
+     "What is a QUIC connection ID used for?"
+    ],
+    "error": null,
+    "latency_ms": 161.5
+   },
+   "What is the maximum segment lifetime (MSL) in TCP and why does it matter?": {
+    "queries": [
+     "What is the maximum segment lifetime (MSL) in TCP and why does it matter?"
+    ],
+    "error": null,
+    "latency_ms": 190.6
+   },
+   "How does the TCP three-way handshake establish a connection?": {
+    "queries": [
+     "How does the TCP three-way handshake establish a connection?"
+    ],
+    "error": null,
+    "latency_ms": 333.5
+   },
+   "What is the purpose of the TCP receive window?": {
+    "queries": [
+     "What is the purpose of the TCP receive window?"
+    ],
+    "error": null,
+    "latency_ms": 154.1
+   },
+   "Which TLS 1.3 handshake message carries the server's certificate?": {
+    "queries": [
+     "Which TLS 1.3 handshake message carries the server's certificate?"
+    ],
+    "error": null,
+    "latency_ms": 185.3
+   },
+   "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?": {
+    "queries": [
+     "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?"
+    ],
+    "error": null,
+    "latency_ms": 186.1
+   },
+   "How does a TLS client indicate the target server name using Server Name Indication (SNI)?": {
+    "queries": [
+     "How does a TLS client indicate the target server name using Server Name Indication (SNI)?"
+    ],
+    "error": null,
+    "latency_ms": 160.5
+   },
+   "What information does the Subject field identify in an X.509 certificate?": {
+    "queries": [
+     "What information does the Subject field identify in an X.509 certificate?"
+    ],
+    "error": null,
+    "latency_ms": 469.4
+   },
+   "What does an OCSP response tell a client about a certificate's status?": {
+    "queries": [
+     "What does an OCSP response tell a client about a certificate's status?"
+    ],
+    "error": null,
+    "latency_ms": 219.6
+   },
+   "How does the ACME http-01 challenge validate control of a domain?": {
+    "queries": [
+     "How does the ACME http-01 challenge validate control of a domain?"
+    ],
+    "error": null,
+    "latency_ms": 254.8
+   },
+   "What does the invalid_grant error mean in OAuth 2.0?": {
+    "queries": [
+     "What does the invalid_grant error mean in OAuth 2.0?"
+    ],
+    "error": null,
+    "latency_ms": 324.6
+   },
+   "How does PKCE protect the OAuth 2.0 authorization code flow?": {
+    "queries": [
+     "How does PKCE protect the OAuth 2.0 authorization code flow?"
+    ],
+    "error": null,
+    "latency_ms": 244.3
+   },
+   "How is an OAuth 2.0 bearer token presented in an HTTP request?": {
+    "queries": [
+     "How is an OAuth 2.0 bearer token presented in an HTTP request?"
+    ],
+    "error": null,
+    "latency_ms": 424.3
+   },
+   "How are credentials encoded in the HTTP Basic authentication scheme?": {
+    "queries": [
+     "How are credentials encoded in the HTTP Basic authentication scheme?"
+    ],
+    "error": null,
+    "latency_ms": 136.2
+   },
+   "What is the purpose of the nonce in HTTP Digest access authentication?": {
+    "queries": [
+     "What is the purpose of the nonce in HTTP Digest access authentication?"
+    ],
+    "error": null,
+    "latency_ms": 189.5
+   },
+   "What are the registered claim names defined for a JSON Web Token (JWT)?": {
+    "queries": [
+     "What are the registered claim names defined for a JSON Web Token (JWT)?"
+    ],
+    "error": null,
+    "latency_ms": 229.6
+   },
+   "How is a JWS Compact Serialization structured?": {
+    "queries": [
+     "How is a JWS Compact Serialization structured?"
+    ],
+    "error": null,
+    "latency_ms": 126.8
+   },
+   "What does the alg (algorithm) header parameter specify in a JWS?": {
+    "queries": [
+     "What does the alg (algorithm) header parameter specify in a JWS?"
+    ],
+    "error": null,
+    "latency_ms": 167.9
+   },
+   "How does base64url encoding differ from standard base64 encoding?": {
+    "queries": [
+     "How does base64url encoding differ from standard base64 encoding?"
+    ],
+    "error": null,
+    "latency_ms": 195.0
+   },
+   "What structured data types does JSON define per RFC 8259?": {
+    "queries": [
+     "What structured data types does JSON define per RFC 8259?"
+    ],
+    "error": null,
+    "latency_ms": 171.4
+   },
+   "What is the format of an Internet date-time timestamp per RFC 3339?": {
+    "queries": [
+     "What is the format of an Internet date-time timestamp per RFC 3339?"
+    ],
+    "error": null,
+    "latency_ms": 154.4
+   },
+   "What does an A resource record provide in the DNS?": {
+    "queries": [
+     "What does an A resource record provide in the DNS?"
+    ],
+    "error": null,
+    "latency_ms": 199.6
+   },
+   "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?": {
+    "queries": [
+     "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?"
+    ],
+    "error": null,
+    "latency_ms": 188.2
+   },
+   "How are DNS queries carried in DNS over HTTPS (DoH)?": {
+    "queries": [
+     "How are DNS queries carried in DNS over HTTPS (DoH)?"
+    ],
+    "error": null,
+    "latency_ms": 160.3
+   },
+   "What transport port does DNS over TLS (DoT) use by default?": {
+    "queries": [
+     "What transport port does DNS over TLS (DoT) use by default?"
+    ],
+    "error": null,
+    "latency_ms": 174.9
+   }
+  }
+ },
+ "answers": {
+  "items": 16,
+  "means": {
+   "single_top5": {
+    "faithfulness": 0.956,
+    "context_recall": 0.688,
+    "abstained": 6
+   },
+   "planned": {
+    "faithfulness": 0.958,
+    "context_recall": 0.844,
+    "abstained": 1
+   }
+  },
+  "per_question": [
+   {
+    "question": "What port does DNS over TLS use by default, and which media type must DNS over HTTPS clients and servers support?",
+    "single_top5": {
+     "answer": "I don't have enough information in the provided context to answer that.",
+     "abstained": true,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    },
+    "planned": {
+     "answer": "DNS over TLS uses TCP port 853 by default [rfc7858#0006][rfc7858#0005].  \nDNS over HTTPS clients and servers must support the media type **\"application/dns-message\"** [rfc8484#0014].",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "How does a WebSocket server compute the Sec-WebSocket-Accept value, and what does the 101 Switching Protocols status code mean in HTTP?",
+    "single_top5": {
+     "answer": "A WebSocket server computes the **Sec‑WebSocket‑Accept** value by:\n\n1. Taking the value of the client’s **Sec‑WebSocket‑Key** header field (the base64‑encoded nonce) as it appears in the request, without any leading or trailing whitespace.  \n2. Concatenating that value with the fixed GUID string  \n   `\"258EAFA5-E914-47DA-95CA-C5AB0DC85B11\"`.  \n3. Computing the SHA‑1 hash of the concatenated string (160 bits).  \n4. Base64‑encoding the resulting 20‑byte hash and returning that string in the **Sec‑WebSocket‑Accept** header field of the server’s response.  \n   (See [rfc6455#0011] and [rfc6455#0033]).\n\nThe **101 Switching Protocols** status code in HTTP indicates that the server has accepted the client’s request to switch protocols (in this case to WebSocket).  A 101 response is the only status code that completes the WebSocket handshake; any other status code means the handshake has not succeeded and normal HTTP semantics still apply.  (See [rfc6455#0012] and [rfc6455#0032]).",
+     "abstained": false,
+     "faithfulness": 0.875,
+     "context_recall": 1.0
+    },
+    "planned": {
+     "answer": "The server builds the **Sec‑WebSocket‑Accept** header by taking the value that the client sent in its **Sec‑WebSocket‑Key** header, appending the fixed GUID “258EAFA5‑E914‑47DA‑95CA‑C5AB0DC85B11”, computing the SHA‑1 hash of that concatenated string, and then base64‑encoding the 20‑byte hash result 【rfc6455#0032】.\n\nWhen the handshake succeeds, the server responds with an HTTP status line that contains the status code **101 Switching Protocols**. This status code indicates that the server is switching from the HTTP protocol to the WebSocket protocol, completing the opening handshake 【rfc6455#0012】.",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "How is an OAuth 2.0 bearer token sent in the Authorization header, and what does the invalid_token error mean?",
+    "single_top5": {
+     "answer": "An OAuth 2.0 bearer token is sent in the HTTP **Authorization** request header using the **Bearer** authentication scheme.  \nThe header field has the form\n\n```\nAuthorization: Bearer <b64token>\n```\n\nwhere `<b64token>` is a base64‑url‑safe string that contains the access token value. The syntax is defined as\n\n```\nb64token    = 1*( ALPHA / DIGIT / \"-\" / \".\" / \"_\" / \"~\" / \"+\" / \"/\" ) *\"=\"\ncredentials = \"Bearer\" 1*SP b64token\n```\n\nand an example is\n\n```\nGET /resource HTTP/1.1\nHost: server.example.com\nAuthorization: Bearer mF_9.B5f-4.1JqM\n```\n[rfc6750#0004]\n\n---\n\nThe **invalid_token** error is returned by a resource server when the access token supplied in the request is **expired, revoked, malformed, or otherwise invalid**. In this case the server must respond with HTTP 401 Unauthorized, and the client may request a new access token and retry the request.  \n[rfc6750#0009]",
+     "abstained": false,
+     "faithfulness": 0.8888888888888888,
+     "context_recall": 1.0
+    },
+    "planned": {
+     "answer": "An OAuth 2.0 bearer token is sent in the HTTP **Authorization** request header using the **Bearer** authentication scheme.  \nThe header field has the form\n\n```\nAuthorization: Bearer <b64token>\n```\n\nwhere `<b64token>` is a base64‑url‑safe string that contains the access token value. The syntax is defined as\n\n```\nb64token    = 1*( ALPHA / DIGIT / \"-\" / \".\" / \"_\" / \"~\" / \"+\" / \"/\" ) *\"=\"\ncredentials = \"Bearer\" 1*SP b64token\n```\n\nand an example is\n\n```\nGET /resource HTTP/1.1\nHost: server.example.com\nAuthorization: Bearer mF_9.B5f-4.1JqM\n```\n[rfc6750#0004]\n\n---\n\nThe **invalid_token** error is returned by a resource server when the access token supplied in the request is **expired, revoked, malformed, or otherwise invalid**. In this case the server must respond with HTTP 401 Unauthorized, and the client may request a new access token and retry the request.  \n[rfc6750#0009]",
+     "abstained": false,
+     "faithfulness": 0.7777777777777778,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "How does PKCE derive the S256 code challenge from the code verifier, and what does the device authorization grant's verification_uri tell the user?",
+    "single_top5": {
+     "answer": "I don't have enough information in the provided context to answer that.",
+     "abstained": true,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    },
+    "planned": {
+     "answer": "PKCE derives the S256 code challenge by taking the ASCII representation of the code verifier, computing its SHA‑256 hash, and then Base64‑URL‑encoding that hash without padding:\n\n```\ncode_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))\n```\n[rfc7636#0008] [rfc7636#0010]\n\nIn the device authorization flow, the server returns a **verification_uri** that the user must visit in a browser.  This URI is the end‑user verification endpoint where the user will be prompted to enter the **user_code** that the device displayed.  The URI is intended to be short and easy to remember so the user can type it manually.  The server may also provide a **verification_uri_complete** that includes the user code, but the verification_uri itself is the primary link the user follows.  [rfc8628#0007] [rfc8628#0009]",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "How does TCP establish a connection, and how does the QUIC handshake differ in what it negotiates?",
+    "single_top5": {
+     "answer": "I don't have enough information in the provided context to answer that.",
+     "abstained": true,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    },
+    "planned": {
+     "answer": "TCP establishes a connection by an application issuing an **OPEN** call.  \n* An **active OPEN** causes the TCP endpoint to immediately begin the\n  synchronization procedure, sending a SYN segment and moving the\n  connection into the SYN‑SENT state.  \n* A **passive OPEN** creates a new connection record in LISTEN state\n  (or returns an error) and does not affect any previously created\n  connection record [MUST‑41] [rfc9293#0062].  \nThe connection then progresses through the standard TCP state diagram\n(FIN‑WAIT‑1, FIN‑WAIT‑2, CLOSE‑WAIT, CLOSING, LAST‑ACK, TIME‑WAIT,\nCLOSED) in response to user calls (OPEN, SEND, RECEIVE, CLOSE, ABORT,\nSTATUS) and incoming segments containing SYN, ACK, RST, or FIN flags\n[rfc9293#0017].\n\nIn contrast, the QUIC handshake is a single, integrated exchange that\ncombines **cryptographic negotiation and transport‑parameter\nnegotiation**.  \n* QUIC uses TLS 1.3 as the cryptographic handshake, but the TLS\n  handshake data is carried in QUIC CRYPTO frames and protected by\n  QUIC’s own packet‑level encryption.  \n* The handshake also carries **QUIC transport parameters** (e.g., flow‑\n  control limits, stream limits) in a TLS extension\n  `quic_transport_parameters` so that both endpoints agree on\n  transport configuration [rfc9001#0046].  \n* Additionally, QUIC requires authenticated **protocol negotiation**\n  via ALPN; if no application protocol is negotiated, the connection\n  is closed with a `no_application_protocol` alert (error code\n  0x0178) [rfc9001#0046].  \n\nThus, while TCP’s connection establishment is purely a sequence of\nSYN/SYN‑ACK/ACK exchanges governed by the TCP state machine, QUIC’s\nhandshake simultaneously negotiates cryptographic keys, transport\nparameters, and the application protocol, all within a single TLS‑based\nexchange carried in QUIC packets [rfc9001#0046, rfc9001#0007].",
+     "abstained": false,
+     "faithfulness": 0.6666666666666666,
+     "context_recall": 0.5
+    }
+   },
+   {
+    "question": "What does the Secure attribute do for a cookie, and how does the HSTS includeSubDomains directive affect subdomains?",
+    "single_top5": {
+     "answer": "The **Secure** attribute marks a cookie so that it is only sent over secure transport.  When a cookie has the Secure flag set, the user agent will transmit it only on HTTPS connections (and not on plain‑HTTP connections) [rfc6797#0037].\n\nThe **includeSubDomains** directive in an HSTS policy tells user agents that every subdomain of the HSTS host is also a Known HSTS Host.  Consequently, the UA will enforce the HSTS policy for those subdomains, requiring secure transport and preventing access to them over plain HTTP [rfc6797#0037][rfc6797#0039].",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    },
+    "planned": {
+     "answer": "The Secure attribute limits the scope of a cookie to “secure” channels.  When a cookie has the Secure attribute, the user agent will include the cookie in an HTTP request only if the request is transmitted over a secure channel (typically HTTP over Transport Layer Security (TLS) [ RFC2818]) [rfc6265#0013].  \n\nThe HSTS includeSubDomains directive causes user agents to treat every subdomain of the HSTS host as a known HSTS host.  When a host declares an HSTS policy with includeSubDomains, UAs will automatically regard all subdomains of that host as HSTS hosts, and will therefore use secure transport for those subdomains as well [rfc6797#0031].",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "What does the exp claim mean in a JWT, and which JWS algorithm does HS256 identify?",
+    "single_top5": {
+     "answer": "The **exp** claim is the *Expiration Time* claim.  It identifies the time on or after which the JWT MUST NOT be accepted for processing; the current date/time must be before the value listed in the claim.  Its value must be a NumericDate number.  [rfc7519#0013]\n\nThe **HS256** value in a JOSE Header identifies the JWS algorithm **HMAC SHA‑256**.  [rfc7519#0009]",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    },
+    "planned": {
+     "answer": "The **exp** claim is the “Expiration Time” claim.  It identifies the time on or after which the JWT must not be accepted for processing; the current date/time must be before the value listed in the claim when the token is validated.  [rfc7519#0014]\n\nThe **HS256** value for the “alg” header field identifies the HMAC‑SHA‑256 algorithm used to sign the JWS.  [rfc7519#0009] and [rfc7515#0048] both state that “alg”: “HS256” means the token is signed with HMAC SHA‑256.",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    }
+   },
+   {
+    "question": "How do the 301 and 308 status codes differ in whether a user agent may change the request method?",
+    "single_top5": {
+     "answer": "Both the 301 (Moved Permanently) and the 308 (Permanent Redirect) status codes allow a user agent to change the request method when following the redirection.  \nFor 301 the standard notes that a user agent “MAY change the request method from POST to GET for the subsequent request” [rfc9110#0177].  \nFor 308 the same wording appears in the note: “a user agent MAY change the request method from POST to GET for the subsequent request” [rfc9110#0181].  \n\nThus, in terms of method change, 301 and 308 are identical; the difference between them lies in the permanence of the redirect, not in whether the method may be altered.",
+     "abstained": false,
+     "faithfulness": 0.8571428571428571,
+     "context_recall": 1.0
+    },
+    "planned": {
+     "answer": "The 301 (Moved Permanently) response allows a user agent to change the request method when following the redirect.  \nThe 308 (Permanent Redirect) response does **not** allow such a change; the method must be preserved.  \n\n- 301: “For historical reasons, a user agent MAY change the request method from POST to GET for the subsequent request. If this behavior is undesired, the 308 (Permanent Redirect) status code can be used instead.” [rfc9110#0177]  \n- 308: The status code is described as a method‑preserving redirect, and no note is given that the method may be changed. [rfc9110#0181]",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "What does a revoked status in an OCSP response mean, and what does the CRL distribution points extension in an X.509 certificate identify?",
+    "single_top5": {
+     "answer": "A “revoked” status in an OCSP response indicates that the certificate being queried has been revoked.  The response must include the revocation time and, optionally, a revocation reason, and the status is one of the three possible values (good, revoked, or unknown) that the responder can return for each certificate in the request [rfc6960#0017].  \n\nThe CRL Distribution Points extension in an X.509 certificate identifies the location(s) of the certificate revocation list(s) that can be used to check the revocation status of the certificate [rfc6960#0017].",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    },
+    "planned": {
+     "answer": "A “revoked” status in an OCSP response indicates that the certificate in question has been revoked or placed on hold.  When an OCSP responder returns a “revoked” status for a non‑issued certificate, it must include the extended revoked definition extension and the SingleResponse must specify the revocation reason as *certificateHold* (6), the revocationTime as January 1 1970, and must not include any CRL references or CRL entry extensions [rfc6960#0007].\n\nThe CRL distribution points extension in an X.509 certificate identifies how the certificate holder can obtain the relevant Certificate Revocation List (CRL).  It is a SEQUENCE of DistributionPoint structures; each DistributionPoint may contain a distributionPoint field (listing one or more general names or a nameRelativeToCRLIssuer) and/or a cRLIssuer field.  The extension is non‑critical but recommended, and it specifies the locations (e.g., LDAP, HTTP, directory names) from which the CRL can be retrieved [rfc5280#0055].",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "How does the ACME dns-01 challenge prove control of a domain, and what are TXT resource records for in the DNS?",
+    "single_top5": {
+     "answer": "The ACME **dns‑01** challenge proves control of a domain by having the client create a DNS TXT record that contains the base64url‑encoded SHA‑256 digest of a *key authorization* string.  \nThe key authorization is built from the challenge’s **token** value and the client’s account key. The client then provisions a TXT record under the validation domain name, which is formed by prepending the label `_acme‑challenge` to the domain being validated. The ACME server later queries that TXT record and verifies that its contents match the expected digest, thereby confirming that the client can modify DNS records for the domain [5ab56dd0#0069].\n\nTXT resource records in DNS are used to store arbitrary text data. In the context of the dns‑01 challenge, the TXT record holds the digest value that the ACME server checks to validate domain control [5ab56dd0#0069].",
+     "abstained": false,
+     "faithfulness": 0.875,
+     "context_recall": 0.5
+    },
+    "planned": {
+     "answer": "The ACME **dns‑01** challenge proves control of a domain by requiring the client to create a DNS **TXT** record that contains the base64url‑encoded SHA‑256 digest of a *key authorization* string.  \nThe key authorization is built from the challenge’s *token* value and the client’s account key. The server verifies control by querying the DNS for the TXT record at the validation domain name (the domain being validated prefixed with “_acme‑challenge.”) and checking that one of the TXT records matches the expected digest value. If the record is present and matches, the server considers the challenge valid.  \nThis process is described in the RFC passages: the construction of the key authorization and the use of the TXT record are in [rfc8555#0069] and the verification steps are in [rfc8555#0070] and [rfc8555#0068].\n\n**TXT resource records** in DNS are a type of record that can hold arbitrary text data. In the context of the dns‑01 challenge, a TXT record is used to store the digest value that the ACME server expects to find at the validation domain name. The record is provisioned by the domain owner (or whoever controls the DNS zone) and is queried by the ACME server to confirm ownership. The RFC explains that the record is provisioned as a TXT record under the validation domain name, e.g., `_acme-challenge.www.example.org. 300 IN TXT \"gfj9Xq...Rg85nM\"` [rfc8555#0069].",
+     "abstained": false,
+     "faithfulness": 0.8888888888888888,
+     "context_recall": 0.5
+    }
+   },
+   {
+    "question": "What does the no-store cache directive require of a cache, and what does the ETag response field provide?",
+    "single_top5": {
+     "answer": "I don't have enough information in the provided context to answer that.",
+     "abstained": true,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    },
+    "planned": {
+     "answer": "I don't have enough information in the provided context to answer that.",
+     "abstained": true,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    }
+   },
+   {
+    "question": "Which ALPN protocol identifiers select HTTP/2 over TLS and HTTP/3?",
+    "single_top5": {
+     "answer": "The ALPN protocol identifiers are:\n\n* **HTTP/2 over TLS** – the identifier is the string `\"h2\"`【cbfa1c1f#rfc9113#0008】.  \n* **HTTP/3** – the identifier is the string `\"h3\"`【cbfa1c1f#rfc9114#0057】.",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    },
+    "planned": {
+     "answer": "The ALPN protocol identifiers are:\n\n* **HTTP/2 over TLS** – the identifier is the string **“h2”**【d6c1a8a9#rfc9113#0008】.  \n* **HTTP/3** – the identifier is the string **“h3”**【d6c1a8a9#rfc9114#0057】.",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "When must a TLS 1.3 server send a HelloRetryRequest, and what does the HostName in the server_name extension contain?",
+    "single_top5": {
+     "answer": "I don't have enough information in the provided context to answer that.",
+     "abstained": true,
+     "faithfulness": 1.0,
+     "context_recall": 0.0
+    },
+    "planned": {
+     "answer": "A TLS 1.3 server must send a HelloRetryRequest when it can find an acceptable set of handshake parameters but the ClientHello does not contain sufficient information to proceed with the handshake.  In other words, the server replies with a HelloRetryRequest if the ClientHello is missing required data (e.g., a suitable key‑share or other parameter) that the server needs to continue the handshake.  [rfc8446#0032]\n\nThe HostName field in the server_name extension contains the fully‑qualified DNS hostname of the server as understood by the client.  It is represented as an ASCII byte string without a trailing dot, is case‑insensitive, and may use A‑label encoding for internationalized domain names.  [rfc6066#0006]",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    }
+   },
+   {
+    "question": "What does the {+var} reserved expansion do in a URI Template, and which characters are reserved in the generic URI syntax?",
+    "single_top5": {
+     "answer": "The `{+var}` expression performs a **reserved‑string expansion**: the value of `var` is inserted into the URI exactly as it appears, with any reserved URI characters left **un‑percent‑encoded**.  This is the behavior shown in the Level 2 examples, where `{+hello}` expands to `Hello%20World!` and `{+path}` expands to `/foo/bar` without encoding the slash or other reserved characters [rfc6570#0005].\n\nIn a URI, the **reserved characters** are those that are not part of the unreserved set.  They are the characters that have special syntactic meaning in the generic URI syntax (for example, `:`, `/`, `?`, `#`, `[` , `]`, `@`, `!`, `$`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `;`, `=`).  These characters are listed in the literal character set for URI templates and are treated specially during expansion [rfc6570#0019].",
+     "abstained": false,
+     "faithfulness": 0.8,
+     "context_recall": 0.5
+    },
+    "planned": {
+     "answer": "The `{+var}` expression is the **reserved‑string expansion** operator defined for Level 2 URI Templates.  \nWhen a variable is expanded with `{+var}`, its value is inserted into the URI **without percent‑encoding any characters that are in the reserved set** of the generic URI syntax. In other words, the expansion allows reserved characters to appear literally in the resulting URI rather than being percent‑encoded.  \nThis is shown in the examples in § 3.2.3 of the template specification, where `{+var}` expands to `value`, `{+hello}` expands to `Hello%20World!`, and `{+path}` expands to `/foo/bar` (the slash is preserved)【rfc6570#0005】.\n\nThe reserved characters in the generic URI syntax are the characters that are defined as *gen‑delims* and *sub‑delims* in RFC 3986. They are:\n\n* **General delimiters (gen‑delims):** `:` `/` `?` `#` `[` `]` `@`【rfc3986#0018】  \n* **Sub‑delimiters (sub‑delims):** `!` `$` `&` `'` `(` `)` `*` `+` `,` `;` `=`【rfc3986#0018】",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "What does the kty parameter of a JSON Web Key identify, and what does the enc header parameter of a JWE identify?",
+    "single_top5": {
+     "answer": "The **`kty`** parameter of a JSON Web Key identifies the cryptographic algorithm family used with the key, such as “RSA” or “EC”【cc3d8d5f#rfc7517#0008】.  \n\nThe **`enc`** header parameter of a JWE identifies the content‑encryption algorithm used to perform authenticated encryption on the plaintext, producing the ciphertext and authentication tag【cc3d8d5f#rfc7516#0017】.",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    },
+    "planned": {
+     "answer": "The **kty** parameter of a JSON Web Key identifies the cryptographic algorithm family used with the key, such as “RSA” or “EC”【aac79608#0008】.  \n\nThe **enc** header parameter of a JWE identifies the content‑encryption algorithm that is used to perform authenticated encryption on the plaintext, i.e., the algorithm that encrypts the data and produces the ciphertext and authentication tag【aac79608#0017】.",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   },
+   {
+    "question": "How is the relation type of a link conveyed in the HTTP Link header, and what path prefix do well-known URIs use?",
+    "single_top5": {
+     "answer": "I don't have enough information in the provided context to answer that.",
+     "abstained": true,
+     "faithfulness": 1.0,
+     "context_recall": 0.5
+    },
+    "planned": {
+     "answer": "The relation type of a link in an HTTP Link header is conveyed by the **`rel` parameter** of each link‑value.  The `rel` parameter must be present, may appear only once per link‑value, and can contain one or more link‑relation types that share the same context, target, and target attributes [rfc8288#0012].\n\nWell‑known URIs use the path prefix **`/.well-known/`**.  This prefix is defined for URI schemes that explicitly support well‑known URIs, such as HTTP and HTTPS [rfc8615#0000][rfc8615#0004].",
+     "abstained": false,
+     "faithfulness": 1.0,
+     "context_recall": 1.0
+    }
+   }
+  ]
+ },
+ "spend": {
+  "usd": 0.0157,
+  "by_model": {
+   "openai/gpt-oss-120b": {
+    "calls": 18,
+    "input_tokens": 47926,
+    "output_tokens": 10996
+   },
+   "openai/gpt-oss-20b": {
+    "calls": 6,
+    "input_tokens": 19026,
+    "output_tokens": 1681
+   }
+  }
+ }
+}

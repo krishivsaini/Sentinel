@@ -61,6 +61,7 @@ from sentinel.generate import collect_answer, is_abstention
 from sentinel.guardrails.output import guard_answer
 from sentinel.guardrails.pii import redact_chunks
 from sentinel.logging_config import configure_logging, log
+from sentinel.plan import planned_retrieve
 from sentinel.retrieve import hybrid_retrieve, warmup
 from sentinel.retry import (
     backoff_wait,
@@ -274,7 +275,9 @@ async def _score_one(
     on its own (scripts/answer_check_eval.py).
     Returns (answer, abstained, retrieved, faith, arel, crec); arel/crec are NaN when gate_only.
     Wrapped in a wall-clock timeout by the caller so a hang can't stall the run."""
-    retrieved = hybrid_retrieve(gt.question)
+    # What the service retrieves: planned when query planning is on (sentinel.plan).
+    retrieved = (planned_retrieve(gt.question) if settings.query_planning
+                 else hybrid_retrieve(gt.question))
     if settings.redact_context_pii:
         retrieved, _ = redact_chunks(retrieved)
     # Generation is sync (streams via the sync client); run it off the loop in a worker thread.
