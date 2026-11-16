@@ -21,37 +21,14 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
 
 from sentinel.config import DATA_DIR
+from sentinel.ops import ANSWER_EVENTS, read_cloud_logging, read_log_file
 
 OUT = DATA_DIR / "feedback" / "candidates.jsonl"
-ANSWER_EVENTS = {"query", "query.refused"}
-
-
-def _from_gcloud(project: str, days: int) -> list[dict]:
-    flt = ('resource.type="cloud_run_revision" AND resource.labels.service_name="sentinel-api" '
-           'AND jsonPayload.event=("query" OR "query.refused" OR "feedback")')
-    proc = subprocess.run(
-        ["gcloud", "logging", "read", flt, "--project", project, f"--freshness={days}d",
-         "--format=json", "--limit=100000"],
-        capture_output=True, text=True, check=True)
-    return [e["jsonPayload"] for e in json.loads(proc.stdout or "[]") if "jsonPayload" in e]
-
-
-def _from_file(path: Path) -> list[dict]:
-    events = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line.startswith("{"):
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-    return events
 
 
 def join(events: list[dict]) -> list[dict]:
@@ -105,7 +82,8 @@ def main() -> int:
     if args.gcloud and not args.project:
         ap.error("--gcloud needs --project")
 
-    events = _from_gcloud(args.project, args.days) if args.gcloud else _from_file(args.log_file)
+    events = (read_cloud_logging(args.project, args.days, ("query", "query.refused", "feedback"))
+              if args.gcloud else read_log_file(args.log_file))
     records = merge(join(events))
     tally = Counter((r["outcome"], r["rating"]) for r in records)
     print(f"{len(records)} rated answers in {OUT.relative_to(DATA_DIR.parent)}")

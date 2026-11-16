@@ -189,6 +189,8 @@ Apple M3, 8 GB, local models on CPU; generation on Groq `gpt-oss-20b` ([report](
 | Rerank — cross-encoder over 50 candidates | 200 | 954 ms | 1,021 ms | 1,129 ms |
 | Generate — full streamed answer | 50 | 1,047 ms | 2,457 ms | 4,273 ms |
 
+Live on Cloud Run's 2 vCPUs it is much slower: over the first 7 logged requests reranking took **10.6 s p50, 14.0 s p95**, generation 0.7 s and the guards 0.5 s ([ops report](data/ops_report.json)).
+
 Reranking is the bottleneck. A [measured sweep](data/rerank_pool_sweep.json) shows a 20-candidate pool keeps hit@5 at 0.896 and recall@5 at 0.812 (vs 0.816) for **2.6× less rerank time**, but changes the top-5 for 13 of 48 questions. The pool stays at 50 — every number here is measured on it — and 20 is the fallback.
 
 ---
@@ -326,6 +328,7 @@ flowchart LR
 - **Provider-agnostic, judge pinned.** Groq, OpenAI, DeepSeek, NVIDIA and Google are wired; the judge stays on the host it was calibrated on.
 - **Spend is metered and capped.** Every Groq call is priced from the tokens the API reports; each CI gate stops at $0.25 and reports its cost ([`spend.py`](sentinel/spend.py)).
 - **Partial evals mislead.** Throttled runs hid a whole class of retrieval failures that a complete run surfaced.
+- **The logs are the telemetry.** Each request logs its per-stage timings, when the first word reached the reader, the whole request time, and what its own Groq calls cost (a per-request tally, so concurrent requests don't blur together). [`scripts/ops_report.py`](scripts/ops_report.py) reads them back from Cloud Logging into [`data/ops_report.json`](data/ops_report.json): outcome rates (answered, abstained, withheld, refused, turned away), p50/p95/p99 per stage, cost per request and reader feedback. The dashboard's **Operations** view shows it. There's no metrics backend or agent, so nothing new to run or pay for; the report holds counts and timings, never questions.
 - **Feedback without a database.** The playground's thumbs up/down goes to `POST /feedback`, which only writes a log line keyed by the answer's `answer_id`; every answer is logged under the same id (question and comment PII-scrubbed, and a withheld answer as it was generated). [`scripts/feedback_candidates.py`](scripts/feedback_candidates.py) joins the two from Cloud Logging and sorts the thumbs-downs by what they suggest: a wrong answer, a retrieval miss (abstained), or a false withhold or refusal. They're leads for review, not labels: a person writes the reference answer before anything enters the ground truth, and the review file is git-ignored because it holds readers' questions. The service stays stateless and adds no infrastructure.
 
 ---
@@ -479,7 +482,7 @@ Stated plainly:
 | **Classifiers** | Vary run to run even at temperature 0; every rate is a mean of 3 runs. |
 | **Answer check** | Holding the answer until it passes delays the first word by generation plus the check; the words that follow are a paced replay, not live generation. Wrongly withheld 3 of ~600 clean answers. |
 | **PII** | Lists named after a working group (`hybi@ietf.org`) still look personal and are redacted. Names are found only in private documents and miss lone first or last names, `Smith, J.` references and names absent from the Wikidata list (`Raj Patel`); only US/UK-style street addresses are found; IP addresses are out of scope. The private set was written before the name detector, but by its author. |
-| **Infra** | FAISS in memory; reranking ~1 s per query on CPU; a paid Groq key for CI. |
+| **Infra** | FAISS in memory; reranking ~1 s per query on an M3 but 9–14 s on Cloud Run's 2 vCPUs; a paid Groq key for CI. |
 
 ---
 

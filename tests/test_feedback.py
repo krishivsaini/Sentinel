@@ -45,4 +45,4 @@ def test_rerunning_keeps_reviews_already_written(tmp_path) -> None:
 def test_log_file_lines_that_are_not_json_are_skipped(tmp_path) -> None:
     log = tmp_path / "service.log"
     log.write_text("INFO: started\n" + "\n".join(json.dumps(e) for e in EVENTS) + "\n{broken\n")
-    assert len(fc._from_file(log)) == len(EVENTS)
+    assert len(fc.read_log_file(log)) == len(EVENTS)

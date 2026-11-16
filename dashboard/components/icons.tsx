@@ -50,6 +50,12 @@ export const QueryIcon = ({ size = 15, className }: P) => (
   </svg>
 );
 
+export const PulseIcon = ({ size = 15, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M3 12h4l2.5-6 4 12 2.5-6H21" strokeLinejoin="round" strokeLinecap="round" />
+  </svg>
+);
+
 export const ShieldIcon = ({ size = 15, className }: P) => (
   <svg {...base(size)} className={className}>
     <path d="M12 3l7 3v5c0 4.4-3 8-7 10-4-2-7-5.6-7-10V6z" strokeLinejoin="round" />

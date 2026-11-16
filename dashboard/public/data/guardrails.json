@@ -5,7 +5,8 @@
     "detectors": {
       "detectors": [
         "promptguard:meta-llama/llama-prompt-guard-2-86m",
-        "safeguard:openai/gpt-oss-safeguard-20b:0923522a"
+        "safeguard:openai/gpt-oss-safeguard-20b:0923522a",
+        "safeguard:openai/gpt-oss-safeguard-20b:853c993b"
       ],
       "recall": {
         "dev": {
@@ -27,17 +28,25 @@
               0.9897
             ]
           },
-          "union": {
-            "flagged": 22,
+          "safeguard:openai/gpt-oss-safeguard-20b:853c993b": {
+            "flagged": 21,
             "of": 24,
-            "rate": 0.9167,
+            "rate": 0.875,
             "ci95": [
-              0.73,
-              0.9897
+              0.6764,
+              0.9734
+            ]
+          },
+          "union": {
+            "flagged": 23,
+            "of": 24,
+            "rate": 0.9583,
+            "ci95": [
+              0.7888,
+              0.9989
             ]
           },
           "missed": [
-            "adv22",
             "adv24"
           ]
         },
@@ -60,7 +69,7 @@
               0.9984
             ]
           },
-          "union": {
+          "safeguard:openai/gpt-oss-safeguard-20b:853c993b": {
             "flagged": 15,
             "of": 16,
             "rate": 0.9375,
@@ -69,9 +78,16 @@
               0.9984
             ]
           },
-          "missed": [
-            "adv31"
-          ]
+          "union": {
+            "flagged": 16,
+            "of": 16,
+            "rate": 1.0,
+            "ci95": [
+              0.7941,
+              1.0
+            ]
+          },
+          "missed": []
         },
         "adaptive": {
           "promptguard:meta-llama/llama-prompt-guard-2-86m": {
@@ -84,6 +100,15 @@
             ]
           },
           "safeguard:openai/gpt-oss-safeguard-20b:0923522a": {
+            "flagged": 3,
+            "of": 10,
+            "rate": 0.3,
+            "ci95": [
+              0.0667,
+              0.6525
+            ]
+          },
+          "safeguard:openai/gpt-oss-safeguard-20b:853c993b": {
             "flagged": 3,
             "of": 10,
             "rate": 0.3,
@@ -130,17 +155,28 @@
             0.0013
           ]
         },
-        "union": {
-          "flagged": 1,
+        "safeguard:openai/gpt-oss-safeguard-20b:853c993b": {
+          "flagged": 2,
           "of": 2888,
-          "rate": 0.0003,
+          "rate": 0.0007,
           "ci95": [
-            0.0,
-            0.0019
+            0.0001,
+            0.0025
+          ]
+        },
+        "union": {
+          "flagged": 3,
+          "of": 2888,
+          "rate": 0.001,
+          "ci95": [
+            0.0002,
+            0.003
           ]
         },
         "flagged_chunks": [
-          "rfc9293#0078"
+          "rfc9293#0078",
+          "rfc8446#0143",
+          "rfc8446#0144"
         ],
         "unscored": 0
       }
@@ -2019,25 +2055,25 @@
   },
   "pii": {
     "corpus": {
-      "precision": 0.7994,
+      "precision": 0.9152,
       "recall": 1.0,
       "precision_ci95": [
-        0.7516,
-        0.8416
+        0.8764,
+        0.9449
       ],
       "recall_ci95": [
         0.9859,
         1.0
       ],
       "tp": 259,
-      "fp": 65,
+      "fp": 24,
       "fn": 0,
       "per_kind": {
         "email": {
           "tp": 235,
-          "fp": 64,
+          "fp": 23,
           "fn": 0,
-          "precision": 0.786,
+          "precision": 0.9109,
           "recall": 1.0
         },
         "phone": {
@@ -2061,22 +2097,6 @@
         {
           "kind": "email",
           "text": "Action.domains@ISI.EDU"
-        },
-        {
-          "kind": "email",
-          "text": "HOSTMASTER@SRI-NIC.ARPA"
-        },
-        {
-          "kind": "email",
-          "text": "HOSTMASTER@SRI-NIC.ARPA"
-        },
-        {
-          "kind": "email",
-          "text": "HOSTMASTER@SRI-NIC.ARPA"
-        },
-        {
-          "kind": "email",
-          "text": "HOSTMASTER@SRI-NIC.ARPA"
         },
         {
           "kind": "email",
@@ -2152,111 +2172,7 @@
         },
         {
           "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "iesg@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "ietf-http-wg@w3.org"
-        },
-        {
-          "kind": "email",
-          "text": "ietf-http-wg@w3.org"
-        },
-        {
-          "kind": "email",
-          "text": "ietf-http-wg@w3.org"
-        },
-        {
-          "kind": "email",
-          "text": "ietf-ipr@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "ietf-ipr@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "ietf-types@iana.org"
-        },
-        {
-          "kind": "email",
-          "text": "ietf-types@iana.org"
-        },
-        {
-          "kind": "email",
-          "text": "ipr@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "jose-reg-review@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "jose-reg-review@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "jose-reg-review@ietf.org"
-        },
-        {
-          "kind": "email",
           "text": "juliet@capulet.lit"
-        },
-        {
-          "kind": "email",
-          "text": "jwt-reg-review@ietf.org"
         },
         {
           "kind": "email",
@@ -2264,51 +2180,173 @@
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "quic@ietf.org"
+        }
+      ],
+      "stale_labels": 0
+    },
+    "corpus_dev": {
+      "precision": 0.987,
+      "recall": 1.0,
+      "precision_ci95": [
+        0.9298,
+        0.9997
+      ],
+      "recall_ci95": [
+        0.9526,
+        1.0
+      ],
+      "tp": 76,
+      "fp": 1,
+      "fn": 0,
+      "per_kind": {
+        "email": {
+          "tp": 63,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "phone": {
+          "tp": 13,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.9286,
+          "recall": 1.0
+        }
+      },
+      "misses": [],
+      "false_alarms": [
+        {
+          "kind": "phone",
+          "text": "+1-816-555-1212"
+        }
+      ],
+      "stale_labels": 0
+    },
+    "corpus_heldout": {
+      "precision": 0.8883,
+      "recall": 1.0,
+      "precision_ci95": [
+        0.8372,
+        0.9279
+      ],
+      "recall_ci95": [
+        0.98,
+        1.0
+      ],
+      "tp": 183,
+      "fp": 23,
+      "fn": 0,
+      "per_kind": {
+        "email": {
+          "tp": 172,
+          "fp": 23,
+          "fn": 0,
+          "precision": 0.8821,
+          "recall": 1.0
+        },
+        "phone": {
+          "tp": 11,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        }
+      },
+      "misses": [],
+      "false_alarms": [
+        {
+          "kind": "email",
+          "text": "Action.domains@E.ISI.EDU"
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "Action.domains@ISI.EDU"
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "NAMEDROPPERS@SRI-NIC.ARPA"
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "art@ietf.org"
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "hybi@ietf.org"
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "hybi@ietf.org"
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "hybi@ietf.org"
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "hybi@ietf.org"
         },
         {
           "kind": "email",
-          "text": "oauth-ext-review@ietf.org"
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "hybi@ietf.org"
+        },
+        {
+          "kind": "email",
+          "text": "juliet@capulet.lit"
+        },
+        {
+          "kind": "email",
+          "text": "link-relations@ietf.org"
         },
         {
           "kind": "email",
           "text": "quic@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "review@ietf.org"
-        },
-        {
-          "kind": "email",
-          "text": "wellknown-uri-review@ietf.org"
         }
       ],
       "stale_labels": 0
@@ -2365,13 +2403,110 @@
       ],
       "false_alarms": [],
       "stale_labels": 0
+    },
+    "private": {
+      "precision": 1.0,
+      "recall": 0.6667,
+      "precision_ci95": [
+        0.8575,
+        1.0
+      ],
+      "recall_ci95": [
+        0.4903,
+        0.8144
+      ],
+      "tp": 24,
+      "fp": 0,
+      "fn": 12,
+      "per_kind": {
+        "address": {
+          "tp": 7,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.7778
+        },
+        "email": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "person": {
+          "tp": 16,
+          "fp": 0,
+          "fn": 9,
+          "precision": 1.0,
+          "recall": 0.64
+        },
+        "phone": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "precision": null,
+          "recall": 0.0
+        }
+      },
+      "misses": [
+        {
+          "kind": "person",
+          "text": "Aisha"
+        },
+        {
+          "kind": "person",
+          "text": "Okafor"
+        },
+        {
+          "kind": "address",
+          "text": "5-2-1 Ginza, Chuo-ku, Tokyo 104-0061"
+        },
+        {
+          "kind": "person",
+          "text": "J. Martinez"
+        },
+        {
+          "kind": "person",
+          "text": "Grace"
+        },
+        {
+          "kind": "person",
+          "text": "Smith, J."
+        },
+        {
+          "kind": "person",
+          "text": "Patel, R."
+        },
+        {
+          "kind": "phone",
+          "text": "07700 900123"
+        },
+        {
+          "kind": "address",
+          "text": "17 Rue de la Paix, 75002 Paris"
+        },
+        {
+          "kind": "person",
+          "text": "Raj Patel"
+        },
+        {
+          "kind": "person",
+          "text": "Lena"
+        },
+        {
+          "kind": "person",
+          "text": "Chen Jing"
+        }
+      ],
+      "false_alarms": [],
+      "stale_labels": 0
     }
   },
   "scope": {
     "default_scope_leaks": 0
   },
   "threshold": 0.05,
-  "rescored_utc": "2026-10-24T11:11:51+00:00",
+  "rescored_utc": "2026-10-23T18:10:40+00:00",
   "remeasured": [
     {
       "utc": "2026-10-24T10:35:25+00:00",

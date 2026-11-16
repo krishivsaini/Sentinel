@@ -5,6 +5,7 @@ import { Attribution } from "@/components/Attribution";
 import { Drilldown } from "@/components/Drilldown";
 import { EvalRuns } from "@/components/EvalRuns";
 import { Guardrails } from "@/components/Guardrails";
+import { Operations } from "@/components/Operations";
 import { Overview } from "@/components/Overview";
 import { Playground } from "@/components/Playground";
 import { Sidebar } from "@/components/Sidebar";
@@ -27,7 +28,7 @@ export default function Page() {
   }, [theme]);
 
   // Hash routing: each view gets a shareable URL (#drill, #attr, …) and the back button works.
-  const VIEWS: View[] = ["overview", "runs", "drill", "attr", "query", "guard"];
+  const VIEWS: View[] = ["overview", "runs", "drill", "attr", "query", "ops", "guard"];
   useEffect(() => {
     const sync = () => {
       const h = window.location.hash.replace("#", "") as View;
@@ -73,6 +74,7 @@ export default function Page() {
               {view === "drill" && <Drilldown latest={data.latest} />}
               {view === "attr" && <Attribution latest={data.latest} />}
               {view === "query" && <Playground latest={data.latest} />}
+              {view === "ops" && <Operations report={data.ops} />}
               {view === "guard" && <Guardrails report={data.guardrails} bipia={data.bipia} />}
             </>
           )}

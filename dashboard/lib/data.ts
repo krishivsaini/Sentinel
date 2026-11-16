@@ -170,12 +170,27 @@ export type BipiaReport = {
   judge_agreement?: { agree: Proportion; labelled: number; labelled_by: string[] };
 };
 
+// data/ops_report.json (scripts/ops_report.py): the live service, summarised from its logs.
+export type OpsLatency = LatencyStage & { min_ms: number; max_ms: number };
+export type OpsReport = {
+  generated_utc: string;
+  source: string;
+  window: { from: string | null; to: string | null };
+  requests: number;
+  outcomes: Record<string, { n: number; rate: number | null }>;
+  latency: OpsLatency[];
+  cost_usd: { total: number; per_request_mean: number | null; requests_with_cost: number };
+  feedback: { up: number; down: number; by_outcome: Record<string, Record<string, number>> };
+  daily: { date: string; requests: number; cost_usd: number; request_p95_ms: number | null }[];
+};
+
 export type DashboardData = {
   latest: RunResult;
   history: History;
   latency: LatencyReport | null;
   guardrails: GuardrailsReport | null;
   bipia: BipiaReport | null;
+  ops: OpsReport | null;
 };
 
 async function getJSON<T>(path: string): Promise<T> {
@@ -208,5 +223,11 @@ export async function loadDashboardData(): Promise<DashboardData> {
   } catch {
     bipia = null;
   }
-  return { latest, history, latency, guardrails, bipia };
+  let ops: OpsReport | null = null;
+  try {
+    ops = await getJSON<OpsReport>("/data/ops.json");
+  } catch {
+    ops = null;
+  }
+  return { latest, history, latency, guardrails, bipia, ops };
 }

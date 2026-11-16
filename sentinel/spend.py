@@ -11,12 +11,15 @@ being sent: a run stops within the cost of the calls already in flight.
 
 The deployed API also has a per-day budget (config.daily_spend_limit_usd), checked when a request
 starts rather than per call, so a request either runs to completion or is turned away whole.
+Each request also gets its own tally (start_request_cost), so the query log can say what that
+one answer cost.
 """
 
 from __future__ import annotations
 
 import threading
 from collections import defaultdict
+from contextvars import ContextVar
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -33,6 +36,19 @@ PRICES: dict[str, tuple[float, float]] = {
 }
 # A model missing from the table is priced at the dearest rate rather than as free.
 _FALLBACK = max(PRICES.values(), key=lambda p: p[0] + p[1])
+
+
+# The running cost of the request being served, if any. A one-element list rather than a float so
+# the threads a request runs in (the SSE stream is iterated in a threadpool, each step in a copy
+# of the request's context) all add to the same tally.
+_request_cost: ContextVar[list[float] | None] = ContextVar("request_cost", default=None)
+
+
+def start_request_cost() -> list[float]:
+    """Start a cost tally for the current request; every call recorded under it adds to it."""
+    tally = [0.0]
+    _request_cost.set(tally)
+    return tally
 
 
 class BudgetExceeded(RuntimeError):
@@ -70,6 +86,8 @@ class _Meter:
                 self._day, self._usd_day = today, 0.0
             self._usd_day += cost
             self.usd += cost
+            if (tally := _request_cost.get()) is not None:
+                tally[0] += cost
             self.calls[model] += 1
             self.tokens[model][0] += input_tokens
             self.tokens[model][1] += output_tokens

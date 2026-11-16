@@ -6,6 +6,7 @@ import {
   ListIcon,
   LogoMark,
   MoonIcon,
+  PulseIcon,
   QueryIcon,
   SearchIcon,
   ShieldIcon,
@@ -97,6 +98,9 @@ export function Sidebar({
       <Group>Service</Group>
       <NavButton id="query" view={view} setView={setView} icon={<QueryIcon />}>
         Query Playground
+      </NavButton>
+      <NavButton id="ops" view={view} setView={setView} icon={<PulseIcon />}>
+        Operations
       </NavButton>
 
       <Group>Security · v2</Group>

@@ -64,7 +64,7 @@ from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_cita
 from sentinel.guardrails.pii import redact, redact_chunks
 from sentinel.logging_config import configure_logging, log
 from sentinel.retrieve import Access, hybrid_retrieve_timed
-from sentinel.spend import meter
+from sentinel.spend import meter, start_request_cost
 from sentinel.schema import (
     Answer,
     FeedbackRequest,
@@ -155,10 +155,14 @@ def _scrub(text: str) -> str:
     return redact(text)[0]
 
 
-def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> Iterator[dict]:
+def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
+                  cost: list[float] | None = None) -> Iterator[dict]:
     """Sync generator of SSE events: retrieved -> token* -> done. Runs in a threadpool (the
-    LLM stream is sync), so it never blocks the event loop."""
+    LLM stream is sync), so it never blocks the event loop. `cost` is the request's spend tally
+    (spend.start_request_cost), reported in the query log."""
     answer_id = uuid.uuid4().hex   # ties a later POST /feedback to this answer's log entry
+    t_request = time.perf_counter()
+    first_token: list[float] = []   # when the reader got the first word of the answer
     latency: dict[str, float] = {}
     guard_s = 0.0
     if settings.input_guard:
@@ -166,7 +170,7 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
         screening = engine.screen_input(req.question)
         guard_s += time.perf_counter() - t
         if screening.flagged:
-            yield from _refusal(user, req, screening, guard_s, answer_id)
+            yield from _refusal(user, req, screening, guard_s, answer_id, cost)
             return
     chunks, latency["retrieve"], latency["rerank"] = engine.retrieve(
         req.question, req.top_k, Access(scopes=user.scopes)
@@ -211,10 +215,12 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
         if token:
             parts.append(token)
             if not blocking:
+                first_token or first_token.append(time.perf_counter())
                 yield {"event": "token", "data": token}
     if sanitizer is not None and (tail := sanitizer.finish()):
         parts.append(tail)
         if not blocking:
+            first_token or first_token.append(time.perf_counter())
             yield {"event": "token", "data": tail}
     latency["generate"] = (time.perf_counter() - t0 - stream_guard_s) * 1000.0
     guard_s += stream_guard_s
@@ -238,6 +244,7 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
     if blocking:
         # Released as the model's own tokens, so clients can still render word by word; a
         # withheld answer goes out as the replacement alone.
+        first_token or first_token.append(time.perf_counter())
         for part in [WITHHELD_MESSAGE] if withheld else parts:
             yield {"event": "token", "data": part}
     citations = [] if abstained or withheld else parse_citations(text, chunks)
@@ -268,6 +275,10 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
         scopes=sorted(user.scopes),
         chunk_ids=[c.chunk_id for c in chunks],
         latency_ms={k: round(v, 1) for k, v in latency.items()},
+        # End to end inside the service: the first word the reader saw, and the whole request.
+        first_token_ms=round((first_token[0] - t_request) * 1000.0, 1) if first_token else None,
+        request_ms=round((time.perf_counter() - t_request) * 1000.0, 1),
+        cost_usd=round(cost[0], 6) if cost is not None else None,
         n_citations=len(citations),
         outcome="withheld" if withheld else "abstained" if abstained else "answered",
         guardrails_flagged=guardrails.flagged or bool(redactions),
@@ -276,7 +287,7 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest) -> It
 
 
 def _refusal(user: Principal, req: QueryRequest, screening: InputScreening, guard_s: float,
-             answer_id: str):
+             answer_id: str, cost: list[float] | None = None):
     """The SSE stream for a question the input guard refused: no retrieval, no generation."""
     report = GuardrailReport(input_flagged=True, input_error=screening.error, flagged=True)
     answer = Answer(
@@ -293,6 +304,8 @@ def _refusal(user: Principal, req: QueryRequest, screening: InputScreening, guar
         user=user.subject,
         input_scores=screening.scores,
         input_error=screening.error,
+        request_ms=round(guard_s * 1000.0, 1),
+        cost_usd=round(cost[0], 6) if cost is not None else None,
     )
     yield {"event": "retrieved", "data": "[]"}
     yield {"event": "token", "data": REFUSAL_MESSAGE}
@@ -368,7 +381,7 @@ def create_app() -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="The demo's daily API budget is used up; it resets at 00:00 UTC.",
             )
-        return EventSourceResponse(_query_events(engine, user, body))
+        return EventSourceResponse(_query_events(engine, user, body, start_request_cost()))
 
     # Feedback is a log event, not a database row: the service stays stateless and adds no
     # infrastructure, and scripts/feedback_candidates.py joins it to the query log by

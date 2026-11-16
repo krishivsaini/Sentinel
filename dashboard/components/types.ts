@@ -1,1 +1,1 @@
-export type View = "overview" | "runs" | "drill" | "attr" | "query" | "guard";
+export type View = "overview" | "runs" | "drill" | "attr" | "query" | "ops" | "guard";

@@ -426,3 +426,33 @@ def test_malformed_feedback_is_rejected(client, body) -> None:
 def test_feedback_needs_a_token(client) -> None:
     r = client.post("/feedback", json={"answer_id": "a" * 32, "rating": "up"})
     assert r.status_code == 401
+
+
+# --------------------------------------------------------------------------- observability
+
+
+class _PricedEngine(FakeEngine):
+    """Records known Groq usage while generating and checking, as the real calls do."""
+
+    def generate_tokens(self, question, chunks):
+        from sentinel.spend import meter
+
+        meter.record("openai/gpt-oss-20b", 1_000_000, 0)            # $0.075
+        yield from super().generate_tokens(question, chunks)
+
+    def check_answer(self, question, answer):
+        from sentinel.spend import meter
+
+        meter.record("openai/gpt-oss-safeguard-20b", 0, 1_000_000)  # $0.30
+        return super().check_answer(question, answer)
+
+
+def test_the_query_log_carries_this_requests_cost_and_end_to_end_time(capsys) -> None:
+    c = _client(_PricedEngine())
+    headers = _auth_header(c)
+    _done(c, headers)
+    _done(c, headers)   # a second request starts its own tally, not a running total
+    first, second = _logged(capsys, "query")
+    for q in (first, second):
+        assert q["cost_usd"] == pytest.approx(0.375)
+        assert 0 <= q["first_token_ms"] <= q["request_ms"]

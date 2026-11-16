@@ -1,0 +1,75 @@
+{
+  "generated_utc": "2026-11-16T04:24:30+00:00",
+  "source": "cloud-logging, 30d",
+  "window": {
+    "from": "2026-11-15T10:28:39.790229Z",
+    "to": "2026-11-15T14:14:42.890185Z"
+  },
+  "requests": 7,
+  "outcomes": {
+    "answered": {
+      "n": 7,
+      "rate": 1.0
+    }
+  },
+  "latency": [
+    {
+      "stage": "retrieve",
+      "n": 7,
+      "mean_ms": 103.8,
+      "p50_ms": 99.3,
+      "p95_ms": 127.5,
+      "p99_ms": 130.3,
+      "min_ms": 74.9,
+      "max_ms": 131.0
+    },
+    {
+      "stage": "rerank",
+      "n": 7,
+      "mean_ms": 11232.1,
+      "p50_ms": 10649.1,
+      "p95_ms": 13964.7,
+      "p99_ms": 14045.7,
+      "min_ms": 8820.4,
+      "max_ms": 14066.0
+    },
+    {
+      "stage": "generate",
+      "n": 7,
+      "mean_ms": 1032.6,
+      "p50_ms": 661.1,
+      "p95_ms": 2253.6,
+      "p99_ms": 2537.8,
+      "min_ms": 398.4,
+      "max_ms": 2608.8
+    },
+    {
+      "stage": "guard",
+      "n": 7,
+      "mean_ms": 462.0,
+      "p50_ms": 471.0,
+      "p95_ms": 504.9,
+      "p99_ms": 510.7,
+      "min_ms": 410.5,
+      "max_ms": 512.2
+    }
+  ],
+  "cost_usd": {
+    "total": 0,
+    "per_request_mean": null,
+    "requests_with_cost": 0
+  },
+  "feedback": {
+    "up": 0,
+    "down": 0,
+    "by_outcome": {}
+  },
+  "daily": [
+    {
+      "date": "2026-11-15",
+      "requests": 7,
+      "cost_usd": 0.0,
+      "request_p95_ms": null
+    }
+  ]
+}

@@ -228,3 +228,7 @@ Built for a fixed corpus and one demo tenant; the seams for growing it:
   horizontally behind a load balancer once the indexes are on shared storage. Reader feedback
   keeps it that way: `POST /feedback` writes a log event keyed by the answer's `answer_id`, and
   `scripts/feedback_candidates.py` joins it to the logged answer offline.
+- **Observability** — the structured logs are the telemetry. Each `query` event carries per-stage
+  latency, `first_token_ms`, `request_ms` and `cost_usd` (a per-request tally kept in a context
+  variable that every metered Groq call adds to); `sentinel/ops.py` summarises them from Cloud
+  Logging into `data/ops_report.json`, shown in the dashboard's Operations view.
