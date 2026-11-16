@@ -1,0 +1,27 @@
+# Watch the RFC Editor for changes that concern the corpus (scripts/watch_rfcs.py).
+#
+# Reads the public RFC index only: no secrets, no model calls, no cost. The job fails when
+# something needs a person's decision (a corpus RFC's standing changed, or a new RFC is a
+# candidate), so GitHub's own failed-run notification is the alert; the run summary lists what
+# to do. Decisions are recorded in data/corpus_watch.json, so each one is reported until decided.
+name: corpus-watch
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "17 6 * * 1"   # Mondays 06:17 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check the RFC index
+        run: python scripts/watch_rfcs.py check --summary "$GITHUB_STEP_SUMMARY"

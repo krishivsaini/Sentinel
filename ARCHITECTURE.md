@@ -229,8 +229,14 @@ Built for a fixed corpus and one demo tenant; the seams for growing it:
 - **Latency** — rerank dominates. Pool 20 keeps hit@5 and recall@5 within 0.004 at 2.6× less
   rerank time (`data/rerank_pool_sweep.json`); a GPU or a smaller cross-encoder are the next
   steps.
-- **Screening a changing corpus** — verdicts are keyed by chunk text, so incremental ingestion
-  only screens new chunks.
+- **A changing corpus** — `scripts/watch_rfcs.py` reports what moved at the RFC Editor
+  (standing changes, candidate RFCs); a person decides what joins the corpus.
+  `ingest --incremental` then compares per-document hashes in `meta.json` with the corpus and
+  chunks, screens and embeds only new or changed documents, carrying every other chunk and
+  vector over; BM25 is rebuilt, since its statistics are global. Tests check the result equals a
+  full rebuild, chunk for chunk and vector for vector. Screening verdicts are keyed by chunk text,
+  so only new text costs a classifier call. Changing the chunking or the embedding model forces
+  a full rebuild.
 - **Tenancy** — scopes are enforced end to end and granted per account from a file-backed user
   store. Past a few dozen accounts, or with self-service sign-up, the store moves to a database
   behind the same `UserStore.get` / `authenticate` interface; nothing downstream changes.

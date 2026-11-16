@@ -23,6 +23,7 @@ Two indexes are built, and they never share a directory:
                         only the adversarial passages are embedded.
 
 Run:  python -m sentinel.ingest                  # full rebuild of indexes/
+      python -m sentinel.ingest --incremental    # only new/changed RFCs (same result as full)
       python -m sentinel.ingest --limit 3        # first 3 RFCs (fast smoke test)
       python -m sentinel.ingest --dry-run        # clean + chunk only, no embed/index
       python -m sentinel.ingest --adversarial    # build indexes_adversarial/ from indexes/
@@ -31,6 +32,13 @@ Run:  python -m sentinel.ingest                  # full rebuild of indexes/
 Every chunk is screened for prompt injection before indexing (sentinel.guardrails.injection);
 flagged chunks are written with quarantined=true and never retrieved. Verdicts come from the
 committed cache when the text is unchanged, so an unchanged corpus rebuilds without API calls.
+
+Incremental (`--incremental`): meta.json records a hash of every document. A rebuild compares
+them with the corpus, then chunks, screens and embeds only new or changed documents; the other
+chunks and their vectors are carried over, removed documents dropped, and BM25 rebuilt (its
+statistics are global). The result is the index a full rebuild would produce, written beside
+the old one and swapped in only when complete. Any change to how chunks are made or embedded
+(the chunking settings, the embedding model, CHUNKER_VERSION) forces a full rebuild.
 """
 
 from __future__ import annotations
@@ -63,6 +71,9 @@ ADVERSARIAL_CORPUS_PATH = ADVERSARIAL_DIR / "corpus.jsonl"
 BIPIA_CORPUS_PATH = BIPIA_DIR / "corpus.jsonl"
 TIKTOKEN_ENCODING = "cl100k_base"  # only used to *measure* chunk length in tokens
 MIN_CHUNK_TOKENS = 5               # drop degenerate fragments (stray letters, page artifacts)
+# Bump when cleaning or chunking code changes in a way the settings don't capture: an index
+# built by another version is then rebuilt in full rather than updated incrementally.
+CHUNKER_VERSION = 1
 
 # --- RFC boilerplate patterns (two formats: modern unpaginated + legacy paginated) ---
 # Legacy page footer, e.g. "Mockapetris                              [Page 1]"
@@ -211,20 +222,35 @@ def _write_meta(
     manifest_sha = sha256(MANIFEST_PATH.read_bytes()).hexdigest()
     meta = {
         "built_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "chunk_strategy": settings.chunk_strategy,
-        "chunk_tokens": settings.chunk_tokens,
-        "chunk_overlap_pct": settings.chunk_overlap_pct,
-        "embedding_model": settings.embedding_model,
+        **_build_settings(),
         "embedding_dim": dim,
         "doc_count": len(docs),
         "chunk_count": len(chunks),
         "doc_ids": [d.doc_id for d in docs],
         "corpus_manifest_sha256": manifest_sha,
-        "bm25_tokenizer": "hyphen_underscore_lower",
         "scopes": dict(Counter(c.scope for c in chunks)),
         "quarantined": sum(c.quarantined for c in chunks),
+        "doc_sha256": {d.doc_id: _doc_sha(d) for d in docs},
     }
     paths.meta.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+
+
+def _build_settings() -> dict:
+    """Everything that decides a document's chunks and vectors. An index built with different
+    values can't be updated incrementally."""
+    return {
+        "chunker_version": CHUNKER_VERSION,
+        "chunk_strategy": settings.chunk_strategy,
+        "chunk_tokens": settings.chunk_tokens,
+        "chunk_overlap_pct": settings.chunk_overlap_pct,
+        "embedding_model": settings.embedding_model,
+        "bm25_tokenizer": "hyphen_underscore_lower",
+    }
+
+
+def _doc_sha(doc: SourceDoc) -> str:
+    """Identifies a document's chunks: its cleaned text and scope (chunk ids derive from doc_id)."""
+    return sha256(f"{doc.scope}\0{doc.text}".encode()).hexdigest()
 
 
 def _reset_dir(root: Path) -> IndexPaths:
@@ -286,6 +312,74 @@ def ingest(
     _write_meta(docs, chunks, dim, paths)
     print(f"[meta]  {paths.meta}")
     print(f"[done]  {time.perf_counter() - t0:.1f}s — {len(docs)} docs, {len(chunks)} chunks")
+
+
+def ingest_incremental(index_dir: Path = INDEXES_DIR, screen: bool | None = None) -> dict:
+    """Update index_dir for what changed in the corpus since it was built; see the module
+    docstring. Returns what was done: {"mode": "full" | "incremental" | "unchanged", ...}."""
+    import faiss
+    import numpy as np
+
+    t0 = time.perf_counter()
+    screen = settings.injection_screening if screen is None else screen
+    paths = IndexPaths(index_dir)
+    meta = json.loads(paths.meta.read_text()) if paths.meta.exists() else {}
+    stale = [k for k, v in _build_settings().items() if meta.get(k) != v]
+    if not (paths.chunks.exists() and paths.faiss.exists()) or "doc_sha256" not in meta or stale:
+        why = f"built with different {stale}" if meta and stale else "no incremental metadata"
+        print(f"[incremental] {index_dir.name}/ {why}: full rebuild")
+        ingest(index_dir=index_dir, screen=screen)
+        return {"mode": "full", "reason": why}
+
+    docs = load_source_docs(load_manifest())
+    old_sha = meta["doc_sha256"]
+    changed = [d for d in docs if old_sha.get(d.doc_id) != _doc_sha(d)]
+    added = [d.doc_id for d in changed if d.doc_id not in old_sha]
+    updated = [d.doc_id for d in changed if d.doc_id in old_sha]
+    removed = sorted(set(old_sha) - {d.doc_id for d in docs})
+    if not changed and not removed:
+        print(f"[incremental] {index_dir.name}/ is up to date ({len(docs)} docs)")
+        return {"mode": "unchanged", "added": [], "updated": [], "removed": [], "embedded": 0}
+
+    old_chunks = [Chunk.model_validate_json(line) for line in paths.chunks.open(encoding="utf-8")]
+    old_index = faiss.read_index(str(paths.faiss))
+    old_vectors = old_index.reconstruct_n(0, old_index.ntotal)
+    if len(old_vectors) != len(old_chunks):
+        raise RuntimeError(f"{index_dir} is inconsistent — rebuild it with `sentinel.ingest`")
+    kept: dict[str, list[tuple[Chunk, object]]] = {}
+    for chunk, vec in zip(old_chunks, old_vectors, strict=True):
+        kept.setdefault(chunk.doc_id, []).append((chunk, vec))
+
+    fresh = chunk_documents(changed)
+    fresh_vectors = _embed(fresh) if fresh else np.zeros((0, old_vectors.shape[1]), "float32")
+    for chunk, vec in zip(fresh, fresh_vectors, strict=True):
+        kept.setdefault(f"new:{chunk.doc_id}", []).append((chunk, vec))
+    changed_ids = {d.doc_id for d in changed}
+    # Corpus order, as a full rebuild has it: each changed doc's fresh chunks, others' old ones.
+    rows = [row for d in docs
+            for row in kept.get(f"new:{d.doc_id}" if d.doc_id in changed_ids else d.doc_id, [])]
+    print(f"[incremental] +{len(added)} new, {len(updated)} changed, -{len(removed)} removed docs;"
+          f" embedded {len(fresh)} chunks, kept {len(rows) - len(fresh)}")
+    chunks = [c.model_copy(update={"quarantined": False}) for c, _ in rows]
+    vectors = np.vstack([v for _, v in rows]).astype("float32")
+    if screen:   # re-screens everything, but only new text misses the verdict cache
+        chunks = _screen(chunks, "corpus")
+
+    tmp_dir = index_dir.with_name(index_dir.name + ".building")
+    tmp = _reset_dir(tmp_dir)
+    _write_chunks(chunks, tmp)
+    dim = _write_faiss(vectors, tmp)
+    _build_bm25(chunks, tmp)
+    _write_meta(docs, chunks, dim, tmp)
+    old_dir = index_dir.with_name(index_dir.name + ".old")
+    if old_dir.exists():
+        shutil.rmtree(old_dir)
+    index_dir.rename(old_dir)
+    tmp_dir.rename(index_dir)
+    shutil.rmtree(old_dir)
+    print(f"[done]  {time.perf_counter() - t0:.1f}s — {len(docs)} docs, {len(chunks)} chunks")
+    return {"mode": "incremental", "added": added, "updated": updated, "removed": removed,
+            "embedded": len(fresh)}
 
 
 def load_adversarial_docs() -> list[SourceDoc]:
@@ -393,6 +487,8 @@ def main() -> None:
                     help="build indexes_adversarial/ (real index + adversarial corpus)")
     ap.add_argument("--bipia", action="store_true",
                     help="build indexes_bipia/ (real index + the BIPIA attack set)")
+    ap.add_argument("--incremental", action="store_true",
+                    help="update indexes/ for new or changed RFCs only (= a full build)")
     ap.add_argument("--no-screen", action="store_true",
                     help="skip prompt-injection screening (nothing is quarantined)")
     args = ap.parse_args()
@@ -401,6 +497,8 @@ def main() -> None:
         ingest_adversarial(screen=screen)
     elif args.bipia:
         ingest_adversarial(out_dir=BIPIA_INDEX_DIR, screen=screen, docs=load_bipia_docs())
+    elif args.incremental:
+        ingest_incremental(screen=screen)
     else:
         ingest(limit=args.limit, dry_run=args.dry_run, screen=screen)
 
