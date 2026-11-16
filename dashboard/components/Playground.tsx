@@ -51,7 +51,10 @@ async function signIn(username: string, password: string): Promise<Session> {
   if (!res.ok) throw new Error(`auth ${res.status}`);
   const t = await res.json();
   const me = await fetch(`${API}/me`, { headers: { Authorization: `Bearer ${t.access_token}` } });
-  const account = me.ok ? await me.json() : { username, scopes: t.scopes ?? [], shared: false };
+  // An API without /me (older deploys) still works: the demo account by name, public scope.
+  const account = me.ok
+    ? await me.json()
+    : { username, scopes: t.scopes ?? ["public"], shared: username === DEMO.username };
   // Renewed a minute early so a question never starts on a token about to expire.
   const expires = Date.now() + ((t.expires_in || 3600) - 60) * 1000;
   return { token: t.access_token, ...account, expires };
