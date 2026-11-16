@@ -28,7 +28,7 @@ variable "daily_spend_limit_usd" {
 }
 
 variable "rate_limit" {
-  description = "Per-IP limit on /query (slowapi syntax; several limits separated by ';')."
+  description = "Limit on /query per named account, or per IP for the demo account (slowapi syntax; several limits separated by ';')."
   type        = string
   default     = "6/minute;60/day"
 }
@@ -55,4 +55,10 @@ variable "budget_currency" {
   description = "Currency of the billing account (the alert must match it)."
   type        = string
   default     = "USD"
+}
+
+variable "named_accounts" {
+  description = "Mount a users file (Secret Manager secret sentinel-users) so named accounts with their own scopes can sign in. Add a secret version before turning this on; see deploy/README.md."
+  type        = bool
+  default     = false
 }

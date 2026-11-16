@@ -135,7 +135,16 @@ class TokenResponse(BaseModel):
 
     access_token: str
     token_type: str = "bearer"
+    scopes: list[str] = Field(default_factory=list)   # what this token may retrieve
+    expires_in: int = 0                                # seconds
 
+
+class Account(BaseModel):
+    """GET /me: who a token belongs to and what it may retrieve."""
+
+    username: str
+    scopes: list[str]
+    shared: bool   # the public demo account
 
 # --------------------------------------------------------------------------- Ground truth / eval
 

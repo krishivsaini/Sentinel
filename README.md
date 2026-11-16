@@ -232,7 +232,7 @@ flowchart LR
 | **[Ingestion](sentinel/ingest.py)** | clean → chunk (512 tokens, 12% overlap) → embed locally → FAISS **and** BM25 over the same chunk ids; idempotent |
 | **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen |
 | **[Generation](sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
-| **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, per-IP rate limit |
+| **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, `GET /me`; rate limited per account (per IP for the demo account and sign-in) |
 | **[Evaluation](sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
 | **[CI gates](.github/workflows/eval-gate.yml)** | tests · faithfulness gate · injection gate, path-filtered and spend-capped |
 | **[Dashboard](dashboard/)** | Next.js: trends, drill-down, attribution, live playground, guardrails — from exported JSON, no backend |
@@ -315,6 +315,7 @@ flowchart LR
 - **The stream can't leak half a link.** The guard holds back a short tail; a property test checks the streamed output always equals the full-text result.
 - **A withheld answer is never sent.** The service holds the answer until the check passes, then sends its tokens, so a client can't show what the check stopped. The words still stream, but the first one now arrives after generation and the check rather than with the first token; the dashboard paces the released tokens word by word. On 7 live queries before this change, generation took 0.4–2.6 s and the whole guard stage (input guard and answer check together) 410–512 ms, beside 9–14 s of reranking. The check is now timed on its own (`latency_ms.answer_check`). `answer_check_blocks=false` brings back token streaming, with the retraction in `done`.
 - **Attack corpora are segregated** into their own indexes and scopes; the service index never contains a poisoned chunk.
+- **Accounts without a database.** The shared demo account (public password, public scope only) sits beside named accounts from a file of scrypt hashes, mounted from Secret Manager in production and managed with `scripts/users.py`. A token carries an HMAC of its account's password hash and scopes and is re-checked on every request, so disabling an account, changing its password or removing a scope ends its live tokens at once; the file is re-read when it changes, so none of that needs a redeploy.
 
 </details>
 
@@ -367,6 +368,14 @@ curl -N -X POST localhost:8000/query \
   -d '{"question": "What does the HTTP 429 status code indicate?"}'
 ```
 
+Named accounts with their own scopes (the demo account gets `public` only):
+
+```bash
+uv run python scripts/users.py add alice --scopes public       # prompts for a password; stores a hash
+SENTINEL_USERS_FILE=data/users.json uv run python -m sentinel.serve
+curl -s -X POST localhost:8000/token -d 'username=alice&password=…&scope=public'   # scope is optional
+```
+
 **Evaluate** — paid runs accept `--max-spend USD`:
 
 ```bash
@@ -396,7 +405,8 @@ Everything tunable lives in [`config.py`](sentinel/config.py) and can be overrid
 |---|---|---|
 | `GROQ_API_KEY` | yes | generation, the judge and the guardrail classifiers |
 | `SENTINEL_JWT_SECRET` | yes | signs API tokens |
-| `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | the single demo account |
+| `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | the shared demo account (default scope only) |
+| `SENTINEL_USERS_FILE` | no | named accounts: scrypt hashes and scopes, managed with `scripts/users.py` |
 | `SENTINEL_SPEND_LIMIT_USD` | no | stop any run once its metered spend reaches this |
 | `SENTINEL_TORCH_DEVICE` | no | `cpu` (default), `mps` or `cuda` for the local models |
 | `SENTINEL_INPUT_GUARD` · `_INJECTION_SCREENING` · `_PROMPT_HARDENING` · `_REDACT_CONTEXT_PII` · `_OUTPUT_GUARD` · `_ANSWER_CHECK` | no | switch a guardrail off — the guardrail eval does exactly that |
@@ -417,6 +427,7 @@ Sentinel/
 │   ├── generate.py          # grounded, cited generation with abstention
 │   ├── llm.py               # provider-agnostic chat-model factory
 │   ├── serve.py             # FastAPI: JWT scopes, rate limiting, SSE, guardrails
+│   ├── users.py             # accounts: the demo account + named ones (scrypt hashes, scopes)
 │   ├── retry.py             # shared retry policy for every rate-limited API call
 │   ├── spend.py             # meters every paid LLM call; caps a run in dollars
 │   ├── logging_config.py    # structured logging + per-stage timers
@@ -455,6 +466,7 @@ Sentinel/
 │   ├── answer_check_eval.py         # the answer check on every recorded answer
 │   ├── build_bipia.py               # fetch BIPIA (pinned) and plant it in RFC passages
 │   ├── bench_latency.py             # per-stage p50/p95/p99
+│   ├── users.py                     # add / disable / re-scope named accounts
 │   └── export_dashboard_data.py     # cross-run history for the dashboard
 ├── dashboard/               # Next.js + Tailwind eval dashboard
 ├── tests/                   # retrieval, scope, guardrails, generation, service, eval, spend
@@ -474,6 +486,7 @@ Stated plainly:
 | | |
 |---|---|
 | **Scope** | One corpus (IETF RFCs), 48 hand-built questions, one demo tenant. The pipeline is generic; the numbers aren't claimed to transfer. |
+| **Accounts** | A file, not a database: accounts are added by the operator (no sign-up, no password reset), and every instance re-reads the same file. Fine for a handful of accounts. The production RFC index holds only `public` chunks, so a named account's extra scopes have nothing more to retrieve there yet. |
 | **The judge** | A model, calibrated against one labeller (blind r = +0.78). Judged context recall is too coarse to tell fusion from reranking. |
 | **The CI gate** | Sees 24 of 48 questions, faithfulness only. The baseline comes from 4 runs, so about 1 healthy PR in 40 may fail by chance; regressions under ~0.07 pass. Refresh the baseline when main changes generation on purpose. |
 | **Attack sets** | The 85 hand-written attacks share an author with the defences; BIPIA showed the bias — screening caught 59% of its attacks vs 93% of our dev and held-out ones. A second policy now catches 74 / 75, but it was written because of that result, so BIPIA is no longer a fully independent test of screening. |

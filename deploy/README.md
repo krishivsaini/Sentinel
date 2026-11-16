@@ -107,6 +107,20 @@ terraform apply
 | Logs | `gcloud run services logs read sentinel-api --region <region>` (structured JSON, one line per query) |
 | Change the daily cap or rate limit | edit `daily_spend_limit_usd` / `rate_limit` in `terraform.tfvars`, `terraform apply` |
 | Rotate the Groq key | add a new secret version; the next revision picks up `latest` |
+| Named accounts | see below |
 | Take it offline | `terraform destroy` |
 
-**Limits, stated plainly:** the daily cap is counted per instance and resets when an instance starts, so with scale-to-zero it bounds each waking period, not strictly the day — the Groq account's own spend limit is the hard backstop. The demo account's password is public (the dashboard signs in with it); the JWT demonstrates scoped auth, while the rate limit and spend cap are what protect the endpoint. A cold start takes ~30–60 s while the models load.
+**Named accounts (optional).** Without them the service has only the shared demo account. To add accounts with their own passwords and scopes, build the users file locally, store it as a secret, then turn on the mount (the secret needs a version before the mount, or the new revision can't start):
+
+```bash
+uv run python scripts/users.py add alice --scopes public       # writes data/users.json (git-ignored)
+cd deploy/terraform
+terraform apply -var named_accounts=true -target='google_secret_manager_secret.app["users"]'
+gcloud secrets versions add sentinel-users --data-file=../../data/users.json
+# then set named_accounts = true in terraform.tfvars and:
+terraform apply
+```
+
+After that, change accounts by editing the file with `scripts/users.py` and adding a new secret version; the running service re-reads it, so no redeploy. Disabling an account, changing its password or removing a scope ends its existing tokens. It stays free: one more secret is within Secret Manager's free tier.
+
+**Limits, stated plainly:** the daily cap is counted per instance and resets when an instance starts, so with scale-to-zero it bounds each waking period, not strictly the day — the Groq account's own spend limit is the hard backstop. The demo account's password is public (the dashboard signs in with it) and gets only the public scope; the rate limit and spend cap are what protect the endpoint. Named accounts are rate limited per account, sign-in per IP. A cold start takes ~30–60 s while the models load.

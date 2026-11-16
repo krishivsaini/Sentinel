@@ -28,7 +28,8 @@ from sentinel.guardrails.answer import WITHHELD_MESSAGE, AnswerCheck
 from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening
 from sentinel.retrieve import Access
 from sentinel.schema import RetrievedChunk
-from sentinel.serve import create_access_token, create_app, get_engine
+from sentinel.serve import create_app, get_engine
+from sentinel.users import UserStore, hash_password, write_users_file
 
 
 class FakeEngine:
@@ -171,12 +172,18 @@ def _done(client: TestClient, headers: dict[str, str]) -> tuple[list[str], dict]
     return tokens, json.loads(next(data for ev, data in events if ev == "done"))
 
 
-def test_token_scopes_reach_retrieval() -> None:
+def test_token_scopes_reach_retrieval(tmp_path) -> None:
+    users_file = tmp_path / "users.json"
+    write_users_file(users_file, [{"username": "alice", "password_hash": hash_password("pw-a"),
+                                   "scopes": ["public", "internal"]}])
     engine = FakeEngine()
-    c = _client(engine)
+    app = create_app(UserStore(demo_user=settings.demo_user, demo_password=settings.demo_password,
+                               default_scopes=settings.default_scopes, users_file=users_file))
+    app.dependency_overrides[get_engine] = lambda: engine
+    c = TestClient(app)
     _done(c, _auth_header(c))
     assert engine.accesses[-1].scopes == frozenset(settings.default_scopes)
-    token = create_access_token(settings.demo_user, scopes=("public", "internal"))
+    token = c.post("/token", data={"username": "alice", "password": "pw-a"}).json()["access_token"]
     _done(c, {"Authorization": f"Bearer {token}"})
     assert engine.accesses[-1].scopes == frozenset({"public", "internal"})
     assert not engine.accesses[-1].include_quarantined

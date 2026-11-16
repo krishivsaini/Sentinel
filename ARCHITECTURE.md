@@ -57,7 +57,7 @@ Three properties hold throughout:
 
 | Stage | Module | What it does | Why this way |
 |---|---|---|---|
-| Auth + rate limit | [`serve.py`](sentinel/serve.py) | JWT bearer (with document scopes); slowapi per-IP limit | Scopes come from the signed token, never the request |
+| Auth + rate limit | [`serve.py`](sentinel/serve.py), [`users.py`](sentinel/users.py) | JWT bearer with document scopes, issued from a user store (scrypt hashes); slowapi limit per named account, per IP for the shared demo account and sign-in | Scopes come from the signed token, never the request, and every token is re-checked against its account |
 | Input guard | [`guardrails/input.py`](sentinel/guardrails/input.py) | gpt-oss-safeguard-20b with an input policy; a flagged question gets a fixed refusal | Chosen over Prompt Guard by measurement: it refused 0 of 88 genuine questions, Prompt Guard 2 |
 | Dense + sparse | [`retrieve.py`](sentinel/retrieve.py) | FAISS (bge-small) top 50 and BM25 top 50 | BM25 recovers exact terms — header names, status codes — that dense misses |
 | Access filter | `retrieve.Access` | scope and quarantine applied **inside** both searches (FAISS id selector, BM25 mask) | A post-filter would let a blocked chunk take a candidate slot or reach the reranker |
@@ -126,6 +126,15 @@ Two design rules come from this table:
 
 Scopes are the authorization model: every chunk has one, the JWT carries the caller's, and a
 default-scope caller provably retrieves 0 adversarial chunks across every attack question.
+
+Accounts grant the scopes ([`users.py`](sentinel/users.py)). The shared demo account's password
+is public, so it only ever gets the default scope. Named accounts live in a JSON file of salted
+scrypt hashes, managed with `scripts/users.py` and mounted in production from Secret Manager, so
+it is never in the image or the repository. A caller may ask `/token` for fewer scopes than the
+account has, never more. Each token carries a credential tag, an HMAC of the account's password
+hash and scopes, and every request re-checks it against the store, which re-reads the file when
+it changes. Disabling an account, changing its password or taking a scope away therefore ends its
+existing tokens on the next request, with no database and no redeploy.
 
 ---
 
@@ -222,8 +231,9 @@ Built for a fixed corpus and one demo tenant; the seams for growing it:
   steps.
 - **Screening a changing corpus** — verdicts are keyed by chunk text, so incremental ingestion
   only screens new chunks.
-- **Tenancy** — scopes are enforced end to end, but there is no user store to grant them;
-  one would issue JWTs with per-user scopes and nothing downstream changes.
+- **Tenancy** — scopes are enforced end to end and granted per account from a file-backed user
+  store. Past a few dozen accounts, or with self-service sign-up, the store moves to a database
+  behind the same `UserStore.get` / `authenticate` interface; nothing downstream changes.
 - **Statelessness** — the service holds no per-request state beyond the stream; it scales
   horizontally behind a load balancer once the indexes are on shared storage. Reader feedback
   keeps it that way: `POST /feedback` writes a log event keyed by the answer's `answer_id`, and

@@ -94,8 +94,14 @@ class Settings(BaseSettings):
     # judge verdicts on long answers (see sentinel.llm). The model allows far more.
     groq_max_output_tokens: int = 16384
     jwt_secret: str = Field(default="dev-insecure-change-me", validation_alias="SENTINEL_JWT_SECRET")
+    # The shared demo account. Its password is public (the dashboard signs in with it), so it only
+    # ever gets default_scopes; named accounts with their own scopes live in users_file.
     demo_user: str = "demo"
     demo_password: str = "change-me"
+    # Named accounts (sentinel.users): a JSON file of scrypt hashes and scopes, managed with
+    # scripts/users.py. None = the demo account only. In production, a mounted Secret Manager
+    # secret; locally, e.g. data/users.json (git-ignored).
+    users_file: Path | None = None
 
     # ---------------------------------------------------------------- Models
     # Local (₹0) models — verified stable HF model IDs.
@@ -224,7 +230,8 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------- Service (§11)
     jwt_algorithm: str = "HS256"
     jwt_expiry_minutes: int = 60
-    rate_limit: str = "20/minute"          # slowapi per-IP limit; a test must prove it fires
+    rate_limit: str = "20/minute"          # per named account, or per IP for the demo account
+    token_rate_limit: str = "10/minute"    # sign-in attempts per IP: slows password guessing
     # A public deployment: turn /query away once the day's metered LLM spend reaches this
     # many USD (None = no cap), and the browser origins allowed to call the API (the dashboard).
     daily_spend_limit_usd: float | None = None

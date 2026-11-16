@@ -1,7 +1,9 @@
 """FastAPI service (§11) — Phase 2, Day 6.
 
 Endpoints:
-    POST /token   -> issue a JWT for the single demo user (OAuth2 password form).
+    POST /token   -> issue a JWT (OAuth2 password form): the shared demo account, or a named
+                     account from the user store (sentinel.users), optionally narrowed with `scope`.
+    GET  /me      -> the token's account and scopes.
     POST /query   -> Answer, SSE-streamed tokens; JWT-protected; rate-limited.
     POST /feedback -> a thumbs up/down (and optional comment) on one answer, by its answer_id.
     GET  /healthz -> liveness (Cloud Run's probes call it inside the container).
@@ -39,7 +41,6 @@ Run:  python -m sentinel.serve   (or: uvicorn sentinel.serve:app)
 from __future__ import annotations
 
 import json
-import secrets
 import time
 import uuid
 from collections.abc import AsyncIterator, Iterator
@@ -65,7 +66,9 @@ from sentinel.guardrails.pii import redact, redact_chunks
 from sentinel.logging_config import configure_logging, log
 from sentinel.retrieve import Access, hybrid_retrieve_timed
 from sentinel.spend import meter, start_request_cost
+from sentinel.users import User, UserStore
 from sentinel.schema import (
+    Account,
     Answer,
     FeedbackRequest,
     GuardrailReport,
@@ -110,37 +113,73 @@ def get_engine() -> QueryEngine:
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
+def default_user_store() -> UserStore:
+    return UserStore(demo_user=settings.demo_user, demo_password=settings.demo_password,
+                     default_scopes=settings.default_scopes, users_file=settings.users_file)
+
+
 @dataclass(frozen=True)
 class Principal:
     """An authenticated caller: who, and which document scopes they may retrieve (v2-R4)."""
 
     subject: str
     scopes: frozenset[str]
+    shared: bool = False
 
 
-def create_access_token(subject: str, scopes: tuple[str, ...] | None = None) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expiry_minutes)
-    claims = {"sub": subject, "exp": expire, "scopes": list(scopes or settings.default_scopes)}
+def create_access_token(user: User, scopes: frozenset[str] | None = None) -> str:
+    """A signed token for `user`, carrying `scopes` (default: all the account's) and the
+    account's credential tag, so it stops working if the password or scopes change."""
+    scopes = user.scopes if scopes is None else scopes
+    if not scopes <= user.scopes:
+        raise ValueError(f"{user.username} may not be issued {sorted(scopes - user.scopes)}")
+    now = datetime.now(timezone.utc)
+    claims = {"sub": user.username, "iat": now,
+              "exp": now + timedelta(minutes=settings.jwt_expiry_minutes),
+              "scopes": sorted(scopes), "cred": user.credential_tag(settings.jwt_secret)}
     return jwt.encode(claims, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> Principal:
-    """Decode + validate the bearer JWT; 401 on anything wrong (FR-S3). The scopes come from the
-    signed token; one without a scopes claim gets the default scopes, never more."""
-    credentials_error = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+def _verified_account(token: str, store: UserStore) -> tuple[User, frozenset[str]] | None:
+    """The account a token belongs to and the scopes it grants, or None. A valid signature is
+    not enough: the account must still exist and be enabled, and its credential tag must
+    match, so a disabled account, a changed password or a removed scope ends old tokens."""
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError as exc:
-        raise credentials_error from exc
-    subject = payload.get("sub")
-    scopes = payload.get("scopes", list(settings.default_scopes))
-    if not subject or not isinstance(scopes, list) or not all(isinstance(s, str) for s in scopes):
-        raise credentials_error
-    return Principal(subject=subject, scopes=frozenset(scopes))
+    except JWTError:
+        return None
+    user = store.get(payload.get("sub") or "")
+    scopes = payload.get("scopes")
+    if (user is None or not isinstance(scopes, list)
+            or not all(isinstance(x, str) for x in scopes)
+            or payload.get("cred") != user.credential_tag(settings.jwt_secret)):
+        return None
+    granted = frozenset(scopes) & user.scopes
+    return (user, granted) if granted else None
+
+
+def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> Principal:
+    """Decode + validate the bearer JWT against the user store; 401 on anything wrong (FR-S3)."""
+    found = _verified_account(token, request.app.state.users)
+    if found is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user, scopes = found
+    return Principal(subject=user.username, scopes=scopes, shared=user.shared)
+
+
+def _rate_key(request: Request) -> str:
+    """Rate limit bucket: a named account's own (wherever it calls from), or the caller's IP
+    for the shared demo account and anything unauthenticated."""
+    auth = request.headers.get("authorization", "")
+    if auth[:7].lower() == "bearer ":
+        found = _verified_account(auth[7:].strip(), request.app.state.users)
+        if found and not found[0].shared:
+            return f"user:{found[0].username}"
+    return get_remote_address(request)
 
 
 # --------------------------------------------------------------------------- SSE query stream
@@ -328,7 +367,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-def create_app() -> FastAPI:
+def create_app(users: UserStore | None = None) -> FastAPI:
     configure_logging(json_output=True)
     app = FastAPI(
         title="Sentinel",
@@ -342,8 +381,9 @@ def create_app() -> FastAPI:
             allow_methods=["GET", "POST"],
             allow_headers=["Authorization", "Content-Type"],
         )
+    app.state.users = users or default_user_store()
     # Limiter is created per-app (fresh in-memory storage) so tests don't bleed rate state.
-    limiter = Limiter(key_func=get_remote_address)
+    limiter = Limiter(key_func=_rate_key)
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -353,16 +393,35 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     @app.post("/token", response_model=TokenResponse)
-    def issue_token(form: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
-        ok_user = secrets.compare_digest(form.username, settings.demo_user)
-        ok_pass = secrets.compare_digest(form.password, settings.demo_password)
-        if not (ok_user and ok_pass):
+    @limiter.limit(settings.token_rate_limit, key_func=get_remote_address)
+    def issue_token(request: Request,
+                    form: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
+        user = app.state.users.authenticate(form.username, form.password)
+        if user is None:
+            # No username in the log: a mistyped password often lands in that field.
+            log.warning("token.refused")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return TokenResponse(access_token=create_access_token(form.username))
+        # OAuth2 `scope`: a caller may ask for fewer scopes than the account has, never more.
+        asked = frozenset(form.scopes)
+        if not asked <= user.scopes:
+            log.warning("token.invalid_scope", user=user.username, asked=sorted(asked))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"invalid_scope: not granted {sorted(asked - user.scopes)}",
+            )
+        scopes = asked or user.scopes
+        log.info("token.issued", user=user.username, scopes=sorted(scopes), shared=user.shared)
+        return TokenResponse(access_token=create_access_token(user, scopes),
+                             scopes=sorted(scopes),
+                             expires_in=settings.jwt_expiry_minutes * 60)
+
+    @app.get("/me", response_model=Account)
+    def me(user: Principal = Depends(get_current_user)) -> Account:  # noqa: B008
+        return Account(username=user.subject, scopes=sorted(user.scopes), shared=user.shared)
 
     @app.post("/query")
     @limiter.limit(settings.rate_limit)

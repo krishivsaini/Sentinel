@@ -1,9 +1,10 @@
 # Sentinel API on Cloud Run — everything the service needs, as code.
 #
 #   Artifact Registry    the container images (only the newest few are kept)
-#   Secret Manager       GROQ_API_KEY and the JWT secret; Terraform creates the secrets but never
-#                        holds their values, so they stay out of state — add them with gcloud
-#   Service accounts     one the service runs as (reads its two secrets, nothing else) and one
+#   Secret Manager       GROQ_API_KEY and the JWT secret, plus (with named_accounts) the users
+#                        file of password hashes; Terraform creates the secrets but never holds
+#                        their values, so they stay out of state — add them with gcloud
+#   Service accounts     one the service runs as (reads its secrets, nothing else) and one
 #                        GitHub Actions deploys as (pushes images, rolls out revisions)
 #   Workload Identity    GitHub's OIDC token is exchanged for the deployer's identity, restricted
 #                        to this repository's main branch — no long-lived key exists anywhere
@@ -51,10 +52,14 @@ locals {
     "cloudresourcemanager.googleapis.com", # needed by the quota-project override above
     "serviceusage.googleapis.com",
   ]
-  secrets = {
-    groq_api_key = "sentinel-groq-api-key"
-    jwt_secret   = "sentinel-jwt-secret"
-  }
+  secrets = merge(
+    {
+      groq_api_key = "sentinel-groq-api-key"
+      jwt_secret   = "sentinel-jwt-secret"
+    },
+    # The named accounts' users file (scripts/users.py), mounted as a file, not an env var.
+    var.named_accounts ? { users = "sentinel-users" } : {},
+  )
 }
 
 resource "google_project_service" "apis" {
@@ -183,6 +188,22 @@ resource "google_cloud_run_v2_service" "api" {
     timeout                          = "120s"
     max_instance_request_concurrency = 4
 
+    # Named accounts: the users file, re-read by the app when a new secret version lands, so
+    # adding or disabling an account needs no redeploy.
+    dynamic "volumes" {
+      for_each = var.named_accounts ? [1] : []
+      content {
+        name = "users"
+        secret {
+          secret = google_secret_manager_secret.app["users"].secret_id
+          items {
+            version = "latest"
+            path    = "users.json"
+          }
+        }
+      }
+    }
+
     scaling {
       min_instance_count = 0 # scale to zero: no cost while idle
       max_instance_count = 1 # one instance, so the in-app daily spend cap is the whole cap
@@ -235,6 +256,21 @@ resource "google_cloud_run_v2_service" "api" {
             secret  = google_secret_manager_secret.app["jwt_secret"].secret_id
             version = "latest"
           }
+        }
+      }
+
+      dynamic "volume_mounts" {
+        for_each = var.named_accounts ? [1] : []
+        content {
+          name       = "users"
+          mount_path = "/secrets/users"
+        }
+      }
+      dynamic "env" {
+        for_each = var.named_accounts ? [1] : []
+        content {
+          name  = "SENTINEL_USERS_FILE"
+          value = "/secrets/users/users.json"
         }
       }
 

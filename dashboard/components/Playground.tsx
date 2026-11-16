@@ -30,17 +30,31 @@ type Done = {
 
 const rfc = (docId: string) => docId.replace(/^rfc/i, "RFC ");
 
-// Streams from the real Sentinel API: POST /token (demo creds) -> JWT, then POST /query and parse
-// the SSE frames (`retrieved` -> chunks, `checking` -> the answer check is running, `token` ->
-// text, `done` -> final text + latency + guardrail report). No API configured => idle state.
-async function getToken(): Promise<string> {
-  const tokenRes = await fetch(`${API}/token`, {
+// Streams from the real Sentinel API: POST /token -> JWT, then POST /query and parse the SSE
+// frames (`retrieved` -> chunks, `checking` -> the answer check is running, `token` -> text,
+// `done` -> final text + latency + guardrail report). No API configured => idle state.
+//
+// Without a sign-in the playground uses the shared demo account (its password is public, so it
+// only gets the public scope). A named account signs in below; its token is kept in memory for
+// this tab only, and the password is never stored.
+const DEMO = { username: "demo", password: "change-me" };
+type Session = { token: string; username: string; scopes: string[]; shared: boolean; expires: number };
+
+async function signIn(username: string, password: string): Promise<Session> {
+  const res = await fetch(`${API}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ username: "demo", password: "change-me" }),
+    body: new URLSearchParams({ username, password }),
   });
-  if (!tokenRes.ok) throw new Error(`auth ${tokenRes.status}`);
-  return (await tokenRes.json()).access_token;
+  if (res.status === 401) throw new Error("Wrong username or password.");
+  if (res.status === 429) throw new Error("Too many sign-in attempts. Wait a minute.");
+  if (!res.ok) throw new Error(`auth ${res.status}`);
+  const t = await res.json();
+  const me = await fetch(`${API}/me`, { headers: { Authorization: `Bearer ${t.access_token}` } });
+  const account = me.ok ? await me.json() : { username, scopes: t.scopes ?? [], shared: false };
+  // Renewed a minute early so a question never starts on a token about to expire.
+  const expires = Date.now() + ((t.expires_in || 3600) - 60) * 1000;
+  return { token: t.access_token, ...account, expires };
 }
 
 async function streamAnswer(
@@ -114,6 +128,7 @@ export function Playground({ latest }: { latest: RunResult }) {
   const [done, setDone] = useState<Done | null>(null);
   const [error, setError] = useState("");
   const [token, setToken] = useState("");
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     if (!answer.startsWith(revealed)) {
@@ -142,7 +157,16 @@ export function Playground({ latest }: { latest: RunResult }) {
     setChunks([]);
     setDone(null);
     try {
-      const t = await getToken(); // fresh per question (tokens expire); kept for its feedback
+      let s = session;
+      if (!s || Date.now() > s.expires) {
+        if (s && !s.shared) {
+          setSession(null);
+          throw new Error("Your session expired. Sign in again.");
+        }
+        s = await signIn(DEMO.username, DEMO.password);
+        setSession(s);
+      }
+      const t = s.token; // kept for this answer's feedback
       setToken(t);
       await streamAnswer(
         t,
@@ -192,6 +216,7 @@ export function Playground({ latest }: { latest: RunResult }) {
           </button>
         </div>
       </div>
+      <AccountBar session={session} onSession={setSession} />
       <div className="mb-6 flex flex-wrap gap-2">
         {samples.map((s) => (
           <button
@@ -219,7 +244,7 @@ export function Playground({ latest }: { latest: RunResult }) {
       {phase === "error" && (
         <div className="rounded-xl border border-dashed border-input-bd p-11 text-center">
           <div className="mb-1.5 text-[13px] font-medium text-text-2">
-            {error === "no-api" ? "No API endpoint configured" : "Couldn't reach the API"}
+            {error === "no-api" ? "No API endpoint configured" : error.startsWith("Your session") ? error : "Couldn't reach the API"}
           </div>
           <div className="mx-auto max-w-[520px] text-[12px] leading-[1.6] text-text-4">
             The playground streams from a running Sentinel service. Start it with{" "}
@@ -376,6 +401,93 @@ function Feedback({ answerId, token }: { answerId: string; token: string }) {
       {state === "sending" && <span>Sending…</span>}
       {state === "sent" && <span>Thanks, recorded.</span>}
       {state === "failed" && <span className="text-warn-fg">Couldn't send feedback.</span>}
+    </div>
+  );
+}
+
+// Who the playground asks as. Signing in swaps the token; nothing is written to storage.
+function AccountBar({
+  session,
+  onSession,
+}: {
+  session: Session | null;
+  onSession: (s: Session | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const named = session && !session.shared;
+
+  async function submit() {
+    if (!API || !username || !password) return;
+    setBusy(true);
+    setErr("");
+    try {
+      onSession(await signIn(username, password));
+      setOpen(false);
+      setPassword("");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-3 text-[12px] text-text-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span>
+          Asking as <span className="font-mono text-text-2">{named ? session.username : DEMO.username}</span>
+          {" · scopes "}
+          <span className="font-mono text-text-2">{(session?.scopes ?? ["public"]).join(", ")}</span>
+          {!named && <span className="text-text-4"> (shared demo account)</span>}
+        </span>
+        {named ? (
+          <button onClick={() => onSession(null)} className="text-accent hover:underline">
+            Sign out
+          </button>
+        ) : (
+          <button onClick={() => setOpen(!open)} className="text-accent hover:underline">
+            {open ? "Cancel" : "Sign in with an account"}
+          </button>
+        )}
+      </div>
+      {open && !named && (
+        <form
+          className="mt-2 flex flex-wrap items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value.trim().toLowerCase())}
+            placeholder="username"
+            autoComplete="username"
+            className="rounded-lg border border-input-bd bg-panel px-3 py-1.5 text-[12.5px] text-text"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="password"
+            autoComplete="current-password"
+            className="rounded-lg border border-input-bd bg-panel px-3 py-1.5 text-[12.5px] text-text"
+          />
+          <button
+            type="submit"
+            disabled={busy || !username || !password}
+            className="rounded-lg bg-btn-bg px-3 py-1.5 text-[12.5px] font-medium text-btn-fg disabled:opacity-50"
+          >
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+          {err && <span className="text-[12px] text-bad-fg">{err}</span>}
+          {!API && <span className="text-text-4">No API endpoint configured.</span>}
+        </form>
+      )}
     </div>
   );
 }

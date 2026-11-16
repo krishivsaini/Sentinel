@@ -54,3 +54,7 @@ deploy/terraform/.terraform.lock.hcl.bak
 
 # --- Reader feedback (holds readers questions; only reviewed items reach ground_truth.jsonl) ---
 data/feedback/
+
+# --- Accounts (password hashes; in production a Secret Manager secret, never the repo) ---
+data/users.json
+data/users.json.tmp
