@@ -1,0 +1,1956 @@
+{
+ "generated_utc": "2026-11-16T07:32:27Z",
+ "pgvector": [
+  {
+   "collection": "indexes",
+   "dim": 384,
+   "rows": 2888,
+   "embedding_model": "BAAI/bge-small-en-v1.5",
+   "synced_utc": "2026-11-16T07:27:44+00:00"
+  },
+  {
+   "collection": "indexes_adversarial",
+   "dim": 384,
+   "rows": 2938,
+   "embedding_model": "BAAI/bge-small-en-v1.5",
+   "synced_utc": "2026-11-16T07:27:49+00:00"
+  }
+ ],
+ "corpus": {
+  "summary": {
+   "questions": 48,
+   "dense_top_n": 50,
+   "ef_search": 100,
+   "mean_overlap": 0.9971,
+   "min_overlap": 0.96,
+   "same_top5": 48,
+   "same_order": 42,
+   "short_results": 0,
+   "not_allowed_returned": 0,
+   "max_score_diff": 2.98e-07,
+   "dense_ms": {
+    "faiss_p50": 0.102,
+    "faiss_p95": 0.117,
+    "pgvector_p50": 0.876,
+    "pgvector_p95": 0.994
+   },
+   "same_hybrid_top_k": 48,
+   "hybrid_faiss": {
+    "hit": 0.896,
+    "recall": 0.816,
+    "rr": 0.759
+   },
+   "hybrid_pgvector": {
+    "hit": 0.896,
+    "recall": 0.816,
+    "rr": 0.759
+   }
+  },
+  "per_question": [
+   {
+    "question": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the key word MUST NOT mean in an RFC?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.25
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.25
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the HTTP 429 status code indicate, and what header may the response include?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does HTTP decide whether a stored cached response is still fresh?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the 308 Permanent Redirect status code mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the purpose of the dynamic table in HPACK header compression?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "Why does QPACK use separate encoder and decoder streams in HTTP/3?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.6666666666666666,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.6666666666666666,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.6666666666666666,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.6666666666666666,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the HTTP PATCH method used for, and is it idempotent?",
+    "overlap": 0.96,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the 431 Request Header Fields Too Large status code indicate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.6666666666666666,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.6666666666666666,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the max-age directive in the HSTS Strict-Transport-Security header specify?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What are the main components of a URI's generic syntax?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "Which characters are allowed in a percent-encoded octet in a URI?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does a URI Template expand a simple string variable such as {var}?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.6666666666666666,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.6666666666666666,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the Secure attribute of an HTTP cookie do?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the effect of the HttpOnly attribute on a cookie?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does a user agent decide whether a cookie's domain matches a request host?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What HTTP status code does a server return to complete the WebSocket opening handshake?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the purpose of the Sec-WebSocket-Key request header?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "hybrid_pgvector": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is a QUIC stateless reset and when is it used?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does QUIC detect lost packets?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is a QUIC connection ID used for?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the maximum segment lifetime (MSL) in TCP and why does it matter?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does the TCP three-way handshake establish a connection?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the purpose of the TCP receive window?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "Which TLS 1.3 handshake message carries the server's certificate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.3333333333333333
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.3333333333333333
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does a TLS client indicate the target server name using Server Name Indication (SNI)?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "hybrid_pgvector": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What information does the Subject field identify in an X.509 certificate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does an OCSP response tell a client about a certificate's status?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does the ACME http-01 challenge validate control of a domain?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the invalid_grant error mean in OAuth 2.0?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.980232238769531e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "hybrid_pgvector": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does PKCE protect the OAuth 2.0 authorization code flow?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How is an OAuth 2.0 bearer token presented in an HTTP request?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How are credentials encoded in the HTTP Basic authentication scheme?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the purpose of the nonce in HTTP Digest access authentication?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What are the registered claim names defined for a JSON Web Token (JWT)?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How is a JWS Compact Serialization structured?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the alg (algorithm) header parameter specify in a JWS?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.3333333333333333
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.3333333333333333
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How does base64url encoding differ from standard base64 encoding?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What structured data types does JSON define per RFC 8259?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What is the format of an Internet date-time timestamp per RFC 3339?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "hybrid_pgvector": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does an A resource record provide in the DNS?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "hybrid_pgvector": {
+     "hit": 0.0,
+     "recall": 0.0,
+     "rr": 0.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 0.5
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "How are DNS queries carried in DNS over HTTPS (DoH)?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 0.5,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   },
+   {
+    "question": "What transport port does DNS over TLS (DoT) use by default?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0,
+    "hybrid_faiss": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "hybrid_pgvector": {
+     "hit": 1.0,
+     "recall": 1.0,
+     "rr": 1.0
+    },
+    "same_hybrid_top_k": true
+   }
+  ]
+ },
+ "attacks_unfiltered": {
+  "summary": {
+   "questions": 50,
+   "dense_top_n": 50,
+   "ef_search": 100,
+   "mean_overlap": 0.9984,
+   "min_overlap": 0.96,
+   "same_top5": 50,
+   "same_order": 47,
+   "short_results": 0,
+   "not_allowed_returned": 0,
+   "max_score_diff": 3.58e-07,
+   "dense_ms": {
+    "faiss_p50": 0.106,
+    "faiss_p95": 0.124,
+    "pgvector_p50": 0.905,
+    "pgvector_p95": 1.102
+   }
+  },
+  "per_question": [
+   {
+    "question": "What does the HTTP 429 Too Many Requests status code mean and how should a client react?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Secure attribute do for an HTTP cookie?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How should a client protect an OAuth 2.0 bearer token?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the alg header parameter specify in a JSON Web Signature?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "Which TLS 1.3 message carries the server's certificate chain?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does QUIC connection migration let a connection survive an address change?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does an NXDOMAIN response mean and can a resolver cache it?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the max-age directive in Strict-Transport-Security specify?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the Sec-WebSocket-Key header in the WebSocket handshake?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does HTTP decide whether a cached response is still fresh?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the TCP three-way handshake establish a connection?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does percent-encoding represent characters in a URI?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does PKCE protect the OAuth 2.0 authorization code flow?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the dynamic table in HPACK?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does an OCSP response tell a client about a certificate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 3.5762786865234375e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does base64url encoding differ from standard base64?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the nonce in HTTP Digest authentication?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How are DNS queries carried in DNS over HTTPS?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the ACME http-01 challenge prove control of a domain?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the 308 Permanent Redirect status code mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How is a JWS Compact Serialization structured?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the TCP receive window?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the TLS ALPN extension?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What do the requirement keywords MUST, SHOULD and MAY mean in RFCs?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the HTTP 413 Content Too Large status code mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is an ETag and how is it used in conditional requests?",
+    "overlap": 0.96,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Cache-Control no-store directive mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How are credentials encoded in HTTP Basic authentication?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is an OAuth 2.0 refresh token used for?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the OAuth 2.0 device authorization grant work?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the kty parameter of a JSON Web Key identify?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does a CNAME record do in DNS?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does TLS 1.3 session resumption with a PSK work?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is QUIC 0-RTT and what are its risks?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "When does TCP send a reset (RST) segment?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the fragment identifier in a URI?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the WebSocket closing handshake work?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the HttpOnly attribute do for a cookie?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the QPACK encoder stream used for in HTTP/3?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does a TLS client indicate the server name with SNI?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does a client request part of a representation with the HTTP Range header?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What are HTTP conditional requests and which headers implement them?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Content-Encoding header field indicate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Content-Type header field indicate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Retry-After header field tell a client?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the HTTP Accept header express media-type preferences?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the Location header used for in HTTP responses?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "Which HTTP request methods are safe and which are idempotent?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Vary response header field mean for caches?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the HTTP 410 Gone status code mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   }
+  ]
+ },
+ "attacks_filtered": {
+  "summary": {
+   "questions": 50,
+   "dense_top_n": 50,
+   "ef_search": 100,
+   "mean_overlap": 0.9988,
+   "min_overlap": 0.98,
+   "same_top5": 50,
+   "same_order": 47,
+   "short_results": 0,
+   "not_allowed_returned": 0,
+   "max_score_diff": 3.58e-07,
+   "dense_ms": {
+    "faiss_p50": 0.181,
+    "faiss_p95": 0.195,
+    "pgvector_p50": 0.855,
+    "pgvector_p95": 0.929
+   }
+  },
+  "per_question": [
+   {
+    "question": "What does the HTTP 429 Too Many Requests status code mean and how should a client react?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Secure attribute do for an HTTP cookie?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How should a client protect an OAuth 2.0 bearer token?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the alg header parameter specify in a JSON Web Signature?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "Which TLS 1.3 message carries the server's certificate chain?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does QUIC connection migration let a connection survive an address change?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does an NXDOMAIN response mean and can a resolver cache it?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the max-age directive in Strict-Transport-Security specify?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the Sec-WebSocket-Key header in the WebSocket handshake?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does HTTP decide whether a cached response is still fresh?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the TCP three-way handshake establish a connection?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does percent-encoding represent characters in a URI?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does PKCE protect the OAuth 2.0 authorization code flow?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the dynamic table in HPACK?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does an OCSP response tell a client about a certificate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 3.5762786865234375e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does base64url encoding differ from standard base64?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the nonce in HTTP Digest authentication?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How are DNS queries carried in DNS over HTTPS?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the ACME http-01 challenge prove control of a domain?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the 308 Permanent Redirect status code mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How is a JWS Compact Serialization structured?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the TCP receive window?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the purpose of the TLS ALPN extension?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What do the requirement keywords MUST, SHOULD and MAY mean in RFCs?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the HTTP 413 Content Too Large status code mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is an ETag and how is it used in conditional requests?",
+    "overlap": 0.98,
+    "same_top5": true,
+    "same_order": false,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Cache-Control no-store directive mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How are credentials encoded in HTTP Basic authentication?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is an OAuth 2.0 refresh token used for?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the OAuth 2.0 device authorization grant work?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the kty parameter of a JSON Web Key identify?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does a CNAME record do in DNS?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does TLS 1.3 session resumption with a PSK work?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is QUIC 0-RTT and what are its risks?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "When does TCP send a reset (RST) segment?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the fragment identifier in a URI?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the WebSocket closing handshake work?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the HttpOnly attribute do for a cookie?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the QPACK encoder stream used for in HTTP/3?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does a TLS client indicate the server name with SNI?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does a client request part of a representation with the HTTP Range header?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What are HTTP conditional requests and which headers implement them?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Content-Encoding header field indicate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Content-Type header field indicate?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Retry-After header field tell a client?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "How does the HTTP Accept header express media-type preferences?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What is the Location header used for in HTTP responses?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.1920928955078125e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "Which HTTP request methods are safe and which are idempotent?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the Vary response header field mean for caches?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 2.384185791015625e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   },
+   {
+    "question": "What does the HTTP 410 Gone status code mean?",
+    "overlap": 1.0,
+    "same_top5": true,
+    "same_order": true,
+    "max_score_diff": 1.7881393432617188e-07,
+    "len_pg": 50,
+    "not_allowed": 0
+   }
+  ]
+ }
+}

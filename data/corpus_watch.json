@@ -1,0 +1,9 @@
+{
+ "decisions": {
+  "rfc9846": {
+   "decision": "skip",
+   "reason": "near-identical to RFC 8446; would compete with the TLS ground truth. Revisit with a ground-truth update.",
+   "decided_utc": "2026-11-16"
+  }
+ }
+}

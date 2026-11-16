@@ -116,12 +116,24 @@ jobs:
     if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Postgres + pgvector for tests/test_vectorstore.py (the same image as deploy/pgvector).
+    services:
+      pgvector:
+        image: pgvector/pgvector:0.8.1-pg17
+        env:
+          POSTGRES_USER: sentinel
+          POSTGRES_PASSWORD: sentinel
+          POSTGRES_DB: sentinel
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sentinel -d sentinel"
+          --health-interval 2s --health-timeout 3s --health-retries 30
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv sync --frozen
+      - run: uv sync --frozen --extra pgvector
       - uses: actions/cache/restore@v4
         with:
           path: ~/.cache/huggingface
@@ -134,6 +146,8 @@ jobs:
           key: ${{ needs.indexes.outputs.index_key }}
           fail-on-cache-miss: true
       - run: uv run pytest -q
+        env:
+          SENTINEL_TEST_DATABASE_URL: postgresql://sentinel:sentinel@127.0.0.1:5433/sentinel
 
   faithfulness-gate:
     needs: [changes, indexes]

@@ -51,6 +51,14 @@ dependencies = [
     "en-core-web-sm",
 ]
 
+[project.optional-dependencies]
+# Dense search in Postgres (sentinel/vectorstore.py), local only: `uv sync --extra pgvector`.
+# The production image doesn't install it and keeps FAISS.
+pgvector = [
+    "pgvector>=0.4,<0.5",
+    "psycopg[binary]>=3.2,<4",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

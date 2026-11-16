@@ -1,0 +1,27 @@
+# Local Postgres + pgvector for SENTINEL_VECTOR_STORE=pgvector (sentinel/vectorstore.py).
+# Local development only: bound to 127.0.0.1, with a throwaway password. Production keeps FAISS.
+#
+#   docker compose -f deploy/pgvector/compose.yaml up -d
+#   python -m sentinel.vectorstore sync          # load indexes/ into Postgres
+#   SENTINEL_VECTOR_STORE=pgvector python -m sentinel.retrieve "..."
+#
+# The data lives in the named volume; `docker compose ... down -v` removes it.
+services:
+  pgvector:
+    image: pgvector/pgvector:0.8.1-pg17
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinel
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - sentinel-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel -d sentinel"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  sentinel-pg:

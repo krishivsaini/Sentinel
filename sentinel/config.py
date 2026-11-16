@@ -144,6 +144,16 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------- Retrieval (§9)
     # Which index retrieval reads. The adversarial eval points this at ADVERSARIAL_INDEX_DIR.
     index_dir: Path = INDEXES_DIR
+    # Where dense search runs (sentinel/vectorstore.py). "faiss": the in-memory index in
+    # index_dir (production). "pgvector": a Postgres table loaded from index_dir with
+    # `python -m sentinel.vectorstore sync`; scope and quarantine filters run in SQL. BM25 and the
+    # chunk text stay in process either way. Install with `uv sync --extra pgvector`.
+    vector_store: str = "faiss"            # "faiss" | "pgvector"
+    # The local container in deploy/pgvector/compose.yaml. Holds a password when it isn't local.
+    database_url: str = "postgresql://sentinel:sentinel@127.0.0.1:5433/sentinel"
+    # HNSW candidate list per query. Must be at least dense_top_n; pgvector's iterative scan keeps
+    # going past it when the scope/quarantine filter rejects candidates.
+    pgvector_ef_search: int = 100
     # Document scopes a caller may retrieve when none are given (v2-R4). Every real RFC chunk is
     # "public"; the adversarial corpus is "adversarial" and only its eval asks for it.
     default_scopes: tuple[str, ...] = ("public",)

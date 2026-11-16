@@ -57,7 +57,7 @@ class _Index:
     chunks: list[Chunk]
     id2chunk: dict[str, Chunk]
     chunk_ids: list[str]      # canonical order; FAISS row i and BM25 doc i both map here
-    faiss: object             # faiss.IndexFlatIP
+    faiss: object | None      # faiss.IndexFlatIP; None when dense search runs in pgvector
     bm25: object              # rank_bm25.BM25Okapi
 
 
@@ -66,11 +66,24 @@ def _load_index(index_dir: Path | None = None) -> _Index:
     return _load_index_at((index_dir or settings.index_dir).resolve())
 
 
+def _uses_pgvector() -> bool:
+    if settings.vector_store not in ("faiss", "pgvector"):
+        raise ValueError(f"unknown vector_store {settings.vector_store!r}: faiss or pgvector")
+    return settings.vector_store == "pgvector"
+
+
 @lru_cache(maxsize=4)
 def _load_index_at(root: Path) -> _Index:
-    import faiss  # duplicate-libomp handling on macOS: see sentinel/__init__.py
-
     paths = IndexPaths(root)
+    if _uses_pgvector():
+        from sentinel import vectorstore
+
+        vectorstore.check_synced(root)   # refuses vectors from a different build than chunks
+        dense = None
+    else:
+        import faiss  # duplicate-libomp handling on macOS: see sentinel/__init__.py
+
+        dense = faiss.read_index(str(paths.faiss))
     chunks = [Chunk.model_validate_json(line) for line in paths.chunks.open(encoding="utf-8")]
     with paths.bm25.open("rb") as fh:
         bm = pickle.load(fh)
@@ -79,7 +92,7 @@ def _load_index_at(root: Path) -> _Index:
         chunks=chunks,
         id2chunk={c.chunk_id: c for c in chunks},
         chunk_ids=[c.chunk_id for c in chunks],
-        faiss=faiss.read_index(str(paths.faiss)),
+        faiss=dense,
         bm25=bm["bm25"],
     )
     # FR-I2 guard: the persisted BM25 order must match the canonical chunk order, or fusion
@@ -156,15 +169,22 @@ def dense_search(
     index_dir: Path | None = None,
     access: Access = DEFAULT_ACCESS,
 ) -> list[tuple[str, float]]:
-    """FAISS top-N by cosine similarity among the rows `access` allows. Returns
-    (chunk_id, dense_score) best-first."""
-    import faiss
-
+    """Top-N by cosine similarity among the rows `access` allows, from FAISS or, with
+    vector_store=pgvector, from Postgres. Returns (chunk_id, dense_score) best-first."""
     top_n = top_n or settings.dense_top_n
     idx = _load_index(index_dir)
     vec = _embedder().encode(
         [QUERY_INSTRUCTION + query], normalize_embeddings=True, convert_to_numpy=True
     ).astype("float32")
+    if idx.faiss is None:
+        from sentinel import vectorstore
+
+        return vectorstore.dense_search(
+            idx.root, vec[0], top_n, access.scopes or frozenset(settings.default_scopes),
+            access.include_quarantined)
+
+    import faiss
+
     allowed = access.rows(idx)
     if allowed is None:
         sims, rows = idx.faiss.search(vec, top_n)

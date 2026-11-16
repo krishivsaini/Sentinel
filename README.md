@@ -230,7 +230,7 @@ flowchart LR
 |---|---|
 | **Corpus** | 48 current RFCs — HTTP, URIs, TLS 1.3, QUIC, TCP, DNS, cookies, WebSocket, OAuth, JOSE — in 16 clusters → **2,888 chunks** ([manifest](data/corpus_manifest.json)) |
 | **[Ingestion](sentinel/ingest.py)** | clean → chunk (512 tokens, 12% overlap) → embed locally → FAISS **and** BM25 over the same chunk ids; idempotent, and incremental: only new or changed RFCs are chunked, screened and embedded |
-| **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen |
+| **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen. Dense search runs in FAISS, or in Postgres with [pgvector](sentinel/vectorstore.py) behind one setting |
 | **[Generation](sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
 | **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, `GET /me`; rate limited per account (per IP for the demo account and sign-in) |
 | **[Evaluation](sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
@@ -327,6 +327,13 @@ flowchart LR
 - **CPU over the Mac GPU.** MPS memory grew until long runs died; CPU rerank p95 was 1.0 s vs 1.9 s. (It then exposed a FAISS/PyTorch OpenMP segfault, fixed by loading PyTorch first.)
 - **Taming reasoning models.** `gpt-oss` at default effort sometimes "thought" until it returned nothing; low effort and an explicit output cap fixed both that and truncated judge verdicts.
 - **Provider-agnostic, judge pinned.** Groq, OpenAI, DeepSeek, NVIDIA and Google are wired; the judge stays on the host it was calibrated on.
+- **pgvector, measured against FAISS before anything relies on it.** `SENTINEL_VECTOR_STORE=pgvector` moves dense search into Postgres: one SQL query with the scope and quarantine filters in its `WHERE` clause, so a blocked chunk still can't take a candidate slot. FAISS's flat index is exact and pgvector's HNSW index isn't, so [`scripts/compare_vector_stores.py`](scripts/compare_vector_stores.py) compares them on every question ([results](data/vector_store_comparison.json)):
+  - **Top results:** the hybrid top-5 is identical on all 48 questions, with the same hit@5 0.896, recall@5 0.816 and MRR 0.759.
+  - **Dense top-50:** the lists overlap 99.7% (96% at worst).
+  - **Filters:** on the 50 attack questions, where the filters reject exactly the chunks the questions pull in, not one excluded chunk came back, and every result list was full.
+  - **Speed:** 0.9 ms per dense query against 0.1 ms in memory, beside a 10 ms retrieve stage and ~1 s of reranking.
+
+  The index directory stays the source of truth. A sync writes only rows whose text or vector changed, and the service refuses to start on a collection from a different build. Production stays on FAISS: a managed Postgres would be the project's first standing cost, for 4.4 MB of vectors.
 - **Spend is metered and capped.** Every Groq call is priced from the tokens the API reports; each CI gate stops at $0.25 and reports its cost ([`spend.py`](sentinel/spend.py)).
 - **Partial evals mislead.** Throttled runs hid a whole class of retrieval failures that a complete run surfaced.
 - **The logs are the telemetry.** Each request logs its per-stage timings, when the first word reached the reader, the whole request time, and what its own Groq calls cost (a per-request tally, so concurrent requests don't blur together). [`scripts/ops_report.py`](scripts/ops_report.py) reads them back from Cloud Logging into [`data/ops_report.json`](data/ops_report.json): outcome rates (answered, abstained, withheld, refused, turned away), p50/p95/p99 per stage, cost per request and reader feedback. The dashboard's **Operations** view shows it. There's no metrics backend or agent, so nothing new to run or pay for; the report holds counts and timings, never questions.
@@ -385,6 +392,16 @@ SENTINEL_USERS_FILE=data/users.json uv run python -m sentinel.serve
 curl -s -X POST localhost:8000/token -d 'username=alice&password=…&scope=public'   # scope is optional
 ```
 
+**Dense search in Postgres (optional)** — local pgvector in Docker; FAISS stays the default:
+
+```bash
+uv sync --extra pgvector
+docker compose -f deploy/pgvector/compose.yaml up -d      # Postgres 17 + pgvector, localhost:5433
+uv run python -m sentinel.vectorstore sync                # copies indexes/ in; later syncs write only changes
+SENTINEL_VECTOR_STORE=pgvector uv run python -m sentinel.serve
+uv run python scripts/compare_vector_stores.py            # FAISS vs pgvector on every question, no API calls
+```
+
 **Evaluate** — paid runs accept `--max-spend USD`:
 
 ```bash
@@ -416,6 +433,7 @@ Everything tunable lives in [`config.py`](sentinel/config.py) and can be overrid
 | `SENTINEL_JWT_SECRET` | yes | signs API tokens |
 | `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | the shared demo account (default scope only) |
 | `SENTINEL_USERS_FILE` | no | named accounts: scrypt hashes and scopes, managed with `scripts/users.py` |
+| `SENTINEL_VECTOR_STORE` / `SENTINEL_DATABASE_URL` | no | `faiss` (default) or `pgvector`, and the Postgres to use (default: the local container) |
 | `SENTINEL_SPEND_LIMIT_USD` | no | stop any run once its metered spend reaches this |
 | `SENTINEL_TORCH_DEVICE` | no | `cpu` (default), `mps` or `cuda` for the local models |
 | `SENTINEL_INPUT_GUARD` · `_INJECTION_SCREENING` · `_PROMPT_HARDENING` · `_REDACT_CONTEXT_PII` · `_OUTPUT_GUARD` · `_ANSWER_CHECK` | no | switch a guardrail off — the guardrail eval does exactly that |
@@ -433,6 +451,7 @@ Sentinel/
 │   ├── schema.py            # Pydantic contracts shared by every stage
 │   ├── ingest.py            # load → clean → chunk → embed → FAISS + BM25
 │   ├── retrieve.py          # dense + sparse → RRF → cross-encoder rerank
+│   ├── vectorstore.py       # dense search in Postgres + pgvector; incremental sync from an index
 │   ├── generate.py          # grounded, cited generation with abstention
 │   ├── llm.py               # provider-agnostic chat-model factory
 │   ├── serve.py             # FastAPI: JWT scopes, rate limiting, SSE, guardrails
@@ -460,6 +479,7 @@ Sentinel/
 │   ├── ground_truth_audit.md# second-pass review + judge calibration
 │   ├── faithfulness_baseline.json # main's per-question scores, for the relative gate
 │   ├── retrieval_ablation.json # dense / BM25 / fusion / rerank, per question
+│   ├── vector_store_comparison.json # FAISS vs pgvector, per question
 │   ├── latency_report.json  # per-stage p50/p95/p99
 │   ├── adversarial/         # 50 labelled poisoned passages + questions (dev / held-out / adaptive)
 │   ├── bipia/               # 75 BIPIA attacks planted in RFC passages (MIT, pinned)
@@ -473,6 +493,7 @@ Sentinel/
 │   ├── probe_judge.py               # does a candidate judge produce parseable output?
 │   ├── compare_judge_hosts.py       # same judge, two providers, identical inputs
 │   ├── retrieval_ablation.py        # does each retrieval stage earn its place?
+│   ├── compare_vector_stores.py     # FAISS vs pgvector: same results under the same filters?
 │   ├── answer_check_eval.py         # the answer check on every recorded answer
 │   ├── build_bipia.py               # fetch BIPIA (pinned) and plant it in RFC passages
 │   ├── bench_latency.py             # per-stage p50/p95/p99
@@ -505,7 +526,7 @@ Stated plainly:
 | **Classifiers** | Vary run to run even at temperature 0; every rate is a mean of 3 runs. |
 | **Answer check** | Holding the answer until it passes delays the first word by generation plus the check; the words that follow are a paced replay, not live generation. Wrongly withheld 3 of ~600 clean answers. |
 | **PII** | Lists named after a working group (`hybi@ietf.org`) still look personal and are redacted. Names are found only in private documents and miss lone first or last names, `Smith, J.` references and names absent from the Wikidata list (`Raj Patel`); only US/UK-style street addresses are found; IP addresses are out of scope. The private set was written before the name detector, but by its author. |
-| **Infra** | FAISS in memory; reranking ~1 s per query on an M3 but 9–14 s on Cloud Run's 2 vCPUs; a paid Groq key for CI. |
+| **Infra** | FAISS in memory in production; pgvector is wired and measured but runs only locally. Reranking ~1 s per query on an M3 but 9–14 s on Cloud Run's 2 vCPUs; a paid Groq key for CI. |
 
 ---
 

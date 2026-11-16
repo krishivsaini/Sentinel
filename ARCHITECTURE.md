@@ -60,7 +60,7 @@ Three properties hold throughout:
 | Auth + rate limit | [`serve.py`](sentinel/serve.py), [`users.py`](sentinel/users.py) | JWT bearer with document scopes, issued from a user store (scrypt hashes); slowapi limit per named account, per IP for the shared demo account and sign-in | Scopes come from the signed token, never the request, and every token is re-checked against its account |
 | Input guard | [`guardrails/input.py`](sentinel/guardrails/input.py) | gpt-oss-safeguard-20b with an input policy; a flagged question gets a fixed refusal | Chosen over Prompt Guard by measurement: it refused 0 of 88 genuine questions, Prompt Guard 2 |
 | Dense + sparse | [`retrieve.py`](sentinel/retrieve.py) | FAISS (bge-small) top 50 and BM25 top 50 | BM25 recovers exact terms — header names, status codes — that dense misses |
-| Access filter | `retrieve.Access` | scope and quarantine applied **inside** both searches (FAISS id selector, BM25 mask) | A post-filter would let a blocked chunk take a candidate slot or reach the reranker |
+| Access filter | `retrieve.Access` | scope and quarantine applied **inside** both searches (FAISS id selector or a pgvector `WHERE` clause; BM25 mask) | A post-filter would let a blocked chunk take a candidate slot or reach the reranker |
 | Fusion | `rrf_fuse` | Reciprocal Rank Fusion, k = 60 | The two retrievers' scores aren't comparable; ranks are |
 | Rerank | cross-encoder ms-marco-MiniLM-L-6-v2, local | scores the top 50 fused, keeps 5 | The dominant latency (~950 ms p50 on CPU); a measured pool of 20 is the fallback |
 | PII redaction | [`guardrails/pii.py`](sentinel/guardrails/pii.py) | emails (not role/list mailboxes), phones, Luhn-valid cards, credentials, before the model sees them; outside the public scope also names (spaCy NER + name-shape check) and street addresses | RFC author blocks are real personal data; RFC author *names* are public record, a tenant's customers' are not |
@@ -213,6 +213,7 @@ tuning, measurement and the gates.
 | screening verdicts, answer-check verdicts | `eval_runs.db` |
 | guardrail report with every recorded answer, faithfulness baseline, BIPIA report | `dashboard/data/*.json` (exported) |
 | latency report, retrieval ablation, rerank pool sweep, judge calibration | `.env` (keys) |
+| FAISS vs pgvector comparison | the local pgvector database (synced from `indexes*/`) |
 
 Recorded answers are kept so a change to a success check can re-score history without new API
 calls (`run_guardrails --rescore`).
@@ -223,9 +224,23 @@ calls (`run_guardrails --rescore`).
 
 Built for a fixed corpus and one demo tenant; the seams for growing it:
 
-- **Vector store** — FAISS in-process. pgvector or a managed store would replace
-  `retrieve._load_index` and the id-selector filter; chunk ids, scopes and quarantine flags are
-  already per-row metadata.
+- **Vector store** — FAISS in-process in production; Postgres with pgvector behind
+  `SENTINEL_VECTOR_STORE=pgvector` ([`vectorstore.py`](sentinel/vectorstore.py), local only for
+  now). Dense search becomes one SQL query, with the scope and quarantine filters in its `WHERE`
+  clause rather than applied afterwards. An HNSW index serves it, and pgvector's iterative scan keeps reading
+  when the filters reject candidates, so the top 50 is never short. The index directory stays the
+  build artifact. `python -m sentinel.vectorstore sync` copies it into a collection, and later
+  syncs write only rows whose text or vector changed, update rows whose position, scope or
+  quarantine flag changed, and delete the rest. A fingerprint of the index files is stored with
+  the collection, and the service refuses to start when it differs: it must never search vectors
+  from another build than the chunk text it reranks. Measured against FAISS's exact search
+  (`scripts/compare_vector_stores.py`):
+  - the hybrid top-5 is identical on all 48 questions;
+  - dense top-50 overlap is 99.7%;
+  - on the 50 attack questions, no excluded chunk was returned.
+
+  BM25 stays in process. A managed Postgres for production is a standing cost, so it waits for a
+  corpus that needs it.
 - **Latency** — rerank dominates. Pool 20 keeps hit@5 and recall@5 within 0.004 at 2.6× less
   rerank time (`data/rerank_pool_sweep.json`); a GPU or a smaller cross-encoder are the next
   steps.

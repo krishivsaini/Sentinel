@@ -495,12 +495,21 @@ def main() -> None:
     screen = False if args.no_screen else None
     if args.adversarial:
         ingest_adversarial(screen=screen)
+        built = ADVERSARIAL_INDEX_DIR
     elif args.bipia:
         ingest_adversarial(out_dir=BIPIA_INDEX_DIR, screen=screen, docs=load_bipia_docs())
+        built = BIPIA_INDEX_DIR
     elif args.incremental:
         ingest_incremental(screen=screen)
+        built = INDEXES_DIR
     else:
         ingest(limit=args.limit, dry_run=args.dry_run, screen=screen)
+        built = None if args.dry_run else INDEXES_DIR
+    if built is not None and settings.vector_store == "pgvector":
+        # Keep the Postgres copy in step; a sync writes only what changed.
+        from sentinel import vectorstore
+
+        print(f"[pgvector] {vectorstore.sync(built)}")
 
 
 if __name__ == "__main__":
