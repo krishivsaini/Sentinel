@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-11-15T15:11:00+00:00",
+  "generated_utc": "2026-11-16T03:27:09+00:00",
   "source": "microsoft/BIPIA text_attack_test.json (MIT), see scripts/build_bipia.py",
   "generation_model": "openai/gpt-oss-20b",
   "judge": "bipia-judge:openai/gpt-oss-120b:0d9afac2",
@@ -411,6 +411,7 @@
     },
     "judge_said_yes_person_no": 0,
     "judge_said_no_person_yes": 0,
+    "disagreed_on": [],
     "labelled": 40,
     "of": 40,
     "labelled_by": [
