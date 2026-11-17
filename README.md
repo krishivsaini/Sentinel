@@ -19,7 +19,7 @@
 ![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
 
-**[Try the live API](https://sentinel-api-oh6bzi2ava-uc.a.run.app/docs)** · [Results](docs/results.md) · [Guardrails](docs/guardrails.md) · [Design](docs/design.md) · [Run it locally](docs/development.md) · [Architecture](ARCHITECTURE.md) · [CI gates](.github/workflows/eval-gate.yml)
+**[Live demo](https://sentinel-alpha-dusky.vercel.app/#query)** · [API docs](https://sentinel-api-oh6bzi2ava-uc.a.run.app/docs) · [Results](docs/results.md) · [Guardrails](docs/guardrails.md) · [Design](docs/design.md) · [Run it locally](docs/development.md) · [Architecture](ARCHITECTURE.md) · [CI gates](.github/workflows/eval-gate.yml)
 
 </div>
 
@@ -34,7 +34,7 @@ Sentinel answers questions about 48 IETF RFCs (HTTP, TLS, DNS, OAuth, QUIC and m
 
 It runs on **Google Cloud Run**, provisioned with Terraform and deployed from GitHub Actions, for about **$0.0004 of model cost per answer**. A repeated or reworded question comes back from the semantic cache, kept in Redis, in **about 1 s instead of 16–20 s**, at a tenth of the cost, even after the service has scaled to zero. About 11,000 lines of Python and 330+ tests, and every number below comes from a script in this repo.
 
-**Try it:** open the [live API docs](https://sentinel-api-oh6bzi2ava-uc.a.run.app/docs), click **Authorize**, sign in as `demo` / `change-me`, then send `POST /query` with a question. The demo is rate-limited and has a small daily budget.
+**Try it:** ask a question in the [live playground](https://sentinel-alpha-dusky.vercel.app/#query). The server sleeps when nobody's using it, so the first answer takes about a minute; after that ~15–20 s, and a repeated question ~1 s. The same dashboard shows the eval history, failure analysis and guardrail results. Or call the API directly from its [docs page](https://sentinel-api-oh6bzi2ava-uc.a.run.app/docs) as `demo` / `change-me`. The demo is rate-limited and has a small daily budget.
 
 ---
 
@@ -178,7 +178,7 @@ The main ones, stated plainly ([all of them](docs/design.md#limitations)):
 - [x] Entity recognition for names and postal addresses in the PII guard (private documents)
 - [ ] A larger ground-truth set (80–120 questions)
 - [x] Deployment: the API behind its guardrails, on Cloud Run with Terraform
-- [ ] Deployment: the dashboard
+- [x] Deployment: the dashboard, on Vercel
 - [ ] Faster reranking on Cloud Run's CPUs (an ONNX build of the cross-encoder), the main latency cost
 - [x] The Redis cache backend in production, so cache hits survive scale-to-zero
 

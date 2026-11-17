@@ -137,6 +137,16 @@ export function Playground({ latest }: { latest: RunResult }) {
   const [error, setError] = useState("");
   const [token, setToken] = useState("");
   const [session, setSession] = useState<Session | null>(null);
+  // A slow first response: "waking" while sign-in waits on a cold start, "working" while the
+  // service retrieves and reranks. Shown only after a few seconds of silence.
+  const [wait, setWait] = useState<"" | "waking" | "working">("");
+
+  // The API scales to zero when idle and a cold start loads the models (~1 min). Ping it as soon
+  // as the page opens, so it's often awake by the time someone asks. Fire and forget: the
+  // response isn't read, so it needs no CORS and an error changes nothing.
+  useEffect(() => {
+    if (API) fetch(`${API}/healthz`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!answer.startsWith(revealed)) {
@@ -164,6 +174,8 @@ export function Playground({ latest }: { latest: RunResult }) {
     setAnswer("");
     setChunks([]);
     setDone(null);
+    setWait("");
+    let timer = setTimeout(() => setWait("waking"), 3000);
     try {
       let s = session;
       if (!s || Date.now() > s.expires) {
@@ -176,10 +188,17 @@ export function Playground({ latest }: { latest: RunResult }) {
       }
       const t = s.token; // kept for this answer's feedback
       setToken(t);
+      clearTimeout(timer);
+      setWait("");
+      timer = setTimeout(() => setWait("working"), 3000);
       await streamAnswer(
         t,
         q,
-        setChunks,
+        (c) => {
+          clearTimeout(timer);
+          setWait("");
+          setChunks(c);
+        },
         (t) => {
           setPhase("streaming");
           setAnswer((a) => a + t);
@@ -196,6 +215,9 @@ export function Playground({ latest }: { latest: RunResult }) {
     } catch (e) {
       setError(String(e));
       setPhase("error");
+    } finally {
+      clearTimeout(timer);
+      setWait("");
     }
   }
 
@@ -254,12 +276,20 @@ export function Playground({ latest }: { latest: RunResult }) {
           <div className="mb-1.5 text-[13px] font-medium text-text-2">
             {error === "no-api" ? "No API endpoint configured" : error.startsWith("Your session") ? error : "Couldn't reach the API"}
           </div>
-          <div className="mx-auto max-w-[520px] text-[12px] leading-[1.6] text-text-4">
-            The playground streams from a running Sentinel service. Start it with{" "}
-            <span className="font-mono text-text-3">uvicorn sentinel.serve:app</span> and set{" "}
-            <span className="font-mono text-text-3">NEXT_PUBLIC_API_URL</span> to its URL. The three
-            data views above run entirely on exported JSON and need no backend.
-          </div>
+          {API && error !== "no-api" ? (
+            <div className="mx-auto max-w-[520px] text-[12px] leading-[1.6] text-text-4">
+              The API didn&apos;t answer. It may still be waking up, or the demo&apos;s rate limit or
+              daily budget may be used up. Try again in a minute. The other views run on exported
+              results and need no API.
+            </div>
+          ) : (
+            <div className="mx-auto max-w-[520px] text-[12px] leading-[1.6] text-text-4">
+              The playground streams from a running Sentinel service. Start it with{" "}
+              <span className="font-mono text-text-3">uvicorn sentinel.serve:app</span> and set{" "}
+              <span className="font-mono text-text-3">NEXT_PUBLIC_API_URL</span> to its URL. The three
+              data views above run entirely on exported JSON and need no backend.
+            </div>
+          )}
         </div>
       )}
 
@@ -275,6 +305,14 @@ export function Playground({ latest }: { latest: RunResult }) {
             </div>
             <div className="min-h-[96px] p-[18px] text-[14px] leading-[1.7] text-text-1">
               {revealed}
+              {phase === "streaming" && !answer && wait && (
+                <span className="text-text-4">
+                  {wait === "waking"
+                    ? "Waking the server. It sleeps when nobody's using it, so the first question takes about a minute while the models load. "
+                    : "Searching 2,888 passages and reranking the best 50 on two CPUs: usually about 15 seconds, longer if the server was asleep. "}
+                  A question asked again comes back from the cache in about a second.
+                </span>
+              )}
               {phase === "checking" && !answer && (
                 <span className="text-text-4">Generated. Holding it until the answer check passes.</span>
               )}
