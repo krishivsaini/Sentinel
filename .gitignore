@@ -58,3 +58,6 @@ data/feedback/
 # --- Accounts (password hashes; in production a Secret Manager secret, never the repo) ---
 data/users.json
 data/users.json.tmp
+
+# --- The private build brief (kept locally, not published) ---
+SENTINEL_BUILD_PLAN.md

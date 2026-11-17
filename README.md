@@ -198,7 +198,6 @@ The main ones, stated plainly ([all of them](docs/design.md#limitations)):
 | [docs/product_design.md](docs/product_design.md) | Product thesis, personas, dashboard IA |
 | [docs/architecture.md](docs/architecture.md) | The original planning-stage design (superseded where they differ) |
 | [docs/implementation_plan.md](docs/implementation_plan.md) | Phased build plan and risk register |
-| [SENTINEL_BUILD_PLAN.md](SENTINEL_BUILD_PLAN.md) | The original build brief |
 
 <div align="center">
 

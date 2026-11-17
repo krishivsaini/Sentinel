@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { RunResult } from "@/lib/data";
 import { docLabel } from "@/lib/format";
 import { SearchIcon } from "./icons";
+import { Markdown } from "./Markdown";
 import { Card, PageHead } from "./ui";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -304,7 +305,12 @@ export function Playground({ latest }: { latest: RunResult }) {
               <span className="ml-auto font-mono text-[10.5px] text-text-4">grounded · cited</span>
             </div>
             <div className="min-h-[96px] p-[18px] text-[14px] leading-[1.7] text-text-1">
-              {revealed}
+              {revealed && (
+                <Markdown
+                  text={revealed}
+                  tail={(phase === "streaming" || revealing) && <span className="text-accent">▍</span>}
+                />
+              )}
               {phase === "streaming" && !answer && wait && (
                 <span className="text-text-4">
                   {wait === "waking"
@@ -316,7 +322,7 @@ export function Playground({ latest }: { latest: RunResult }) {
               {phase === "checking" && !answer && (
                 <span className="text-text-4">Generated. Holding it until the answer check passes.</span>
               )}
-              {(phase === "streaming" || revealing) && <span className="text-accent">▍</span>}
+              {!revealed && phase === "streaming" && <span className="text-accent">▍</span>}
             </div>
             {done && !revealing && <AnswerFooter done={done} />}
             {done && !revealing && done.answer_id && (

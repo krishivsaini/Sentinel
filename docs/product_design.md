@@ -1,7 +1,6 @@
 # Sentinel — Product Design
 
 > Companion to [`requirement.md`](./requirement.md) and [`architecture.md`](./architecture.md). This doc covers *what the product is, who it's for, and how each surface should feel* — the product/UX layer above the engineering spec.
-> **Source of truth:** [`SENTINEL_BUILD_PLAN.md`](../SENTINEL_BUILD_PLAN.md).
 
 ---
 

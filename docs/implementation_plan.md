@@ -1,7 +1,7 @@
 # Sentinel — Implementation Plan
 
 > Companion to [`requirement.md`](./requirement.md), [`product_design.md`](./product_design.md), and [`architecture.md`](./architecture.md).
-> **Source of truth:** [`SENTINEL_BUILD_PLAN.md`](../SENTINEL_BUILD_PLAN.md). This plan sequences the build into phases and maps them to the build plan's 14-day schedule.
+> This plan sequences the build into phases over a 14-day schedule.
 > **Timeline:** 14 days × ~3 hrs/day. **Golden rule for cuts:** if time slips, cut dashboard polish and extra corpus size — **never** the eval gate or the hand-built ground truth.
 
 ---

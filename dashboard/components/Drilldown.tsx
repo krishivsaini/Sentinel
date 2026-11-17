@@ -4,6 +4,7 @@ import type { ItemResult, RunResult } from "@/lib/data";
 import { citedChunkIds, docLabel, f2, kindMeta, kindOf, scoreClass } from "@/lib/format";
 import { CaretIcon } from "./icons";
 import { Card, PageHead } from "./ui";
+import { Markdown } from "./Markdown";
 
 const score = (v: number | null) => (v == null ? "—" : v.toFixed(v < 1 && v > -1 ? 2 : 1));
 
@@ -55,7 +56,7 @@ function Row({ item }: { item: ItemResult }) {
         </div>
         <div className="mb-[7px] text-[10px] font-semibold uppercase tracking-[0.05em] text-text-4">Grounded answer</div>
         <div className="border-l-2 border-border-2 pl-3.5 text-[13px] leading-[1.6] text-text-1">
-          {item.generated_answer}
+          <Markdown text={item.generated_answer} />
         </div>
       </div>
     </details>

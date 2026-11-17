@@ -1,6 +1,6 @@
 # Sentinel — Requirements Specification
 
-> **Source of truth:** [`SENTINEL_BUILD_PLAN.md`](../SENTINEL_BUILD_PLAN.md). This document restates the build plan as a testable requirements spec. Where the two conflict, the build plan wins.
+> This document restates the original build brief as a testable requirements spec.
 > **Status:** Draft for the v1 core build. v2 (security guardrails) requirements are captured in §7 but are **not** in scope until every v1 acceptance criterion passes.
 
 ---

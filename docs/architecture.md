@@ -5,7 +5,6 @@
 > measurement (generation and the judge run on Groq gpt-oss, not Gemini Flash; the CI subset is
 > 24 items; screening runs at index build). Companion to [`requirement.md`](./requirement.md),
 > [`product_design.md`](./product_design.md), and [`implementation_plan.md`](./implementation_plan.md).
-> **Source of truth:** [`SENTINEL_BUILD_PLAN.md`](../SENTINEL_BUILD_PLAN.md).
 
 ---
 
