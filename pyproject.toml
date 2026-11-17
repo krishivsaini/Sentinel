@@ -39,6 +39,7 @@ dependencies = [
     "python-jose[cryptography]>=3.5,<4",   # JWT auth
     "python-multipart>=0.0.9",             # form parsing for the token endpoint
     "slowapi>=0.1.10,<0.2",                # per-IP rate limiting
+    "redis>=8.1,<9",                       # optional shared semantic cache (cache_backend=redis)
     # --- Cross-cutting ---
     "pydantic>=2.13,<3",
     "pydantic-settings>=2.14,<3",          # config.py loads secrets/knobs from env

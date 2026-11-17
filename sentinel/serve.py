@@ -57,7 +57,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sse_starlette.sse import EventSourceResponse
 
-from sentinel.cache import AnswerCache, Entry, context_key
+from sentinel.cache import AnswerCache, Entry, RedisAnswerCache, context_key, redacted
 from sentinel.config import IndexPaths, settings
 from sentinel.generate import (
     HARDENING_REMINDER,
@@ -220,7 +220,18 @@ def _scrub(text: str) -> str:
     return redact(text)[0]
 
 
-def default_cache() -> AnswerCache:
+def default_cache() -> AnswerCache | RedisAnswerCache:
+    """The configured cache backend. An unreachable Redis is logged, not fatal: the service
+    starts, and lookups miss until Redis answers."""
+    if settings.cache_backend == "redis":
+        cache = RedisAnswerCache.from_url(settings.redis_url, settings.cache_threshold,
+                                          settings.cache_ttl_seconds, settings.cache_max_entries)
+        log.info("cache.backend", backend="redis", url=redacted(settings.redis_url),
+                 reachable=cache.ping())
+        return cache
+    if settings.cache_backend != "memory":
+        raise ValueError(f"cache_backend must be 'memory' or 'redis', not "
+                         f"{settings.cache_backend!r}")
     return AnswerCache(settings.cache_threshold, settings.cache_ttl_seconds,
                        settings.cache_max_entries)
 
@@ -306,7 +317,7 @@ def _cached_events(entry: Entry, similarity: float, answer_id: str, user: Princi
 
 def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
                   cost: list[float] | None = None,
-                  cache: AnswerCache | None = None) -> Iterator[dict]:
+                  cache: AnswerCache | RedisAnswerCache | None = None) -> Iterator[dict]:
     """Sync generator of SSE events: retrieved -> token* -> done. Runs in a threadpool (the
     LLM stream is sync), so it never blocks the event loop. `cost` is the request's spend tally
     (spend.start_request_cost), reported in the query log."""

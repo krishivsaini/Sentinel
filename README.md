@@ -145,7 +145,14 @@ What makes it safe to share:
 - **Clean answers only:** only answers that went out clean are stored: cited, not abstained or withheld, nothing removed by the output guard. A question with personal data in it is never stored.
 - **Correctable:** a thumbs-down on any copy of an answer evicts it.
 
-It lives in memory, per instance, for 24 hours: nothing new to run or pay for. A restart or a new instance starts empty.
+Entries last 24 hours, in one of two backends behind one setting, both held to the same tests (every cache and service test in [`test_cache.py`](tests/test_cache.py) runs against each):
+
+| `SENTINEL_CACHE_BACKEND` | Where entries live | Trade-off |
+|---|---|---|
+| `memory` (default) | the instance's memory | nothing to run; emptied by every restart, and Cloud Run scales to zero when idle, so every cold start begins with an empty cache |
+| `redis` | Redis | kept across restarts and cold starts, shared by every instance; one more service to run |
+
+The Redis layout makes the exact-term check a key, not a search: entries are bucketed by context and their exact technical tokens, so a lookup reads one bucket (usually zero to a few entries) and compares those vectors with numpy. No vector index or Redis module is needed, so any Redis works (open-source Redis, Valkey, Redis Cloud, Upstash). Every key has a TTL, so Redis reclaims memory itself. If Redis is unreachable the cache fails open: a lookup is a miss and a store is skipped, so it can't fail a request. Measured in Redis 8.8 with the 48 ground-truth questions, an entry takes about 16.5 KB with its keys, mostly the five retrieved passages a replay returns, so the default 2,000 entries need about 33 MB (a 30 MB free tier needs `SENTINEL_CACHE_MAX_ENTRIES` below about 1,800).
 
 ### Is the judge trustworthy?
 
@@ -285,7 +292,7 @@ flowchart LR
 | **[Ingestion](sentinel/ingest.py)** | clean → chunk (512 tokens, 12% overlap) → embed locally → FAISS **and** BM25 over the same chunk ids; idempotent, and incremental: only new or changed RFCs are chunked, screened and embedded |
 | **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen. Dense search runs in FAISS, or in Postgres with [pgvector](sentinel/vectorstore.py) behind one setting |
 | **[Query planning](sentinel/plan.py)** | splits a multi-part question into up to 3 searches that share one rerank budget; a question it doesn't split takes the ordinary path, and a planner failure falls back to it |
-| **[Semantic cache](sentinel/cache.py)** | a repeated or reworded question in the same scopes and settings reuses the earlier answer; needs identical technical terms and similarity ≥ 0.98 |
+| **[Semantic cache](sentinel/cache.py)** | a repeated or reworded question in the same scopes and settings reuses the earlier answer; needs identical technical terms and similarity ≥ 0.98. In memory, or in Redis behind one setting |
 | **[Generation](sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
 | **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, `GET /me`; rate limited per account (per IP for the demo account and sign-in) |
 | **[Evaluation](sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
@@ -457,6 +464,14 @@ SENTINEL_VECTOR_STORE=pgvector uv run python -m sentinel.serve
 uv run python scripts/compare_vector_stores.py            # FAISS vs pgvector on every question, no API calls
 ```
 
+**Semantic cache in Redis (optional)** — local Redis in Docker; the in-memory cache stays the default:
+
+```bash
+docker compose -f deploy/redis/compose.yaml up -d         # Redis 8, localhost:6390, no persistence
+SENTINEL_CACHE_BACKEND=redis uv run python -m sentinel.serve
+uv run pytest tests/test_cache.py                         # every cache test, in memory and in Redis
+```
+
 **Evaluate** — paid runs accept `--max-spend USD`:
 
 ```bash
@@ -490,6 +505,7 @@ Everything tunable lives in [`config.py`](sentinel/config.py) and can be overrid
 | `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | the shared demo account (default scope only) |
 | `SENTINEL_USERS_FILE` | no | named accounts: scrypt hashes and scopes, managed with `scripts/users.py` |
 | `SENTINEL_SEMANTIC_CACHE` / `SENTINEL_CACHE_THRESHOLD` | no | `false` turns off answer reuse; the threshold defaults to the measured 0.98 |
+| `SENTINEL_CACHE_BACKEND` / `SENTINEL_REDIS_URL` | no | `memory` (default) or `redis`, and the Redis to use (default: the local container; `rediss://` for TLS) |
 | `SENTINEL_QUERY_PLANNING` | no | `false` turns off splitting multi-part questions into separate searches (on by default) |
 | `SENTINEL_VECTOR_STORE` / `SENTINEL_DATABASE_URL` | no | `faiss` (default) or `pgvector`, and the Postgres to use (default: the local container) |
 | `SENTINEL_SPEND_LIMIT_USD` | no | stop any run once its metered spend reaches this |
@@ -511,7 +527,7 @@ Sentinel/
 │   ├── retrieve.py          # dense + sparse → RRF → cross-encoder rerank
 │   ├── vectorstore.py       # dense search in Postgres + pgvector; incremental sync from an index
 │   ├── plan.py              # query planner: splits a multi-part question into searches
-│   ├── cache.py             # semantic cache: exact-term check + embedding similarity, scoped
+│   ├── cache.py             # semantic cache: exact-term check + embedding similarity, scoped; in memory or Redis
 │   ├── generate.py          # grounded, cited generation with abstention
 │   ├── llm.py               # provider-agnostic chat-model factory
 │   ├── serve.py             # FastAPI: JWT scopes, rate limiting, SSE, guardrails
@@ -585,7 +601,7 @@ Stated plainly:
 | **Scope** | One corpus (IETF RFCs), 48 hand-built questions, one demo tenant. The pipeline is generic; the numbers aren't claimed to transfer. |
 | **Accounts** | A file, not a database: accounts are added by the operator (no sign-up, no password reset), and every instance re-reads the same file. Fine for a handful of accounts. The production RFC index holds only `public` chunks, so a named account's extra scopes have nothing more to retrieve there yet. |
 | **Multi-part questions** | Planning is measured on 16 two-part questions that Claude drafted and reviewed, with no person's review. It still covers every part of only 7 of them, and its gate run is a single run. |
-| **Semantic cache** | In memory per instance, so hits don't survive a restart or cross instances. The threshold comes from 61 pairs written by Claude; a near-miss closer than "the client's vs the server's certificate" would get through. Casual lower-case phrasings ("what does http 429 mean") always miss. |
+| **Semantic cache** | Production uses the in-memory backend, so hits don't survive a cold start; the Redis backend is tested locally and in CI but not deployed. The threshold comes from 61 pairs written by Claude; a near-miss closer than "the client's vs the server's certificate" would get through. Casual lower-case phrasings ("what does http 429 mean") always miss. |
 | **The judge** | A model, calibrated against one labeller (blind r = +0.78). Judged context recall is too coarse to tell fusion from reranking. |
 | **The CI gate** | Sees 24 of 48 questions, faithfulness only. The baseline comes from 4 runs, so about 1 healthy PR in 40 may fail by chance; regressions under ~0.07 pass. Refresh the baseline when main changes generation on purpose. |
 | **Attack sets** | The 85 hand-written attacks share an author with the defences; BIPIA showed the bias — screening caught 59% of its attacks vs 93% of our dev and held-out ones. A second policy now catches 74 / 75, but it was written because of that result, so BIPIA is no longer a fully independent test of screening. |

@@ -116,7 +116,8 @@ jobs:
     if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Postgres + pgvector for tests/test_vectorstore.py (the same image as deploy/pgvector).
+    # Postgres + pgvector for tests/test_vectorstore.py and Redis for tests/test_cache.py (the
+    # same images as deploy/pgvector and deploy/redis).
     services:
       pgvector:
         image: pgvector/pgvector:0.8.1-pg17
@@ -127,6 +128,12 @@ jobs:
         ports: ["5433:5432"]
         options: >-
           --health-cmd "pg_isready -U sentinel -d sentinel"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+      redis:
+        image: redis:8.8.3-alpine
+        ports: ["6390:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 2s --health-timeout 3s --health-retries 30
     steps:
       - uses: actions/checkout@v4
@@ -148,6 +155,7 @@ jobs:
       - run: uv run pytest -q
         env:
           SENTINEL_TEST_DATABASE_URL: postgresql://sentinel:sentinel@127.0.0.1:5433/sentinel
+          SENTINEL_TEST_REDIS_URL: redis://127.0.0.1:6390/15
 
   faithfulness-gate:
     needs: [changes, indexes]

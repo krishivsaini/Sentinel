@@ -183,12 +183,18 @@ class Settings(BaseSettings):
     # A match needs the same technical tokens AND embedding similarity >= cache_threshold. 0.98
     # is the most similar negative the token check lets through (0.966: "the client's
     # certificate" vs "the server's") plus a 0.01 margin; there, 18 of 32 paraphrases hit and
-    # none of 29 near-misses or 1,128 ground-truth pairs does (data/cache_eval.json). In memory,
-    # per instance; entries expire after cache_ttl_seconds.
+    # none of 29 near-misses or 1,128 ground-truth pairs does (data/cache_eval.json). Entries
+    # expire after cache_ttl_seconds.
     semantic_cache: bool = True
     cache_threshold: float = 0.98
     cache_ttl_seconds: int = 86400
     cache_max_entries: int = 2000
+    # "memory": per instance, emptied by every restart and cold start. "redis": kept in Redis at
+    # redis_url, shared by every instance and kept across cold starts; any Redis works (no
+    # modules). The default URL is the local container in deploy/redis/compose.yaml; a hosted
+    # one holds a password, so set it as a secret (SENTINEL_REDIS_URL, rediss:// for TLS).
+    cache_backend: str = "memory"          # "memory" | "redis"
+    redis_url: str = "redis://127.0.0.1:6390/0"
 
     # ---------------------------------------------------------------- Eval + gate (§12/§13)
     faithfulness_threshold: float = 0.80   # CI gate fails below this

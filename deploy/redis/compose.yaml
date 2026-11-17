@@ -1,0 +1,22 @@
+# Local Redis for SENTINEL_CACHE_BACKEND=redis (sentinel/cache.py, RedisAnswerCache).
+# Local development and tests only: bound to 127.0.0.1, no password. Plain Redis is enough: the
+# cache needs no modules, so a hosted Redis (Redis Cloud, Upstash) or Valkey works the same way.
+#
+#   docker compose -f deploy/redis/compose.yaml up -d
+#   SENTINEL_CACHE_BACKEND=redis uvicorn sentinel.serve:app
+#   uv run pytest tests/test_cache.py          # runs every cache test against Redis too
+#
+# No persistence: the cache is disposable, and every key carries a TTL anyway. The memory cap
+# mirrors a small free tier; at the cap Redis evicts the keys closest to expiring.
+services:
+  redis:
+    image: redis:8.8.3-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no",
+              "--maxmemory", "64mb", "--maxmemory-policy", "volatile-ttl"]
+    ports:
+      - "127.0.0.1:6390:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
