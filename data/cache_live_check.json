@@ -1,0 +1,78 @@
+{
+ "what": "Live check of the semantic cache on the deployed service (Cloud Run revision sentinel-api-00011-sfh, commit af3fa86, in-memory backend), 2026-11-17. Four questions in a row as the demo account: a fresh one, the exact repeat, a rewording, and a near-miss that changes one exact term (DoT -> DoH).",
+ "how": "python scripts/cache_live_check.py --project <gcp-project>: wall_s measured by the client over the internet; request_ms and cost_usd from the service's own query log events in Cloud Logging.",
+ "questions": [
+  {
+   "label": "fresh",
+   "question": "What transport port does DNS over TLS (DoT) use by default?",
+   "cache_hit": false,
+   "cached_from": null,
+   "similarity": null,
+   "wall_s": 16.42,
+   "request_ms": 15664.8,
+   "cost_usd": 0.000362,
+   "stages_ms": {
+    "retrieve": 48.6,
+    "rerank": 13068.6,
+    "generate": 411.6,
+    "guard": 807.0,
+    "answer_check": 264.6,
+    "plan": 874.9,
+    "cache": 179.1
+   },
+   "answer_start": "DNS over TLS (DoT) uses TCP port 853 by default.  \n- The cli"
+  },
+  {
+   "label": "repeat",
+   "question": "What transport port does DNS over TLS (DoT) use by default?",
+   "cache_hit": true,
+   "cached_from": "c5a703fabc184b40b79ea39400d311f4",
+   "similarity": 1.0,
+   "wall_s": 0.61,
+   "request_ms": 206.8,
+   "cost_usd": 3.5e-05,
+   "stages_ms": {
+    "guard": 161.0,
+    "cache": 35.4
+   },
+   "answer_start": "DNS over TLS (DoT) uses TCP port 853 by default.  \n- The cli"
+  },
+  {
+   "label": "reworded",
+   "question": "By default, which transport port does DNS over TLS (DoT) use?",
+   "cache_hit": true,
+   "cached_from": "c5a703fabc184b40b79ea39400d311f4",
+   "similarity": 0.9961,
+   "wall_s": 0.58,
+   "request_ms": 183.6,
+   "cost_usd": 3e-05,
+   "stages_ms": {
+    "guard": 140.7,
+    "cache": 35.0
+   },
+   "answer_start": "DNS over TLS (DoT) uses TCP port 853 by default.  \n- The cli"
+  },
+  {
+   "label": "near-miss",
+   "question": "What transport port does DNS over HTTPS (DoH) use by default?",
+   "cache_hit": false,
+   "cached_from": null,
+   "similarity": null,
+   "wall_s": 13.76,
+   "request_ms": 13334.1,
+   "cost_usd": 0.000404,
+   "stages_ms": {
+    "retrieve": 68.9,
+    "rerank": 11925.6,
+    "generate": 711.1,
+    "guard": 243.0,
+    "answer_check": 197.8,
+    "plan": 118.9,
+    "cache": 58.9
+   },
+   "answer_start": "DNS over HTTPS (DoH) uses the HTTPS default port 443.  \nThis",
+   "note": "not stored either: 0 citations and the output guard flagged it; only clean, cited answers are cached"
+  }
+ ],
+ "total_cost_usd": 0.000831
+}

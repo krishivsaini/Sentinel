@@ -1,0 +1,92 @@
+{
+ "what": "Live semantic-cache check against the deployed service with the cache in Redis (Upstash, primary in GCP us-central1; Cloud Run revision sentinel-api-00013-pjf), 2026-11-17.",
+ "how": "python scripts/cache_live_check.py; wall_s measured by the client, request_ms and cost_usd from Cloud Logging when --project is given.",
+ "passed": true,
+ "questions": [
+  {
+   "label": "fresh",
+   "question": "What transport port does DNS over TLS (DoT) use by default?",
+   "cache_hit": false,
+   "cached_from": null,
+   "similarity": null,
+   "wall_s": 19.84,
+   "stages_ms": {
+    "retrieve": 73.3,
+    "rerank": 16540.2,
+    "generate": 427.6,
+    "guard": 252.0,
+    "answer_check": 251.9,
+    "plan": 1277.9,
+    "cache": 324.0
+   },
+   "answer_start": "DNS over TLS (DoT) uses TCP port 853 by default.  \n[rfc7858#",
+   "request_ms": 19358.2,
+   "cost_usd": 0.000361
+  },
+  {
+   "label": "repeat",
+   "question": "What transport port does DNS over TLS (DoT) use by default?",
+   "cache_hit": true,
+   "cached_from": "bc88ce1ec6984442a87cec48a109c64b",
+   "similarity": 1.0,
+   "wall_s": 0.92,
+   "stages_ms": {
+    "guard": 210.9,
+    "cache": 239.0
+   },
+   "answer_start": "DNS over TLS (DoT) uses TCP port 853 by default.  \n[rfc7858#",
+   "request_ms": 512,
+   "cost_usd": 3.4e-05
+  },
+  {
+   "label": "reworded",
+   "question": "By default, which transport port does DNS over TLS (DoT) use?",
+   "cache_hit": true,
+   "cached_from": "bc88ce1ec6984442a87cec48a109c64b",
+   "similarity": 0.9961,
+   "wall_s": 1.02,
+   "stages_ms": {
+    "guard": 252.1,
+    "cache": 224.6
+   },
+   "answer_start": "DNS over TLS (DoT) uses TCP port 853 by default.  \n[rfc7858#",
+   "request_ms": 540.7,
+   "cost_usd": 3.2e-05
+  },
+  {
+   "label": "near-miss",
+   "question": "What transport port does DNS over HTTPS (DoH) use by default?",
+   "cache_hit": false,
+   "cached_from": null,
+   "similarity": null,
+   "wall_s": 18.2,
+   "stages_ms": {
+    "retrieve": 59.1,
+    "rerank": 16530.9,
+    "generate": 316.1,
+    "guard": 178.4,
+    "answer_check": 218.4,
+    "plan": 89.6,
+    "cache": 127.4
+   },
+   "answer_start": "DNS over HTTPS (DoH) uses the default HTTPS port, which is p",
+   "request_ms": 17724.5,
+   "cost_usd": 0.000359
+  }
+ ],
+ "total_cost_usd": 0.000786,
+ "after_cold_start": {
+  "what": "26 minutes after the last question the service had scaled to zero; asking the 'fresh' question again started a new instance, which answered it from Redis.",
+  "new_instance_started_utc": "2026-11-17T06:28:58Z",
+  "question": "What transport port does DNS over TLS (DoT) use by default?",
+  "cache_hit": true,
+  "cached_from": "bc88ce1ec6984442a87cec48a109c64b",
+  "cached_answer_generated_utc": "2026-11-17T06:02:05Z",
+  "cache_age_s": 1681,
+  "similarity": 1.0,
+  "request_ms": 632.5,
+  "cost_usd": 3.6e-05,
+  "cold_start_s": 67.3,
+  "note": "cold_start_s is the time to the first response from the new instance (models loading); the cache can't shorten it. With the in-memory backend this question would have missed and taken ~18 s more."
+ }
+}

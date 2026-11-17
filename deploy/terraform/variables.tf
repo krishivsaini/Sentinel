@@ -24,7 +24,7 @@ variable "memory" {
 variable "daily_spend_limit_usd" {
   description = "The API stops answering for the day once its metered LLM spend reaches this."
   type        = number
-  default     = 0.10
+  default     = 0.05
 }
 
 variable "rate_limit" {
@@ -55,6 +55,12 @@ variable "budget_currency" {
   description = "Currency of the billing account (the alert must match it)."
   type        = string
   default     = "USD"
+}
+
+variable "redis_cache" {
+  description = "Keep the semantic cache in Redis (the rediss:// URL in Secret Manager secret sentinel-redis-url) instead of instance memory, so cache hits survive restarts and scale-to-zero. Add a secret version before turning this on; see deploy/README.md."
+  type        = bool
+  default     = false
 }
 
 variable "named_accounts" {

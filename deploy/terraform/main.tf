@@ -59,6 +59,8 @@ locals {
     },
     # The named accounts' users file (scripts/users.py), mounted as a file, not an env var.
     var.named_accounts ? { users = "sentinel-users" } : {},
+    # The semantic cache's Redis URL (password inside), when the cache lives in Redis.
+    var.redis_cache ? { redis_url = "sentinel-redis-url" } : {},
   )
 }
 
@@ -259,6 +261,27 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
+      # The semantic cache in Redis (sentinel/cache.py): shared, and kept across cold starts.
+      dynamic "env" {
+        for_each = var.redis_cache ? [1] : []
+        content {
+          name  = "SENTINEL_CACHE_BACKEND"
+          value = "redis"
+        }
+      }
+      dynamic "env" {
+        for_each = var.redis_cache ? [1] : []
+        content {
+          name = "SENTINEL_REDIS_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.app["redis_url"].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
       dynamic "volume_mounts" {
         for_each = var.named_accounts ? [1] : []
         content {
@@ -292,9 +315,10 @@ resource "google_cloud_run_v2_service" "api" {
   }
 
   lifecycle {
-    # Images are rolled out by GitHub Actions; Terraform owns everything else. The API fills in
-    # a service-level scaling block with defaults, which would otherwise show as drift.
-    ignore_changes = [template[0].containers[0].image, client, client_version, scaling]
+    # Images are rolled out by GitHub Actions; Terraform owns everything else. The deploy action
+    # also labels each revision (commit-sha, managed-by), and the API fills in a service-level
+    # scaling block with defaults; both would otherwise show as drift.
+    ignore_changes = [template[0].containers[0].image, template[0].labels, client, client_version, scaling]
   }
 
   depends_on = [google_secret_manager_secret_iam_member.runtime_reads]

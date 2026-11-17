@@ -21,7 +21,7 @@ flowchart LR
 | Image | Built in CI for `linux/amd64`; models and index baked in | A cold start loads from disk — no downloads, no API calls |
 | Secrets | Secret Manager, read only by the runtime service account | Values never in the repo, the image, or Terraform state |
 | Deploy auth | GitHub OIDC → Workload Identity Federation | No long-lived key exists; only this repo's `main` can deploy |
-| Spend | daily LLM cap in the app (`$0.10` default), per-IP rate limit (`6/minute;60/day`), one instance | A public endpoint can't spend more than the owner allows |
+| Spend | daily LLM cap in the app (`$0.05` default), per-IP rate limit (`6/minute;60/day`), one instance | A public endpoint can't spend more than the owner allows |
 | Cost alert | optional billing budget at 50 / 90 / 100% | A second line of defence |
 
 **What it costs:** Cloud Run's free tier covers demo traffic, and an idle service costs nothing. Artifact Registry keeps the 3 newest images (~cents a month). Groq is about $0.001 per question, stopped by the daily cap.
@@ -108,6 +108,7 @@ terraform apply
 | Change the daily cap or rate limit | edit `daily_spend_limit_usd` / `rate_limit` in `terraform.tfvars`, `terraform apply` |
 | Rotate the Groq key | add a new secret version; the next revision picks up `latest` |
 | Named accounts | see below |
+| Semantic cache in Redis | see below |
 | Take it offline | `terraform destroy` |
 
 **Named accounts (optional).** Without them the service has only the shared demo account. To add accounts with their own passwords and scopes, build the users file locally, store it as a secret, then turn on the mount (the secret needs a version before the mount, or the new revision can't start):
@@ -122,5 +123,18 @@ terraform apply
 ```
 
 After that, change accounts by editing the file with `scripts/users.py` and adding a new secret version; the running service re-reads it, so no redeploy. Disabling an account, changing its password or removing a scope ends its existing tokens. It stays free: one more secret is within Secret Manager's free tier.
+
+**Semantic cache in Redis (optional).** By default the cache lives in each instance's memory, so every cold start begins empty. With `redis_cache = true` it lives in Redis instead and survives scale-to-zero. Any Redis works (no modules); a free [Upstash](https://upstash.com) database is plenty (an entry is ~16.5 KB, so 2,000 entries are ~33 MB). Create the database with TLS on, in or near the service's region, and copy its Redis connection string (`rediss://default:<password>@<host>:6379`, not the REST URL). Then, as with named accounts, the secret needs a version before the service can use it:
+
+```bash
+cd deploy/terraform
+terraform apply -var redis_cache=true -target='google_secret_manager_secret.app["redis_url"]' \
+  -target='google_secret_manager_secret_iam_member.runtime_reads["redis_url"]'
+read -rs REDIS_URL && printf '%s' "$REDIS_URL" | gcloud secrets versions add sentinel-redis-url --data-file=- && unset REDIS_URL
+# then set redis_cache = true in terraform.tfvars and:
+terraform apply
+```
+
+The new revision logs `cache.backend` with `reachable` at startup (the URL's password redacted). If Redis is ever unreachable the cache fails open: questions are answered fresh, never refused.
 
 **Limits, stated plainly:** the daily cap is counted per instance and resets when an instance starts, so with scale-to-zero it bounds each waking period, not strictly the day — the Groq account's own spend limit is the hard backstop. The demo account's password is public (the dashboard signs in with it) and gets only the public scope; the rate limit and spend cap are what protect the endpoint. Named accounts are rate limited per account, sign-in per IP. A cold start takes ~30–60 s while the models load.
