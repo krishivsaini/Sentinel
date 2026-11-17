@@ -1,7 +1,7 @@
 # Sentinel — Architecture
 
 How the system is put together, as built. For the measured results see the
-[README](README.md#results); for the original planning-stage design see
+[results](docs/results.md) and [guardrails](docs/guardrails.md) pages; for the original planning-stage design see
 [`docs/architecture.md`](docs/architecture.md).
 
 Sentinel is a question-answering service over 48 IETF RFCs with two jobs: answer from the

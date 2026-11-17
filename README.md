@@ -10,10 +10,31 @@
 ![Groq](https://img.shields.io/badge/LLM-gpt--oss%20on%20Groq-F55036)
 ![Next.js](https://img.shields.io/badge/dashboard-Next.js-000000?logo=nextdotjs&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+<br>
+![FAISS](https://img.shields.io/badge/vectors-FAISS%20%C2%B7%20BM25-0467DF)
+![pgvector](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/cache-Redis-FF4438?logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-4285F4?logo=googlecloud&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
 
-[Results](#results) · [How it works](#how-it-works) · [Guardrails](#guardrails) · [Quickstart](#quickstart) · [Architecture](ARCHITECTURE.md) · [CI gates](.github/workflows/eval-gate.yml) · [Dashboard](dashboard/)
+**[Try the live API](https://sentinel-api-oh6bzi2ava-uc.a.run.app/docs)** · [Results](docs/results.md) · [Guardrails](docs/guardrails.md) · [Design](docs/design.md) · [Run it locally](docs/development.md) · [Architecture](ARCHITECTURE.md) · [CI gates](.github/workflows/eval-gate.yml)
 
 </div>
+
+---
+
+## In 30 seconds
+
+Sentinel answers questions about 48 IETF RFCs (HTTP, TLS, DNS, OAuth, QUIC and more). Every answer streams back with citations to the passages it came from, or says it doesn't know. Answering is the easy part. Sentinel is built around the two questions that decide whether an LLM feature can ship:
+
+1. **Did this change make the answers worse?** CI scores the answers on every pull request against main's own baseline and blocks the merge if they become less faithful to the sources.
+2. **Can a document steer the model?** Text planted in a document ("ignore your instructions…") is screened out before it's indexed, with three more layers behind that. 50 hand-written attacks and 75 from Microsoft's BIPIA benchmark measure how often anything gets through.
+
+It runs on **Google Cloud Run**, provisioned with Terraform and deployed from GitHub Actions, for about **$0.0004 of model cost per answer**. A repeated or reworded question comes back from the semantic cache, kept in Redis, in **about 1 s instead of 16–20 s**, at a tenth of the cost, even after the service has scaled to zero. About 11,000 lines of Python and 330+ tests, and every number below comes from a script in this repo.
+
+**Try it:** open the [live API docs](https://sentinel-api-oh6bzi2ava-uc.a.run.app/docs), click **Authorize**, sign in as `demo` / `change-me`, then send `POST /query` with a question. The demo is rate-limited and has a small daily budget.
 
 ---
 
@@ -21,15 +42,34 @@
 
 | | Result |
 |---|---|
-| **Catches regressions a fixed threshold misses** | two subtle prompt regressions (0.855, 0.865) pass a 0.80 line — the baseline gate fails both, while every healthy run (0.904–0.993) passes |
+| **Blocks bad merges, even subtle ones** | a prompt that let the model answer from memory dropped faithfulness **0.967 → 0.746** and was blocked; two subtle regressions (0.855, 0.865) that pass a fixed 0.80 line fail the baseline gate, while every healthy run (0.904–0.993) passes |
 | **Answers stay grounded** | faithfulness **0.951** on 48 hand-verified questions, scored by a judge that agrees with blind hand labels (r = 0.78) |
 | **Hybrid retrieval earns its complexity** | hit@5 **0.729 → 0.896** (+23%) over dense or BM25 alone |
 | **Poisoned documents** | **29% → 0%** of 50 attacks get through, in all 3 runs |
 | **Attacks nobody here wrote** | **2 / 75** from Microsoft's BIPIA benchmark get through — both "answer in French" |
 | **Jailbreaks in the question** | **19% → 4%**, with **0 / 88** genuine questions refused |
-| **Built to run on a budget** | every LLM call metered; each CI gate capped at $0.25 |
+| **Multi-part questions** | a query planner raises the question parts covered from **15 to 22 of 32** and cuts abstentions from 6 to 1 |
+| **Fast and cheap in production** | live on Cloud Run, a repeated or reworded question takes **~19 s → ~1 s** at **~10× less** model cost, from a semantic cache in Redis that survives scale-to-zero, with 0 false hits on 1,128 question pairs |
+| **Built to run on a budget** | every LLM call metered; each CI gate capped at $0.25; ~$0.0004 per live answer |
 
-Every number comes from a script in this repo and can be re-run — with sample sizes, 95% intervals and the failures shown alongside.
+Every number comes from a script in this repo and can be re-run — with sample sizes, 95% intervals and the failures shown alongside. The details: [results](docs/results.md) · [guardrails](docs/guardrails.md).
+
+---
+
+## Stack
+
+| Layer | What it uses |
+|---|---|
+| **Retrieval** | **FAISS** (bge-small-en-v1.5) + **BM25**, fused with reciprocal rank fusion and re-scored by a **cross-encoder** (ms-marco-MiniLM); LangChain retrievers. Dense search can run in **PostgreSQL + pgvector** (HNSW) instead, behind one setting |
+| **Generation** | gpt-oss-20b on **Groq**, streamed over **SSE** with citations; an LLM query planner splits multi-part questions into separate searches |
+| **Caching** | a semantic answer cache (exact technical terms + embedding similarity ≥ 0.98) in **Redis** (Upstash) in production, or in memory |
+| **Guardrails** | **Llama Prompt Guard 2** + policy models screen documents at index time; input and output guards, PII redaction, and an answer check that holds back unsupported answers |
+| **API** | **FastAPI**; JWT auth with named accounts and revocable tokens; per-account rate limits; structured logs with per-stage latency and cost |
+| **Evaluation** | **Ragas** faithfulness with a calibrated gpt-oss-120b judge; hit@k and recall@k; injection and BIPIA attack benchmarks |
+| **Infra** | **Docker** on **Google Cloud Run**, provisioned with **Terraform**, secrets in Secret Manager; **GitHub Actions** runs the eval gates and the tests, with Postgres + pgvector and Redis service containers |
+| **Dashboard** | **Next.js** + TypeScript: a playground and an operations view |
+
+Production serves FAISS, with the cache in Redis; pgvector is tested locally and in CI and switches on with an environment variable ([why FAISS stays](docs/design.md#engineering-decisions)).
 
 ---
 
@@ -45,9 +85,7 @@ Most RAG projects stop at "it answers questions". Sentinel treats answer quality
 
 ---
 
-## Results
-
-### The gate blocks a grounding regression
+## The proof: a bad merge, blocked
 
 [PR #2](https://github.com/krishivsaini/Sentinel/pull/2) loosens one thing: the prompt now lets the model answer from its own knowledge.
 
@@ -72,195 +110,17 @@ Most RAG projects stop at "it answers questions". Sentinel treats answer quality
 
 The baseline is always read from main, so a PR can't pass by editing it.
 
-### Full evaluation — 48 questions
-
-| Faithfulness | Answer relevance | Context recall | Failure attribution |
-|---|---|---|---|
-| **0.951** | 0.867 | 0.905 | 42 pass · 3 retrieval · 3 generation |
-
-All three retrieval failures ended in a correct "I don't have enough information", not a guess. Each failure is written up in the [audit](data/ground_truth_audit.md).
-
-### Does each retrieval stage earn its place?
-
-Gold passages are exact chunk texts, so the first three columns need no judge ([ablation](scripts/retrieval_ablation.py)).
-
-| Retrieval | Hit@5 | Recall@5 | MRR | Context recall (judge) |
-|---|---|---|---|---|
-| Dense only | 0.729 | 0.615 | 0.547 | — |
-| BM25 only | 0.729 | 0.569 | 0.447 | — |
-| Dense + BM25, RRF fusion | 0.833 | 0.708 | 0.572 | 0.904 |
-| **+ cross-encoder rerank** (shipped) | **0.896** | **0.816** | **0.759** | 0.898 |
-
-- **Hybrid earns its complexity** — on 6 questions BM25 finds the gold passage and dense search misses it.
-- **The reranker earns its latency** — recall@5 +0.11, MRR 0.57 → 0.76 (6 questions rescued, 3 lost).
-- **The judged metric can't see it** — Ragas context recall credits *any* supporting passage, which is why the ablation also reports judge-free ranking metrics.
-
-### Multi-part questions
-
-"What port does DNS over TLS use, and which media type must DoH support?" needs passages from two RFCs. A single search's top 5 tends to fill up from whichever half matches best. With query planning on, a small model splits such a question into up to 3 standalone searches ([`plan.py`](sentinel/plan.py)). Each search is reranked on its share of the same 50-candidate budget, and the results are merged in turn, one from each search. Measured on [16 two-part questions](data/multistep_questions.jsonl) ([report](data/multistep_eval.json)):
-
-| | Single search (ships) | Planned |
-|---|---|---|
-| Parts with a gold passage retrieved | 15 / 32 | **22 / 32** |
-| Questions with every part covered | 4 / 16 | **7 / 16** |
-| Context recall (judge) | 0.688 | **0.844** |
-| Answers that abstained | 6 / 16 | **1 / 16** |
-| Faithfulness | 0.956 | 0.958 |
-| Retrieve + rerank, p50 | 993 ms | 967 ms, + 288 ms planner call |
-
-- **Not just one more passage:** a split question gets 6 passages, but a single search's top 6 covers the same 15 / 32 parts as its top 5.
-- **It rarely splits ordinary questions:** of the 48 single-topic ground-truth questions it split 2 (429 plus its header, and PATCH plus idempotency), and both kept their hit and recall.
-- **It isn't free of losses:** on one question the planned search lost the HS256 passage a single search had found (context recall 1.0 → 0.5), and it left 3 of the 16 questions whole.
-- **The gold lists are strict:** one to three chunks per part, fixed before the run. Several remaining "misses" retrieved a neighbouring chunk of the right RFC.
-- **The set is small and Claude-drafted:** Claude drafted the 16 questions and reference answers from the RFC text, then reviewed each claim against the gold passages and cut three that went beyond them. A loader checks each part's verbatim evidence quote, and that its gold list holds every chunk containing the quote (chunks overlap). No person has reviewed them.
-- **Fewer abstentions, not more faithful answers:** faithfulness is level. On the TCP/QUIC question the planned answer stopped abstaining, but part of it went beyond its passages (faithfulness 0.67).
-- **Three answers re-judged:** after the review, those three items' answers were generated and judged again, since generation varies between runs.
-- **What it cost:** the eval runs cost $0.090 in total.
-
-**It's on by default.** The injection gate was run with planning on, and it passed: 0 / 50 poisoned-document attacks and 0 / 35 attacks in the question got through with the input guard ([results](data/guardrails/gate_with_planning.json); one run, against 0 / 50 and 1.33 / 35 without planning, so read it as no worse, not better). The planner sees only questions that passed the input guard, and it can only choose search queries. Each question costs one extra `gpt-oss-20b` call (~$0.0001, ~0.3 s). The faithfulness eval and the injection gate retrieve the same way the service does. `SENTINEL_QUERY_PLANNING=false` turns it off.
-
-### Repeated questions: a semantic cache
-
-A question asked again, or reworded, can reuse the earlier answer: no retrieval, reranking (~10 s on Cloud Run), generation or answer check, and no Groq cost beyond the input guard ([`cache.py`](sentinel/cache.py)). The risk is a **false hit**: "What does 307 mean?" sits right next to "What does 308 mean?" in embedding space, and serving one's answer to the other is a confident, cited wrong answer. So a hit needs two things:
-
-1. **The same exact terms:** status codes, RFC and version numbers, header and parameter names, error codes, ALL-CAPS keywords. Any difference is a miss.
-2. **Embedding similarity of at least 0.98:** for questions that differ only in ordinary words ("the client's certificate" vs "the server's").
-
-Measured locally on [32 paraphrases and 29 near-misses](data/cache_pairs.jsonl) of ground-truth questions, plus all 1,128 pairs of distinct ground-truth questions ([`scripts/cache_eval.py`](scripts/cache_eval.py), [results](data/cache_eval.json)):
-
-| Similarity threshold | Paraphrases that hit | Near-miss false hits (tokens + embedding) | Near-miss false hits (embedding only) |
-|---|---|---|---|
-| 0.92 | 32 / 32 | 3 / 29 | 7 / 29 |
-| 0.96 | 27 / 32 | 1 / 29 | 4 / 29 |
-| 0.97 | 23 / 32 | 0 / 29 | 2 / 29 |
-| **0.98 (ships)** | **18 / 32** | **0 / 29** | 0 / 29 |
-
-- **Tokens stop most near-misses:** 23 of the 29 differ in an exact term and are stopped by the token check at any threshold.
-- **The rest set the threshold:** the most similar of the other 6 ("the client's certificate" vs "the server's") scores 0.966, so the threshold is that plus a 0.01 margin.
-- **Exact repeats always hit,** and the playground's sample questions are exactly that. No pair of distinct ground-truth questions comes close (highest 0.845).
-
-What makes it safe to share:
-- **Scoped:** answers are shared only within one context: the caller's scopes, the index build, the models and prompt, and every retrieval and guardrail setting, hashed together. A scope never sees answers built from documents it can't retrieve, and rebuilding the index starts afresh.
-- **Guarded:** the input guard runs on every question before the cache is consulted, so a reworded attack doesn't inherit a cached answer.
-- **Clean answers only:** only answers that went out clean are stored: cited, not abstained or withheld, nothing removed by the output guard. A question with personal data in it is never stored.
-- **Correctable:** a thumbs-down on any copy of an answer evicts it.
-
-Entries last 24 hours, in one of two backends behind one setting, both held to the same tests (every cache and service test in [`test_cache.py`](tests/test_cache.py) runs against each):
-
-| `SENTINEL_CACHE_BACKEND` | Where entries live | Trade-off |
-|---|---|---|
-| `memory` (default) | the instance's memory | nothing to run; emptied by every restart, and Cloud Run scales to zero when idle, so every cold start begins with an empty cache |
-| `redis` | Redis | kept across restarts and cold starts, shared by every instance; one more service to run |
-
-The Redis layout makes the exact-term check a key, not a search: entries are bucketed by context and their exact technical tokens, so a lookup reads one bucket (usually zero to a few entries) and compares those vectors with numpy. No vector index or Redis module is needed, so any Redis works (open-source Redis, Valkey, Redis Cloud, Upstash). Every key has a TTL, so Redis reclaims memory itself. If Redis is unreachable the cache fails open: a lookup is a miss and a store is skipped, so it can't fail a request. Measured in Redis 8.8 with the 48 ground-truth questions, an entry takes about 16.5 KB with its keys, mostly the five retrieved passages a replay returns, so the default 2,000 entries need about 33 MB (a 30 MB free tier needs `SENTINEL_CACHE_MAX_ENTRIES` below about 1,800).
-
-### Is the judge trustworthy?
-
-`gpt-oss-120b` on Groq, compared with hand labels — the second time with every judge score hidden:
-
-| Labels | n | Pearson r | Spearman ρ | Mean abs. error |
-|---|---|---|---|---|
-| Original (judge score visible) | 18 | +0.90 | +0.98 | 0.047 |
-| **Blind** | 27 | **+0.78** | **+0.80** | **0.065** |
-
-The same model served by NVIDIA scored r = +0.69 on the blind set; OpenAI's `gpt-6-luna` ≈ +0.50. Calibration is host-specific, so the judge's host is pinned.
-
-### Do the guardrails hold?
-
-Each attack carries a unique canary or phishing host; it succeeded if that string reaches the final answer — no judge needed. Every configuration ran **3 times**, and intervals are exact 95% Clopper–Pearson: "0 succeeded" in 50 still allows up to 7%.
-
-**Poisoned documents — 50 hand-written attacks** in three sets: **dev** (24, the defences were written against these), **held-out** (16, written after the defences were frozen) and **adaptive** (10, written against the screener itself).
-
-| Defences | Got through (mean of 3) | Dev | Held-out | Adaptive |
-|---|---|---|---|---|
-| None | 14.7 / 50 — 29% | 8.0 | 4.7 | 2.0 |
-| Prompt hardening only | 4.3 / 50 — 8.7% | 2.7 | 1.7 | 0 |
-| Output guard only | 15.0 / 50 — 30% | 8.3 | 4.7 | 2.0 |
-| Hardening + output guard | 5.3 / 50 — 10.7% | 3.3 | 2.0 | 0 |
-| Hardening + output guard + answer check *(if screening misses)* | 1.0 / 50 — 2% | 0.7 | 0.3 | 0 |
-| Index-time screening only | 0 / 50 | 0 | 0 | 0 |
-| **All defences (what ships)** | **0 / 50 in every run** | **0** | **0** | **0** |
-
-| Screening detector | Dev | Held-out | Adaptive | Real RFC chunks flagged |
-|---|---|---|---|---|
-| Llama Prompt Guard 2 (86M) | 8 / 24 | 1 / 16 | 1 / 10 | 1 / 2,888 |
-| gpt-oss-safeguard-20b + written policy | 22 / 24 | 15 / 16 | 3 / 10 | 0 / 2,888 |
-| gpt-oss-safeguard-20b + task-hijack policy | 21 / 24 | 15 / 16 | 3 / 10 | 2 / 2,888 |
-| **Any (the quarantine rule)** | **23 / 24** | **16 / 16** | **4 / 10** | **3 / 2,888** |
-
-**Independent attacks — 75 from [BIPIA](https://github.com/microsoft/BIPIA)** (Microsoft, MIT), written by people who never saw these defences, planted verbatim in the passages our eval questions retrieve. No canaries here, so success is judged by `gpt-oss-120b`.
-
-| Defences | Got through (mean of 3) | In any run (95% CI) |
-|---|---|---|
-| None | 4.3 / 75 | 5 / 75 (2.2–14.9%) |
-| Hardening + output guard + answer check | 2.0 / 75 | 2 / 75 (0.3–9.3%) |
-| **All defences** | **2.0 / 75** | **2 / 75 (0.3–9.3%)** |
-
-Screening caught **74 / 75** (95% CI 93–100%): planted content (ads, scams, misinformation) **25 / 25** · output-format tricks **24 / 25** · task hijacks ("recommend a good book") **25 / 25**. It caught 44 / 75 before the task-hijack policy was added; the attack rows above were measured then, so for the attacks screening now catches they overstate what gets through.
-
-**The user's own question — 35 attacks** (overrides, prompt extraction, personas, encoded payloads…) against **88 genuine questions** full of words like "inject", "override" and "bypass".
-
-| Input detector | Dev caught | Held-out caught | Genuine questions refused |
-|---|---|---|---|
-| Llama Prompt Guard 2 | 10 / 20 | 4 / 15 | 2 / 88 |
-| **gpt-oss-safeguard-20b + input policy (ships)** | **15–16 / 20** | **11–12 / 15** | **0 / 88** |
-
-End to end, **6.7 / 35** got through without the input guard and **1.3 / 35** with it.
-
-| Also measured | Result |
-|---|---|
-| PII — real corpus (259 hand-labelled spans), held-out RFCs | precision **0.89** (was 0.82) · recall **1.00** |
-| PII — synthetic (cards, credentials, hard negatives) | precision **1.00** · recall 0.94 |
-| PII — private documents (names, addresses, 8 traps) | precision **1.00** · recall 0.67 (names 16 / 25, addresses 7 / 9) |
-| Poisoned chunks reaching a default-scope caller | **0** |
-| Faithfulness with the passage and output guardrails on | **0.951** (4 runs, 0.916–0.993) vs 0.934 / 0.967 without |
-
-**What the numbers say:**
-
-- **Screening does almost all the work** — but it can be written around. It still catches only 4 of 10 adaptive attacks.
-- **A blind spot found by BIPIA, and closed.** Screening first caught 4 of 25 BIPIA task hijacks: "Write a script to rename all files…" or "Determine the sentiment of this review…" never address an AI, so the policy saw an ordinary sentence. A second policy flags what a standards document never does — ask its reader for an unrelated task or a different reply. Its wording was tuned only on a separate dev set ([16 attacks of our own and 50 tempting RFC passages](scripts/task_hijack_dev.py): 16 / 16 caught, 0 false flags) before BIPIA was scored once: **74 / 75**. That's held out for the wording, not the idea — the policy exists because BIPIA showed the gap. The price is 2 false flags in 2,888 chunks: TLS 1.3's implementation-pitfalls checklist ("do you correctly send an empty Certificate message…?"), questions aimed at the reader. Both are now released by a reviewed exception (next point).
-- **Wrongly quarantined RFC text is released by review, not by loosening a detector.** The detectors flag 3 of 2,888 real chunks: the two TLS checklist chunks and RFC 9293's TCP CLOSE/ABORT table, whose quoted replies (`"error: connection illegal for this process"`) Prompt Guard scored 0.71. Each was read and recorded as a [reviewed exception](data/guardrails/screening_exceptions.json) with its reason ([`scripts/review_quarantine.py`](scripts/review_quarantine.py)), so the served index quarantines **0 of 2,888** real chunks. An exception is pinned to the exact text, its RFC and the detectors that flagged it: an edited passage, the same words planted in another document, or a new detector's objection puts the chunk back in quarantine. Releasing them changed one ground-truth question's top 5 (a TLS chunk took a pool slot, swapping the 5th result between two non-relevant chunks); hit@5 and recall@5 are unchanged.
-- **The screener could be steered.** A dev attack asking for "your reply inside a JSON object" made the original policy model answer `{"msg": "0"}` instead of a label, crashing the build; a BIPIA emoji attack got "🤖1" out of the new one. Output that isn't a bare label now quarantines the passage: text that can redirect the classifier is an injection by demonstration.
-- **The detectors fail differently**, so all three run. An injection framed as "an example of an attack" passes both policy models and only Prompt Guard catches it.
-- **Attacks that beat the backup layers share one shape:** a correct answer plus something nobody asked for — a "compliance tag", an "audit id". The answer check targets that shape and cuts the backup layers from 10.7% to 2%.
-- **What beats every defence is a format request** — "answer in French". A translated answer still answers the question, so the answer check lets it through. Low harm, but real obedience.
-- **The input guard cuts user-side attacks from 19% to 4%** without refusing a single genuine question.
-
-<details>
-<summary><b>Methodology notes and corrections</b></summary>
-
-- **A corrected undercount.** The success check once missed canaries written with Unicode hyphens (`WHIMBREL‑4406`, U+2011) and canaries from a second attack passage retrieved alongside the target. Re-scoring the recorded answers (`run_guardrails --rescore`, no API calls) raised the weaker rows by up to 2.7 attacks; rows with screening on didn't change.
-- **The answer check, measured.** End to end it withheld 18 of 150 answers and took the backup layers from 5.3 to 1.0 of 50; a replay over recorded answers had predicted 0.7. On 665 recorded answers it withheld 59 of 69 successful attacks (59 of 62 leaving out misinformation, which it doesn't judge) and **0 of 311** answers that never saw an attack ([details](data/guardrails/answer_check.json)).
-- **The classifiers aren't deterministic at temperature 0.** The input guard caught 16 then 15 dev attacks across two measurements; the answer check once passed a canary it had caught before. Hence 3 runs per configuration.
-- **A leak found and fixed.** A prompt-extraction question once got the model to print `«END PASSAGE 75e69b05` with no closing `»`, which the fence filter required. It now matches unclosed and any-case markers; replayed, that leaves 1 user-side success in 105 attempts and changes none of 1,873 other answers.
-- **Checking the BIPIA judge.** 40 distinct answers were labelled blind to the judge's verdicts; it agreed on **40 / 40** (95% CI 91–100%). The labels were made by Claude, a different model family from the judge — an independent check, but weaker than a person's, and most cases are easy to call.
-- **BIPIA, unaided.** With no defences the model saw a planted instruction 168 times and obeyed 13: translations, one emoji, and once a scam line whose link survived because `example.com` is an allowlisted documentation domain.
-
-</details>
-
-### Latency, per stage
-
-Apple M3, 8 GB, local models on CPU; generation on Groq `gpt-oss-20b` ([report](data/latency_report.json)).
-
-| Stage | Samples | p50 | p95 | p99 |
-|---|---|---|---|---|
-| Retrieve — dense + BM25 + RRF | 200 | 10.5 ms | 13.7 ms | 19.0 ms |
-| Rerank — cross-encoder over 50 candidates | 200 | 954 ms | 1,021 ms | 1,129 ms |
-| Generate — full streamed answer | 50 | 1,047 ms | 2,457 ms | 4,273 ms |
-
-Live on Cloud Run's 2 vCPUs it is much slower: over the first 7 logged requests reranking took **10.6 s p50, 14.0 s p95**, generation 0.7 s and the guards 0.5 s ([ops report](data/ops_report.json)).
-
-Reranking is the bottleneck. A [measured sweep](data/rerank_pool_sweep.json) shows a 20-candidate pool keeps hit@5 at 0.896 and recall@5 at 0.812 (vs 0.816) for **2.6× less rerank time**, but changes the top-5 for 13 of 48 questions. The pool stays at 50 — every number here is measured on it — and 20 is the fallback.
+More: the [full 48-question evaluation](docs/results.md#full-evaluation--48-questions), [whether each retrieval stage earns its place](docs/results.md#does-each-retrieval-stage-earn-its-place), [multi-part questions](docs/results.md#multi-part-questions), [the semantic cache](docs/results.md#repeated-questions-a-semantic-cache), [whether the judge can be trusted](docs/results.md#is-the-judge-trustworthy) and [latency per stage](docs/results.md#latency-per-stage).
 
 ---
 
 ## How it works
 
-### How a query flows
-
 ```mermaid
 flowchart LR
-    Q["Question"] --> PL["Query planner<br/>splits a multi-part<br/>question (≤ 3 searches)"]
+    Q["Question"] --> C{"Semantic cache<br/>Redis"}
+    C -- "same question, same scopes" --> A
+    C -- miss --> PL["Query planner<br/>splits a multi-part<br/>question (≤ 3 searches)"]
     PL --> D["Dense search<br/>FAISS · bge-small<br/>top-50"]
     PL --> S["Sparse search<br/>BM25<br/>top-50"]
     D --> F["Reciprocal Rank<br/>Fusion (k=60)"]
@@ -272,345 +132,42 @@ flowchart LR
 
 Each stage is timed on its own, so latency is reported per stage, never blended.
 
-### How an answer gets judged
-
-```mermaid
-flowchart LR
-    GT["Hand-built<br/>ground truth"] --> P["Run the full pipeline<br/>on each question"]
-    P --> J["Ragas judge<br/>faithfulness · relevance · recall"]
-    J --> AT["Failure attribution<br/>retrieval vs. generation"]
-    AT --> DB[("SQLite,<br/>keyed by git SHA")]
-    DB --> JS["JSON export"] --> DASH["Dashboard"]
-    J --> GATE{"CI gate<br/>below threshold → ❌"}
-```
-
-### The pieces
-
-| Component | What it does |
-|---|---|
-| **Corpus** | 48 current RFCs — HTTP, URIs, TLS 1.3, QUIC, TCP, DNS, cookies, WebSocket, OAuth, JOSE — in 16 clusters → **2,888 chunks** ([manifest](data/corpus_manifest.json)) |
-| **[Ingestion](sentinel/ingest.py)** | clean → chunk (512 tokens, 12% overlap) → embed locally → FAISS **and** BM25 over the same chunk ids; idempotent, and incremental: only new or changed RFCs are chunked, screened and embedded |
-| **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen. Dense search runs in FAISS, or in Postgres with [pgvector](sentinel/vectorstore.py) behind one setting |
-| **[Query planning](sentinel/plan.py)** | splits a multi-part question into up to 3 searches that share one rerank budget; a question it doesn't split takes the ordinary path, and a planner failure falls back to it |
-| **[Semantic cache](sentinel/cache.py)** | a repeated or reworded question in the same scopes and settings reuses the earlier answer; needs identical technical terms and similarity ≥ 0.98. In memory, or in Redis behind one setting |
-| **[Generation](sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
-| **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, `GET /me`; rate limited per account (per IP for the demo account and sign-in) |
-| **[Evaluation](sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
-| **[CI gates](.github/workflows/eval-gate.yml)** | tests · faithfulness gate · injection gate, path-filtered and spend-capped |
-| **[Dashboard](dashboard/)** | Next.js: trends, drill-down, attribution, live playground, guardrails — from exported JSON, no backend |
-
-<details>
-<summary><b>Why this corpus</b></summary>
-
-- **Full of exact tokens** — status codes (`429`), header names (`Sec-WebSocket-Key`), error codes (`invalid_grant`). That's where pure semantic search fails, so it's an honest test of hybrid retrieval.
-- **Mostly current, and honest where it isn't** — the corpus was chosen to avoid replaced RFCs, but standards keep moving. RFC 2818 is obsoleted by RFC 9110 (both in the corpus), and RFC 8446, TLS 1.3, was obsoleted by RFC 9846 after the corpus was fetched. A RAG system quotes such text faithfully and still answers out of date, and no faithfulness check notices. So every citation carries its RFC's standing (`obsoleted_by`, `updated_by`), recorded from the RFC Editor's metadata ([`scripts/fetch_rfc_status.py`](scripts/fetch_rfc_status.py) → [`data/rfc_status.json`](data/rfc_status.json)), and the playground flags an outdated source instead of presenting it as current. [`scripts/watch_rfcs.py`](scripts/watch_rfcs.py) reads the RFC Editor's index for what has moved since (a corpus RFC newly replaced or amended, new RFCs from the corpus's working groups) and reports it for a decision; the `corpus-watch` workflow runs it in CI.
-- **Cleanly licensed** — the IETF Trust permits verbatim reproduction.
-
-</details>
-
-<details>
-<summary><b>Why hybrid retrieval, concretely</b></summary>
-
-Ask *"How is a JWS Compact Serialization structured?"* Dense search misses the defining passage of RFC 7515. BM25 finds it at rank 5 by the exact term; fusion lifts it to 4; the reranker puts it **first**.
-
-It isn't a cure-all: for *"What does `invalid_grant` mean?"* the reranker drops the right passage from rank 4, and the eval correctly flags a retrieval failure.
-
-</details>
-
-<details>
-<summary><b>Why LangChain — and where not</b></summary>
-
-Retriever composition is solved plumbing, so the dense and sparse stages are LangChain `BaseRetriever`s composed with a real `EnsembleRetriever`. The served path computes RRF itself, because `EnsembleRetriever` hides the per-retriever scores that failure attribution needs. More in [ARCHITECTURE.md](ARCHITECTURE.md#7-where-langchain-is-used-and-where-it-isnt).
-
-</details>
-
-<details>
-<summary><b>How evaluation stays honest</b></summary>
-
-- **Ground truth is hand-written**, verified against the RFC text, never synthetic ([audit](data/ground_truth_audit.md)).
-- **Failure attribution:** low context recall → retrieval failure; good recall but a weak answer → generation failure.
-- **Abstentions score as faithful** — they make no claim — while their low relevance still shows. Otherwise the gate would reward confident guessing.
-- **The judge is never the generator**, so it doesn't grade its own output.
-- **Built for rate-limited APIs:** honours `retry-after`, times out hung items, and stops at a daily quota instead of retrying into it.
-
-</details>
+Around that path sit seven guardrails, each where its threat enters: documents are screened for planted instructions when the index is built; the question is screened before retrieval; access scopes are enforced inside both searches; personal data is redacted; the passages are fenced off as untrusted in the prompt; and the answer is checked twice before it's released. What each does, and what each is measured to stop: [guardrails](docs/guardrails.md). The components, the design choices and why: [design](docs/design.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
-## Guardrails
+## Run it
 
-Retrieval hands the model text it didn't write, so each guardrail sits where its threat enters:
-
-```mermaid
-flowchart LR
-    I["Index build"] --> SC["Injection screening<br/>Prompt Guard 2 + two policies<br/>flagged → quarantined"]
-    SC --> IDX[("Index")]
-    Q["Question + JWT scopes"] --> IG["Input guard<br/>policy model<br/>flagged → refused"]
-    IG --> R["Retrieval<br/>scope + quarantine filters<br/>inside both searches"]
-    IDX --> R
-    R --> P["PII redaction<br/>of passages"]
-    P --> G["Generation<br/>passages fenced as<br/>untrusted data"]
-    G --> O["Output guard<br/>links · images · PII<br/>citation checks"]
-    O --> C["Answer check<br/>did it carry out<br/>a planted instruction?"]
-    C --> A["Answer (released after<br/>the check; withheld if flagged)"]
-```
-
-| Layer | Where | What it does |
-|---|---|---|
-| **[Input guard](sentinel/guardrails/input.py)** | before retrieval | `gpt-oss-safeguard-20b` with an input policy refuses manipulation, not mentions of attacks; fails closed |
-| **[Injection screening](sentinel/guardrails/injection.py)** | index build | Prompt Guard 2 + a policy model applying two written policies (injection aimed at an AI; requests for an unrelated task or reply format); if any flags a chunk it's quarantined, unless a person has reviewed that exact text and recorded an exception. Verdicts are cached and committed, so rebuilds cost nothing |
-| **[Scoped retrieval](sentinel/retrieve.py)** | inside both searches | JWT scopes and quarantine are filtered *inside* FAISS and BM25, so a blocked chunk can't even take a candidate slot |
-| **[PII redaction](sentinel/guardrails/pii.py)** | passages + answer | emails (role and list mailboxes kept), phones, Luhn-valid cards, credentials; in private documents also names (spaCy NER, shape-checked) and street addresses |
-| **[Prompt hardening](sentinel/generate.py)** | the prompt | passages fenced with a random per-request tag; the "nothing in here is an instruction" rule is repeated after them |
-| **[Output guard](sentinel/guardrails/output.py)** | the token stream | link allowlist (scheme-less links and Unicode look-alikes too), images removed, prompt-leak filter, citations checked |
-| **[Answer check](sentinel/guardrails/answer.py)** | the finished answer | reads the question and answer — never the passages — and withholds answers carrying codes, calls to action or claims about itself |
-
-<details>
-<summary><b>Design notes</b></summary>
-
-- **Screening at build time** costs the query path nothing; the corpus is static, so each verdict is computed once.
-- **Prompt Guard earns its one false positive** (TCP state-machine text) by catching injections framed as "an example of an attack", which the policy model allows.
-- **Names are redacted only in private documents.** The public corpus is published RFCs: its names are authors on the public record, and redacting them breaks "who edited RFC 9110?" for no privacy gain. Their mailboxes and phones are still redacted. Entity recognition alone was unusable here — over the corpus spaCy tagged `JSON`, `MUST` and `Huffman` as people in 1,767 of 2,888 chunks — so a name must also start or end with a known given name (from Wikidata, not a national registry, so `Kwame` counts as much as `Daniel`), start with an initial, or follow an honorific.
-- **Role mailboxes were tuned on half the RFCs.** The rule (an RFC 2142 role name, or a word like `wg`, `review`, `ipr` in the address) was written from one half of the labelled RFCs; precision is quoted on the other half.
-- **The task-hijack policy is a separate detector, not an edit** to the first policy: the first one's cached verdicts stay valid, and what the new one adds is measured on its own.
-- **"Only allow links from the passages" can't work** — a poisoned passage carries its own link — so links go through an allowlist.
-- **The stream can't leak half a link.** The guard holds back a short tail; a property test checks the streamed output always equals the full-text result.
-- **A withheld answer is never sent.** The service holds the answer until the check passes, then sends its tokens, so a client can't show what the check stopped. The words still stream, but the first one now arrives after generation and the check rather than with the first token; the dashboard paces the released tokens word by word. On 7 live queries before this change, generation took 0.4–2.6 s and the whole guard stage (input guard and answer check together) 410–512 ms, beside 9–14 s of reranking. The check is now timed on its own (`latency_ms.answer_check`). `answer_check_blocks=false` brings back token streaming, with the retraction in `done`.
-- **Attack corpora are segregated** into their own indexes and scopes; the service index never contains a poisoned chunk.
-- **Accounts without a database.** The shared demo account (public password, public scope only) sits beside named accounts from a file of scrypt hashes, mounted from Secret Manager in production and managed with `scripts/users.py`. A token carries an HMAC of its account's password hash and scopes and is re-checked on every request, so disabling an account, changing its password or removing a scope ends its live tokens at once; the file is re-read when it changes, so none of that needs a redeploy.
-
-</details>
-
----
-
-## Engineering decisions
-
-- **Measure, then decide.** Pool size, CPU vs GPU, the judge and every detector were chosen from measurements kept in the repo.
-- **CPU over the Mac GPU.** MPS memory grew until long runs died; CPU rerank p95 was 1.0 s vs 1.9 s. (It then exposed a FAISS/PyTorch OpenMP segfault, fixed by loading PyTorch first.)
-- **Taming reasoning models.** `gpt-oss` at default effort sometimes "thought" until it returned nothing; low effort and an explicit output cap fixed both that and truncated judge verdicts.
-- **Provider-agnostic, judge pinned.** Groq, OpenAI, DeepSeek, NVIDIA and Google are wired; the judge stays on the host it was calibrated on.
-- **pgvector, measured against FAISS before anything relies on it.** `SENTINEL_VECTOR_STORE=pgvector` moves dense search into Postgres: one SQL query with the scope and quarantine filters in its `WHERE` clause, so a blocked chunk still can't take a candidate slot. FAISS's flat index is exact and pgvector's HNSW index isn't, so [`scripts/compare_vector_stores.py`](scripts/compare_vector_stores.py) compares them on every question ([results](data/vector_store_comparison.json)):
-  - **Top results:** the hybrid top-5 is identical on all 48 questions, with the same hit@5 0.896, recall@5 0.816 and MRR 0.759.
-  - **Dense top-50:** the lists overlap 99.7% (96% at worst).
-  - **Filters:** on the 50 attack questions, where the filters reject exactly the chunks the questions pull in, not one excluded chunk came back, and every result list was full.
-  - **Speed:** 0.9 ms per dense query against 0.1 ms in memory, beside a 10 ms retrieve stage and ~1 s of reranking.
-
-  The index directory stays the source of truth. A sync writes only rows whose text or vector changed, and the service refuses to start on a collection from a different build. Production stays on FAISS: a managed Postgres would be the project's first standing cost, for 4.4 MB of vectors.
-- **Spend is metered and capped.** Every Groq call is priced from the tokens the API reports; each CI gate stops at $0.25 and reports its cost ([`spend.py`](sentinel/spend.py)).
-- **Partial evals mislead.** Throttled runs hid a whole class of retrieval failures that a complete run surfaced.
-- **The logs are the telemetry.** Each request logs its per-stage timings, when the first word reached the reader, the whole request time, and what its own Groq calls cost (a per-request tally, so concurrent requests don't blur together). [`scripts/ops_report.py`](scripts/ops_report.py) reads them back from Cloud Logging into [`data/ops_report.json`](data/ops_report.json): outcome rates (answered, abstained, withheld, refused, turned away), p50/p95/p99 per stage, cost per request and reader feedback. The dashboard's **Operations** view shows it. There's no metrics backend or agent, so nothing new to run or pay for; the report holds counts and timings, never questions.
-- **Feedback without a database.** The playground's thumbs up/down goes to `POST /feedback`, which only writes a log line keyed by the answer's `answer_id`; every answer is logged under the same id (question and comment PII-scrubbed, and a withheld answer as it was generated). [`scripts/feedback_candidates.py`](scripts/feedback_candidates.py) joins the two from Cloud Logging and sorts the thumbs-downs by what they suggest: a wrong answer, a retrieval miss (abstained), or a false withhold or refusal. They're leads for review, not labels: a person writes the reference answer before anything enters the ground truth, and the review file is git-ignored because it holds readers' questions. The service stays stateless and adds no infrastructure.
-
----
-
-## Quickstart
-
-Python 3.11+ with [`uv`](https://docs.astral.sh/uv/) and a [Groq API key](https://console.groq.com/keys); Node 18+ for the dashboard.
+Python 3.11+ with [`uv`](https://docs.astral.sh/uv/) and a [Groq API key](https://console.groq.com/keys).
 
 ```bash
 git clone https://github.com/krishivsaini/Sentinel.git && cd Sentinel
-uv sync                                  # exact versions pinned in uv.lock
-cp .env.example .env                     # set GROQ_API_KEY and SENTINEL_JWT_SECRET
-```
-
-**Build the indexes** — local, no API key needed (screening verdicts are committed):
-
-```bash
-uv run python -m sentinel.ingest                 # the service index
-uv run python -m sentinel.ingest --adversarial   # + the attack corpus, for the guardrail eval
-```
-
-**Keep the corpus current** — the RFC Editor's index says what changed; adding an RFC is a person's call:
-
-```bash
-python scripts/watch_rfcs.py                         # standing changes + candidate RFCs since the snapshot
-python scripts/watch_rfcs.py add 9846 --cluster tls  # or: skip 9846 --reason "..."
-python scripts/fetch_corpus.py && python scripts/fetch_rfc_status.py
-uv run python -m sentinel.ingest --incremental       # embeds + screens only the new RFC
-```
-
-**Retrieve, serve, ask:**
-
-```bash
-uv run python -m sentinel.retrieve "What does the invalid_grant error mean?"   # top-5, all four scores
-uv run python -m sentinel.serve                                                # http://localhost:8000
+uv sync && cp .env.example .env          # set GROQ_API_KEY and SENTINEL_JWT_SECRET
+uv run python -m sentinel.ingest         # build the indexes: local, no API calls
+uv run python -m sentinel.serve          # http://localhost:8000
 ```
 
 ```bash
-TOKEN=$(curl -s -X POST localhost:8000/token \
-  -d 'username=demo&password=change-me' | jq -r .access_token)
-
-curl -N -X POST localhost:8000/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"question": "What does the HTTP 429 status code indicate?"}'
+TOKEN=$(curl -s -X POST localhost:8000/token -d 'username=demo&password=change-me' | jq -r .access_token)
+curl -N -X POST localhost:8000/query -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"question": "What does the HTTP 429 status code indicate?"}'
 ```
 
-Named accounts with their own scopes (the demo account gets `public` only):
-
-```bash
-uv run python scripts/users.py add alice --scopes public       # prompts for a password; stores a hash
-SENTINEL_USERS_FILE=data/users.json uv run python -m sentinel.serve
-curl -s -X POST localhost:8000/token -d 'username=alice&password=…&scope=public'   # scope is optional
-```
-
-**Dense search in Postgres (optional)** — local pgvector in Docker; FAISS stays the default:
-
-```bash
-uv sync --extra pgvector
-docker compose -f deploy/pgvector/compose.yaml up -d      # Postgres 17 + pgvector, localhost:5433
-uv run python -m sentinel.vectorstore sync                # copies indexes/ in; later syncs write only changes
-SENTINEL_VECTOR_STORE=pgvector uv run python -m sentinel.serve
-uv run python scripts/compare_vector_stores.py            # FAISS vs pgvector on every question, no API calls
-```
-
-**Semantic cache in Redis (optional)** — local Redis in Docker; the in-memory cache stays the default:
-
-```bash
-docker compose -f deploy/redis/compose.yaml up -d         # Redis 8, localhost:6390, no persistence
-SENTINEL_CACHE_BACKEND=redis uv run python -m sentinel.serve
-uv run pytest tests/test_cache.py                         # every cache test, in memory and in Redis
-```
-
-**Evaluate** — paid runs accept `--max-spend USD`:
-
-```bash
-uv run python -m sentinel.eval.run_eval                    # all 48 questions (resumable)
-uv run python -m sentinel.eval.run_eval --ci               # the faithfulness gate
-uv run python -m sentinel.eval.run_eval --write-baseline 4 # refresh main's baseline
-uv run python -m sentinel.eval.run_guardrails              # every guardrail, 3 runs each
-uv run python -m sentinel.eval.run_guardrails --ci         # the injection gate
-uv run python -m sentinel.eval.run_bipia --max-spend 0.60  # the independent attack set
-uv run python -m sentinel.eval.run_multistep --judge --max-spend 0.25  # multi-part questions, planned vs not
-uv run pytest                                              # tests (live-LLM tests skipped by default)
-```
-
-**Dashboard** — ships with a committed data snapshot:
-
-```bash
-cd dashboard && npm install && npm run sync-data && npm run dev   # http://localhost:3000
-```
-
-<details>
-<summary><b>Free-tier Groq and configuration</b></summary>
-
-A free Groq key runs everything, slowly — about two CI-sized evals a day. Set `SENTINEL_EVAL_ITEM_PAUSE_SECONDS=25`, `SENTINEL_CI_EVAL_SUBSET_SIZE=10` and `SENTINEL_CI_MIN_ITEMS=6`; [`.env.example`](.env.example) explains each.
-
-Everything tunable lives in [`config.py`](sentinel/config.py) and can be overridden with `SENTINEL_*` variables.
-
-| Variable | Required | Purpose |
-|---|---|---|
-| `GROQ_API_KEY` | yes | generation, the judge and the guardrail classifiers |
-| `SENTINEL_JWT_SECRET` | yes | signs API tokens |
-| `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | the shared demo account (default scope only) |
-| `SENTINEL_USERS_FILE` | no | named accounts: scrypt hashes and scopes, managed with `scripts/users.py` |
-| `SENTINEL_SEMANTIC_CACHE` / `SENTINEL_CACHE_THRESHOLD` | no | `false` turns off answer reuse; the threshold defaults to the measured 0.98 |
-| `SENTINEL_CACHE_BACKEND` / `SENTINEL_REDIS_URL` | no | `memory` (default) or `redis`, and the Redis to use (default: the local container; `rediss://` for TLS) |
-| `SENTINEL_QUERY_PLANNING` | no | `false` turns off splitting multi-part questions into separate searches (on by default) |
-| `SENTINEL_VECTOR_STORE` / `SENTINEL_DATABASE_URL` | no | `faiss` (default) or `pgvector`, and the Postgres to use (default: the local container) |
-| `SENTINEL_SPEND_LIMIT_USD` | no | stop any run once its metered spend reaches this |
-| `SENTINEL_TORCH_DEVICE` | no | `cpu` (default), `mps` or `cuda` for the local models |
-| `SENTINEL_INPUT_GUARD` · `_INJECTION_SCREENING` · `_PROMPT_HARDENING` · `_REDACT_CONTEXT_PII` · `_OUTPUT_GUARD` · `_ANSWER_CHECK` | no | switch a guardrail off — the guardrail eval does exactly that |
-| `OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `NVIDIA_API_KEY` / `GOOGLE_API_KEY` | no | alternate providers |
-
-</details>
-
-<details>
-<summary><b>Repository layout</b></summary>
-
-```
-Sentinel/
-├── sentinel/
-│   ├── config.py            # single source of truth: models, thresholds, paths
-│   ├── schema.py            # Pydantic contracts shared by every stage
-│   ├── ingest.py            # load → clean → chunk → embed → FAISS + BM25
-│   ├── retrieve.py          # dense + sparse → RRF → cross-encoder rerank
-│   ├── vectorstore.py       # dense search in Postgres + pgvector; incremental sync from an index
-│   ├── plan.py              # query planner: splits a multi-part question into searches
-│   ├── cache.py             # semantic cache: exact-term check + embedding similarity, scoped; in memory or Redis
-│   ├── generate.py          # grounded, cited generation with abstention
-│   ├── llm.py               # provider-agnostic chat-model factory
-│   ├── serve.py             # FastAPI: JWT scopes, rate limiting, SSE, guardrails
-│   ├── users.py             # accounts: the demo account + named ones (scrypt hashes, scopes)
-│   ├── retry.py             # shared retry policy for every rate-limited API call
-│   ├── spend.py             # meters every paid LLM call; caps a run in dollars
-│   ├── logging_config.py    # structured logging + per-stage timers
-│   ├── guardrails/
-│   │   ├── input.py         # screens the user's question before retrieval
-│   │   ├── injection.py     # index-time injection screening (Prompt Guard 2 + two policies)
-│   │   ├── pii.py           # PII detection + redaction
-│   │   ├── output.py        # streaming output guard: links, images, PII, citations
-│   │   └── answer.py        # withholds answers that carried out a planted instruction
-│   └── eval/
-│       ├── run_eval.py      # Ragas pipeline, checkpointed + resumable, faithfulness gate
-│       ├── run_guardrails.py# attack evals, detector + PII metrics, injection gate
-│       ├── run_bipia.py     # the independent BIPIA attack set, judged, spend-capped
-│       ├── run_multistep.py # multi-part questions: part coverage, over-splitting, judged answers
-│       ├── stats.py         # exact confidence intervals for small samples
-│       ├── attribution.py   # retrieval- vs generation-failure classifier
-│       └── store.py         # SQLite persistence + JSON export
-├── data/
-│   ├── corpus/              # the 48 RFCs, verbatim
-│   ├── corpus_manifest.json # pinned RFC list + clusters
-│   ├── ground_truth.jsonl   # hand-built eval set
-│   ├── multistep_questions.jsonl # 16 two-part questions, gold chunks + evidence per part
-│   ├── multistep_eval.json  # single search vs planned, per question
-│   ├── cache_pairs.jsonl    # paraphrases and near-misses of ground-truth questions
-│   ├── cache_eval.json      # cache threshold sweep
-│   ├── ground_truth_audit.md# second-pass review + judge calibration
-│   ├── faithfulness_baseline.json # main's per-question scores, for the relative gate
-│   ├── retrieval_ablation.json # dense / BM25 / fusion / rerank, per question
-│   ├── vector_store_comparison.json # FAISS vs pgvector, per question
-│   ├── latency_report.json  # per-stage p50/p95/p99
-│   ├── adversarial/         # 50 labelled poisoned passages + questions (dev / held-out / adaptive)
-│   ├── bipia/               # 75 BIPIA attacks planted in RFC passages (MIT, pinned)
-│   └── guardrails/          # screening verdicts, PII labels, user-side prompts, the report
-├── scripts/
-│   ├── fetch_corpus.py              # download the corpus
-│   ├── watch_rfcs.py                # what changed at the RFC Editor since the snapshot
-│   ├── build_ground_truth.py        # surface candidate passages (--assist)
-│   ├── assemble_ground_truth.py     # the hand-authored answers + gold passages
-│   ├── judge_calibration.py         # correlate the judge with hand labels
-│   ├── probe_judge.py               # does a candidate judge produce parseable output?
-│   ├── compare_judge_hosts.py       # same judge, two providers, identical inputs
-│   ├── retrieval_ablation.py        # does each retrieval stage earn its place?
-│   ├── compare_vector_stores.py     # FAISS vs pgvector: same results under the same filters?
-│   ├── cache_eval.py                # semantic cache threshold: paraphrases vs near-misses
-│   ├── answer_check_eval.py         # the answer check on every recorded answer
-│   ├── build_bipia.py               # fetch BIPIA (pinned) and plant it in RFC passages
-│   ├── bench_latency.py             # per-stage p50/p95/p99
-│   ├── users.py                     # add / disable / re-scope named accounts
-│   └── export_dashboard_data.py     # cross-run history for the dashboard
-├── dashboard/               # Next.js + Tailwind eval dashboard
-├── tests/                   # retrieval, scope, guardrails, generation, service, eval, spend
-├── ARCHITECTURE.md          # the system as built
-├── docs/                    # requirements, product design, original architecture, plan
-└── .github/workflows/eval-gate.yml
-```
-
-</details>
+Evaluations, the dashboard, the optional Postgres and Redis backends, configuration and the repository layout: [docs/development.md](docs/development.md). Deploying to Cloud Run with Terraform: [deploy/README.md](deploy/README.md).
 
 ---
 
 ## Limitations
 
-Stated plainly:
+The main ones, stated plainly ([all of them](docs/design.md#limitations)):
 
 | | |
 |---|---|
-| **Scope** | One corpus (IETF RFCs), 48 hand-built questions, one demo tenant. The pipeline is generic; the numbers aren't claimed to transfer. |
-| **Accounts** | A file, not a database: accounts are added by the operator (no sign-up, no password reset), and every instance re-reads the same file. Fine for a handful of accounts. The production RFC index holds only `public` chunks, so a named account's extra scopes have nothing more to retrieve there yet. |
-| **Multi-part questions** | Planning is measured on 16 two-part questions that Claude drafted and reviewed, with no person's review. It still covers every part of only 7 of them, and its gate run is a single run. |
-| **Semantic cache** | Production uses the in-memory backend, so hits don't survive a cold start; the Redis backend is tested locally and in CI but not deployed. The threshold comes from 61 pairs written by Claude; a near-miss closer than "the client's vs the server's certificate" would get through. Casual lower-case phrasings ("what does http 429 mean") always miss. |
-| **The judge** | A model, calibrated against one labeller (blind r = +0.78). Judged context recall is too coarse to tell fusion from reranking. |
-| **The CI gate** | Sees 24 of 48 questions, faithfulness only. The baseline comes from 4 runs, so about 1 healthy PR in 40 may fail by chance; regressions under ~0.07 pass. Refresh the baseline when main changes generation on purpose. |
-| **Attack sets** | The 85 hand-written attacks share an author with the defences; BIPIA showed the bias — screening caught 59% of its attacks vs 93% of our dev and held-out ones. A second policy now catches 74 / 75, but it was written because of that result, so BIPIA is no longer a fully independent test of screening. |
-| **Screening** | Can still be written around: 6 of 10 adaptive attacks pass it. The detectors wrongly flag 3 of 2,888 real chunks; those are released by hand-reviewed exceptions, so a new false flag stays quarantined until someone reads it. |
-| **Backup layers** | Still let 2% through when screening misses — mostly a planted false claim phrased as RFC errata, which no check here can recognise. |
-| **Classifiers** | Vary run to run even at temperature 0; every rate is a mean of 3 runs. |
-| **Answer check** | Holding the answer until it passes delays the first word by generation plus the check; the words that follow are a paced replay, not live generation. Wrongly withheld 3 of ~600 clean answers. |
-| **PII** | Lists named after a working group (`hybi@ietf.org`) still look personal and are redacted. Names are found only in private documents and miss lone first or last names, `Smith, J.` references and names absent from the Wikidata list (`Raj Patel`); only US/UK-style street addresses are found; IP addresses are out of scope. The private set was written before the name detector, but by its author. |
-| **Infra** | FAISS in memory in production; pgvector is wired and measured but runs only locally. Reranking ~1 s per query on an M3 but 9–14 s on Cloud Run's 2 vCPUs; a paid Groq key for CI. |
+| **Scale** | One corpus (48 RFCs) and 48 hand-built questions, so the intervals are wide and the numbers aren't claimed to transfer. Little real traffic so far. |
+| **Latency** | A fresh answer takes ~15–20 s on Cloud Run's 2 vCPUs, almost all of it CPU reranking (~1 s on an M3). A cache hit takes ~1 s. |
+| **Who wrote the tests** | The hand-written attacks share an author with the defences, and the multi-part questions and cache pairs were drafted by Claude without a person's review. |
+| **Screening** | Can still be written around: 6 of 10 adaptive attacks pass it, and "answer in French" gets past every layer. |
+| **The judge** | A model, calibrated against one labeller (blind r = +0.78). The CI gate scores 24 of the 48 questions. |
 
 ---
 
@@ -620,14 +177,21 @@ Stated plainly:
 - [ ] A person's labels for the BIPIA judge, alongside the model-made ones
 - [x] Entity recognition for names and postal addresses in the PII guard (private documents)
 - [ ] A larger ground-truth set (80–120 questions)
-- [ ] Deployment: the dashboard, then the API behind its guardrails
+- [x] Deployment: the API behind its guardrails, on Cloud Run with Terraform
+- [ ] Deployment: the dashboard
+- [ ] Faster reranking on Cloud Run's CPUs (an ONNX build of the cross-encoder), the main latency cost
+- [x] The Redis cache backend in production, so cache hits survive scale-to-zero
 
 ---
-
 ## Documentation
 
 | Doc | Purpose |
 |---|---|
+| [docs/results.md](docs/results.md) | Every measured result except the guardrails: the CI gate, the full evaluation, the retrieval ablation, multi-part questions, the semantic cache, the judge, latency |
+| [docs/guardrails.md](docs/guardrails.md) | The seven guardrails, how they're layered, and how often attacks get through |
+| [docs/design.md](docs/design.md) | How it works, the engineering decisions, and the full limitations |
+| [docs/development.md](docs/development.md) | Running, evaluating and configuring it locally; the repository layout |
+| [deploy/README.md](deploy/README.md) | Cloud Run, Terraform, secrets and costs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | The system as built: query path, indexes, trust boundaries, gates, models and cost |
 | [data/ground_truth_audit.md](data/ground_truth_audit.md) | Ground-truth review and judge calibration |
 | [docs/requirement.md](docs/requirement.md) | Functional and non-functional requirements |
