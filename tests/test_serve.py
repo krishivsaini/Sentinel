@@ -145,7 +145,7 @@ def test_authenticated_query_streams_wellformed_answer(client: TestClient) -> No
     assert [c["chunk_id"] for c in answer["citations"]] == ["rfc6585#0002"]
     # per-stage latency present and never blended into one number (NFR-3)
     assert set(answer["latency_ms"]) == {"retrieve", "rerank", "generate", "guard",
-                                         "answer_check", "plan"}
+                                         "answer_check", "plan", "cache"}
     assert answer["retrieved"][0]["chunk_id"] == "rfc6585#0002"
     assert answer["guardrails"]["flagged"] is False
 

@@ -22,7 +22,7 @@ from pathlib import Path
 ANSWER_EVENTS = ("query", "query.refused")
 ALL_EVENTS = (*ANSWER_EVENTS, "query.budget_exhausted", "feedback")
 # Per-stage timings, in pipeline order, then the two end-to-end ones a reader feels.
-STAGES = ("plan", "retrieve", "rerank", "generate", "guard", "answer_check")
+STAGES = ("cache", "plan", "retrieve", "rerank", "generate", "guard", "answer_check")
 END_TO_END = ("first_token", "request")
 
 
@@ -130,6 +130,8 @@ def summarise(events: list[dict], source: str) -> dict:
         "outcomes": {k: {"n": v, "rate": round(v / n, 4) if n else None}
                      for k, v in sorted(outcomes.items())},
         "latency": [latency_summary(s, samples[s]) for s in (*STAGES, *END_TO_END) if samples[s]],
+        "cache": {"hits": (hits := sum(bool(e.get("cache_hit")) for e in queries)),
+                  "hit_rate": round(hits / len(queries), 4) if queries else None},
         "cost_usd": {
             "total": round(sum(costed), 6),
             "per_request_mean": round(statistics.fmean(costed), 6) if costed else None,

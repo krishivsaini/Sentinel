@@ -1,0 +1,910 @@
+{
+ "sets": {
+  "paraphrases": 32,
+  "casual": 3,
+  "near_misses": 29,
+  "ground_truth_pairs": 1128
+ },
+ "near_misses_stopped_by_tokens": 23,
+ "paraphrases_with_same_tokens": 32,
+ "highest_negative_similarity_with_same_tokens": 0.9662,
+ "lowest_paraphrase_similarity": 0.921,
+ "lowest_safe_threshold": {
+  "with_tokens": 0.97,
+  "embedding_only": 0.98
+ },
+ "margin": 0.01,
+ "chosen_threshold": 0.98,
+ "at_chosen": {
+  "with_tokens": {
+   "paraphrase_hits": 18,
+   "casual_hits": 0,
+   "near_miss_false_hits": 0,
+   "ground_truth_false_hits": 0
+  }
+ },
+ "embedding_only_at_chosen": {
+  "paraphrase_hits": 18,
+  "casual_hits": 0,
+  "near_miss_false_hits": 0,
+  "ground_truth_false_hits": 0
+ },
+ "sweep": [
+  {
+   "threshold": 0.8,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 3,
+    "near_miss_false_hits": 25,
+    "ground_truth_false_hits": 2
+   }
+  },
+  {
+   "threshold": 0.81,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 3,
+    "near_miss_false_hits": 23,
+    "ground_truth_false_hits": 2
+   }
+  },
+  {
+   "threshold": 0.82,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 3,
+    "near_miss_false_hits": 21,
+    "ground_truth_false_hits": 2
+   }
+  },
+  {
+   "threshold": 0.83,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 3,
+    "near_miss_false_hits": 20,
+    "ground_truth_false_hits": 2
+   }
+  },
+  {
+   "threshold": 0.84,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 3,
+    "near_miss_false_hits": 18,
+    "ground_truth_false_hits": 2
+   }
+  },
+  {
+   "threshold": 0.85,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 3,
+    "near_miss_false_hits": 18,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.86,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 3,
+    "near_miss_false_hits": 17,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.87,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 3,
+    "near_miss_false_hits": 15,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.88,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 2,
+    "near_miss_false_hits": 13,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.89,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 4,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 2,
+    "near_miss_false_hits": 11,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.9,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 4,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 2,
+    "near_miss_false_hits": 10,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.91,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 3,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 1,
+    "near_miss_false_hits": 9,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.92,
+   "with_tokens": {
+    "paraphrase_hits": 32,
+    "casual_hits": 0,
+    "near_miss_false_hits": 3,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 32,
+    "casual_hits": 1,
+    "near_miss_false_hits": 7,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.93,
+   "with_tokens": {
+    "paraphrase_hits": 31,
+    "casual_hits": 0,
+    "near_miss_false_hits": 3,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 31,
+    "casual_hits": 1,
+    "near_miss_false_hits": 6,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.94,
+   "with_tokens": {
+    "paraphrase_hits": 30,
+    "casual_hits": 0,
+    "near_miss_false_hits": 2,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 30,
+    "casual_hits": 1,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.95,
+   "with_tokens": {
+    "paraphrase_hits": 29,
+    "casual_hits": 0,
+    "near_miss_false_hits": 2,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 29,
+    "casual_hits": 0,
+    "near_miss_false_hits": 5,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.96,
+   "with_tokens": {
+    "paraphrase_hits": 27,
+    "casual_hits": 0,
+    "near_miss_false_hits": 1,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 27,
+    "casual_hits": 0,
+    "near_miss_false_hits": 4,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.97,
+   "with_tokens": {
+    "paraphrase_hits": 23,
+    "casual_hits": 0,
+    "near_miss_false_hits": 0,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 23,
+    "casual_hits": 0,
+    "near_miss_false_hits": 2,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.98,
+   "with_tokens": {
+    "paraphrase_hits": 18,
+    "casual_hits": 0,
+    "near_miss_false_hits": 0,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 18,
+    "casual_hits": 0,
+    "near_miss_false_hits": 0,
+    "ground_truth_false_hits": 0
+   }
+  },
+  {
+   "threshold": 0.99,
+   "with_tokens": {
+    "paraphrase_hits": 12,
+    "casual_hits": 0,
+    "near_miss_false_hits": 0,
+    "ground_truth_false_hits": 0
+   },
+   "embedding_only": {
+    "paraphrase_hits": 12,
+    "casual_hits": 0,
+    "near_miss_false_hits": 0,
+    "ground_truth_false_hits": 0
+   }
+  }
+ ],
+ "pairs": [
+  {
+   "cached": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?",
+   "asked": "In IETF RFCs, what requirement level does each of MUST, SHOULD and MAY signal?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.921,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the key word MUST NOT mean in an RFC?",
+   "asked": "In an RFC, what is meant by the key word MUST NOT?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.96,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the key word MUST NOT mean in an RFC?",
+   "asked": "What does the key word SHOULD NOT mean in an RFC?",
+   "expect": "miss",
+   "why": "SHOULD NOT vs MUST NOT",
+   "similarity": 0.974,
+   "same_tokens": false
+  },
+  {
+   "cached": "What does the HTTP 429 status code indicate, and what header may the response include?",
+   "asked": "What does a 429 status code mean in HTTP, and which header can the response carry?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9688,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the HTTP 429 status code indicate, and what header may the response include?",
+   "asked": "What does the HTTP 503 status code indicate, and what header may the response include?",
+   "expect": "miss",
+   "why": "503 vs 429",
+   "similarity": 0.8767,
+   "same_tokens": false
+  },
+  {
+   "cached": "How does HTTP decide whether a stored cached response is still fresh?",
+   "asked": "How does an HTTP cache determine if a stored response is still fresh?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9805,
+   "same_tokens": true
+  },
+  {
+   "cached": "How does HTTP decide whether a stored cached response is still fresh?",
+   "asked": "How does HTTP decide whether a stored cached response can be served stale?",
+   "expect": "miss",
+   "why": "served stale vs fresh (hard: ordinary words)",
+   "similarity": 0.9549,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the 308 Permanent Redirect status code mean?",
+   "asked": "What is the meaning of the 308 Permanent Redirect status code?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9937,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the 308 Permanent Redirect status code mean?",
+   "asked": "What does the 307 Temporary Redirect status code mean?",
+   "expect": "miss",
+   "why": "307 vs 308",
+   "similarity": 0.8288,
+   "same_tokens": false
+  },
+  {
+   "cached": "What is the purpose of the dynamic table in HPACK header compression?",
+   "asked": "Why does HPACK header compression have a dynamic table?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9805,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the purpose of the dynamic table in HPACK header compression?",
+   "asked": "What is the purpose of the dynamic table in QPACK field compression?",
+   "expect": "miss",
+   "why": "QPACK vs HPACK",
+   "similarity": 0.8568,
+   "same_tokens": false
+  },
+  {
+   "cached": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?",
+   "asked": "In HTTP/2, what is controlled by the SETTINGS_HEADER_TABLE_SIZE parameter?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9914,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?",
+   "asked": "What does the SETTINGS_MAX_CONCURRENT_STREAMS parameter control in HTTP/2?",
+   "expect": "miss",
+   "why": "a different SETTINGS parameter",
+   "similarity": 0.8047,
+   "same_tokens": false
+  },
+  {
+   "cached": "What is the HTTP PATCH method used for, and is it idempotent?",
+   "asked": "What is the PATCH method in HTTP for, and is it idempotent?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9871,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the HTTP PATCH method used for, and is it idempotent?",
+   "asked": "What is the HTTP PUT method used for, and is it idempotent?",
+   "expect": "miss",
+   "why": "PUT vs PATCH",
+   "similarity": 0.8165,
+   "same_tokens": false
+  },
+  {
+   "cached": "What does the 431 Request Header Fields Too Large status code indicate?",
+   "asked": "What does status code 431 Request Header Fields Too Large mean?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9797,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the 431 Request Header Fields Too Large status code indicate?",
+   "asked": "What does the 413 Content Too Large status code indicate?",
+   "expect": "miss",
+   "why": "413 vs 431",
+   "similarity": 0.8006,
+   "same_tokens": false
+  },
+  {
+   "cached": "What does the max-age directive in the HSTS Strict-Transport-Security header specify?",
+   "asked": "In the HSTS Strict-Transport-Security header, what does the max-age directive specify?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9967,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the max-age directive in the HSTS Strict-Transport-Security header specify?",
+   "asked": "What does the includeSubDomains directive in the HSTS Strict-Transport-Security header specify?",
+   "expect": "miss",
+   "why": "includeSubDomains vs max-age",
+   "similarity": 0.791,
+   "same_tokens": false
+  },
+  {
+   "cached": "What does the Secure attribute of an HTTP cookie do?",
+   "asked": "What is the effect of setting the Secure attribute on an HTTP cookie?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9423,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the Secure attribute of an HTTP cookie do?",
+   "asked": "What does the SameSite attribute of an HTTP cookie do?",
+   "expect": "miss",
+   "why": "SameSite vs Secure",
+   "similarity": 0.8379,
+   "same_tokens": false
+  },
+  {
+   "cached": "What is the effect of the HttpOnly attribute on a cookie?",
+   "asked": "What does the HttpOnly attribute do to a cookie?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.965,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the effect of the HttpOnly attribute on a cookie?",
+   "asked": "What is the effect of the Path attribute on a cookie?",
+   "expect": "miss",
+   "why": "Path vs HttpOnly",
+   "similarity": 0.8137,
+   "same_tokens": false
+  },
+  {
+   "cached": "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?",
+   "asked": "During the WebSocket opening handshake, how is the value of Sec-WebSocket-Accept computed?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9575,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the purpose of the Sec-WebSocket-Key request header?",
+   "asked": "Why does the client send a Sec-WebSocket-Key request header?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9314,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the purpose of the Sec-WebSocket-Key request header?",
+   "asked": "What is the purpose of the Sec-WebSocket-Protocol request header?",
+   "expect": "miss",
+   "why": "Sec-WebSocket-Protocol vs -Key",
+   "similarity": 0.9686,
+   "same_tokens": false
+  },
+  {
+   "cached": "What is a QUIC stateless reset and when is it used?",
+   "asked": "When is a QUIC stateless reset used, and what is it?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9946,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is a QUIC stateless reset and when is it used?",
+   "asked": "What is a QUIC version negotiation packet and when is it used?",
+   "expect": "miss",
+   "why": "version negotiation vs stateless reset (hard: ordinary words)",
+   "similarity": 0.7211,
+   "same_tokens": true
+  },
+  {
+   "cached": "How does QUIC detect lost packets?",
+   "asked": "How are lost packets detected in QUIC?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9866,
+   "same_tokens": true
+  },
+  {
+   "cached": "How does QUIC detect lost packets?",
+   "asked": "How does TCP detect lost packets?",
+   "expect": "miss",
+   "why": "TCP vs QUIC",
+   "similarity": 0.8612,
+   "same_tokens": false
+  },
+  {
+   "cached": "What is a QUIC connection ID used for?",
+   "asked": "What purpose does a connection ID serve in QUIC?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9548,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is a QUIC connection ID used for?",
+   "asked": "What is a QUIC stream ID used for?",
+   "expect": "miss",
+   "why": "stream ID vs connection ID (hard: ordinary words)",
+   "similarity": 0.8894,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the maximum segment lifetime (MSL) in TCP and why does it matter?",
+   "asked": "Why does the TCP maximum segment lifetime (MSL) matter, and what is it?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9869,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the maximum segment lifetime (MSL) in TCP and why does it matter?",
+   "asked": "What is the maximum segment size (MSS) in TCP and why does it matter?",
+   "expect": "miss",
+   "why": "MSS vs MSL",
+   "similarity": 0.913,
+   "same_tokens": false
+  },
+  {
+   "cached": "How does the TCP three-way handshake establish a connection?",
+   "asked": "How is a connection established with the TCP three-way handshake?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9807,
+   "same_tokens": true
+  },
+  {
+   "cached": "How does the TCP three-way handshake establish a connection?",
+   "asked": "How does the TCP four-way handshake close a connection?",
+   "expect": "miss",
+   "why": "closing vs establishing",
+   "similarity": 0.8681,
+   "same_tokens": false
+  },
+  {
+   "cached": "Which TLS 1.3 handshake message carries the server's certificate?",
+   "asked": "In TLS 1.3, which handshake message carries the server's certificate?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9919,
+   "same_tokens": true
+  },
+  {
+   "cached": "Which TLS 1.3 handshake message carries the server's certificate?",
+   "asked": "Which TLS 1.3 handshake message carries the client's certificate?",
+   "expect": "miss",
+   "why": "client's vs server's certificate (hard: ordinary words)",
+   "similarity": 0.9662,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?",
+   "asked": "What is the TLS Application-Layer Protocol Negotiation (ALPN) extension for?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9798,
+   "same_tokens": true
+  },
+  {
+   "cached": "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?",
+   "asked": "What is the purpose of the TLS Encrypted Client Hello (ECH) extension?",
+   "expect": "miss",
+   "why": "ECH vs ALPN",
+   "similarity": 0.7222,
+   "same_tokens": false
+  },
+  {
+   "cached": "How does a TLS client indicate the target server name using Server Name Indication (SNI)?",
+   "asked": "Using Server Name Indication (SNI), how does a TLS client indicate which server name it wants?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9757,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the invalid_grant error mean in OAuth 2.0?",
+   "asked": "In OAuth 2.0, what is meant by the invalid_grant error?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9955,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the invalid_grant error mean in OAuth 2.0?",
+   "asked": "What does the invalid_client error mean in OAuth 2.0?",
+   "expect": "miss",
+   "why": "invalid_client vs invalid_grant",
+   "similarity": 0.8929,
+   "same_tokens": false
+  },
+  {
+   "cached": "How does PKCE protect the OAuth 2.0 authorization code flow?",
+   "asked": "In what way does PKCE protect the OAuth 2.0 authorization code flow?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9944,
+   "same_tokens": true
+  },
+  {
+   "cached": "How does PKCE protect the OAuth 2.0 authorization code flow?",
+   "asked": "How does PKCE protect the OAuth 2.0 implicit flow?",
+   "expect": "miss",
+   "why": "implicit vs authorization code flow (hard: ordinary words)",
+   "similarity": 0.9389,
+   "same_tokens": true
+  },
+  {
+   "cached": "How is an OAuth 2.0 bearer token presented in an HTTP request?",
+   "asked": "How does a client present an OAuth 2.0 bearer token in an HTTP request?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.973,
+   "same_tokens": true
+  },
+  {
+   "cached": "How is an OAuth 2.0 bearer token presented in an HTTP request?",
+   "asked": "How is an OAuth 2.0 refresh token presented in an HTTP request?",
+   "expect": "miss",
+   "why": "refresh vs bearer token (hard: ordinary words)",
+   "similarity": 0.907,
+   "same_tokens": true
+  },
+  {
+   "cached": "How are credentials encoded in the HTTP Basic authentication scheme?",
+   "asked": "In the HTTP Basic authentication scheme, how are the credentials encoded?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9954,
+   "same_tokens": true
+  },
+  {
+   "cached": "How are credentials encoded in the HTTP Basic authentication scheme?",
+   "asked": "How are credentials encoded in the HTTP Digest authentication scheme?",
+   "expect": "miss",
+   "why": "Digest vs Basic",
+   "similarity": 0.9243,
+   "same_tokens": false
+  },
+  {
+   "cached": "What are the registered claim names defined for a JSON Web Token (JWT)?",
+   "asked": "Which registered claim names does a JSON Web Token (JWT) define?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.993,
+   "same_tokens": true
+  },
+  {
+   "cached": "What are the registered claim names defined for a JSON Web Token (JWT)?",
+   "asked": "What are the registered header parameter names defined for a JSON Web Signature (JWS)?",
+   "expect": "miss",
+   "why": "JWS header parameters vs JWT claims",
+   "similarity": 0.7566,
+   "same_tokens": false
+  },
+  {
+   "cached": "How is a JWS Compact Serialization structured?",
+   "asked": "What is the structure of a JWS Compact Serialization?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9648,
+   "same_tokens": true
+  },
+  {
+   "cached": "How is a JWS Compact Serialization structured?",
+   "asked": "How is a JWE Compact Serialization structured?",
+   "expect": "miss",
+   "why": "JWE vs JWS",
+   "similarity": 0.9705,
+   "same_tokens": false
+  },
+  {
+   "cached": "How does base64url encoding differ from standard base64 encoding?",
+   "asked": "What is the difference between base64url encoding and standard base64 encoding?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9778,
+   "same_tokens": true
+  },
+  {
+   "cached": "How does base64url encoding differ from standard base64 encoding?",
+   "asked": "How does base32 encoding differ from standard base64 encoding?",
+   "expect": "miss",
+   "why": "base32 vs base64url",
+   "similarity": 0.9129,
+   "same_tokens": false
+  },
+  {
+   "cached": "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?",
+   "asked": "In a DNS reply, what does the Name Error (NXDOMAIN) response code mean?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9927,
+   "same_tokens": true
+  },
+  {
+   "cached": "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?",
+   "asked": "What does the Server Failure (SERVFAIL) response code indicate in a DNS reply?",
+   "expect": "miss",
+   "why": "SERVFAIL vs NXDOMAIN",
+   "similarity": 0.8325,
+   "same_tokens": false
+  },
+  {
+   "cached": "How are DNS queries carried in DNS over HTTPS (DoH)?",
+   "asked": "In DNS over HTTPS (DoH), how are DNS queries carried?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9956,
+   "same_tokens": true
+  },
+  {
+   "cached": "How are DNS queries carried in DNS over HTTPS (DoH)?",
+   "asked": "How are DNS queries carried in DNS over TLS (DoT)?",
+   "expect": "miss",
+   "why": "DoT vs DoH",
+   "similarity": 0.8801,
+   "same_tokens": false
+  },
+  {
+   "cached": "What transport port does DNS over TLS (DoT) use by default?",
+   "asked": "By default, which transport port does DNS over TLS (DoT) use?",
+   "expect": "hit",
+   "why": "paraphrase",
+   "similarity": 0.9961,
+   "same_tokens": true
+  },
+  {
+   "cached": "What transport port does DNS over TLS (DoT) use by default?",
+   "asked": "What transport port does DNS over HTTPS (DoH) use by default?",
+   "expect": "miss",
+   "why": "DoH vs DoT",
+   "similarity": 0.8714,
+   "same_tokens": false
+  },
+  {
+   "cached": "What does the HTTP 429 status code indicate, and what header may the response include?",
+   "asked": "what does http 429 mean",
+   "expect": "hit",
+   "why": "casual lower-case",
+   "similarity": 0.8731,
+   "same_tokens": false
+  },
+  {
+   "cached": "How does QUIC detect lost packets?",
+   "asked": "how does quic detect packet loss",
+   "expect": "hit",
+   "why": "casual lower-case",
+   "similarity": 0.9483,
+   "same_tokens": false
+  },
+  {
+   "cached": "What transport port does DNS over TLS (DoT) use by default?",
+   "asked": "dns over tls default port",
+   "expect": "hit",
+   "why": "casual lower-case",
+   "similarity": 0.9021,
+   "same_tokens": false
+  }
+ ],
+ "closest_ground_truth_pairs": [
+  {
+   "a": "What does the Secure attribute of an HTTP cookie do?",
+   "b": "What is the effect of the HttpOnly attribute on a cookie?",
+   "similarity": 0.8451,
+   "same_tokens": false
+  },
+  {
+   "a": "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?",
+   "b": "What is the purpose of the Sec-WebSocket-Key request header?",
+   "similarity": 0.8442,
+   "same_tokens": false
+  },
+  {
+   "a": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?",
+   "b": "What does the key word MUST NOT mean in an RFC?",
+   "similarity": 0.7723,
+   "same_tokens": false
+  },
+  {
+   "a": "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?",
+   "b": "What HTTP status code does a server return to complete the WebSocket opening handshake?",
+   "similarity": 0.7693,
+   "same_tokens": false
+  },
+  {
+   "a": "What does the HTTP 429 status code indicate, and what header may the response include?",
+   "b": "What does the 431 Request Header Fields Too Large status code indicate?",
+   "similarity": 0.7646,
+   "same_tokens": false
+  },
+  {
+   "a": "How does QUIC detect lost packets?",
+   "b": "What is a QUIC connection ID used for?",
+   "similarity": 0.758,
+   "same_tokens": false
+  },
+  {
+   "a": "What does the Secure attribute of an HTTP cookie do?",
+   "b": "How are credentials encoded in the HTTP Basic authentication scheme?",
+   "similarity": 0.7436,
+   "same_tokens": false
+  },
+  {
+   "a": "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?",
+   "b": "What does the key word MUST NOT mean in an RFC?",
+   "similarity": 0.7425,
+   "same_tokens": false
+  },
+  {
+   "a": "How is an OAuth 2.0 bearer token presented in an HTTP request?",
+   "b": "How are credentials encoded in the HTTP Basic authentication scheme?",
+   "similarity": 0.739,
+   "same_tokens": false
+  },
+  {
+   "a": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?",
+   "b": "According to RFC 8174, when do the RFC 2119 key words carry their special normative meaning?",
+   "similarity": 0.734,
+   "same_tokens": false
+  }
+ ]
+}

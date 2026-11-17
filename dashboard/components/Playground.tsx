@@ -28,6 +28,9 @@ type Done = {
   answer_id?: string | null;
   // The search queries a multi-part question was split into (query planning); empty otherwise.
   sub_questions?: string[];
+  // Set when the answer was replayed from the semantic cache.
+  cached_from?: string | null;
+  cache_similarity?: number | null;
 };
 
 const rfc = (docId: string) => docId.replace(/^rfc/i, "RFC ");
@@ -339,6 +342,12 @@ function AnswerFooter({ done }: { done: Done }) {
             .join(" · ")}
         </div>
       )}
+      {done.cached_from && (
+        <div className="mb-2 text-[11.5px] text-text-4">
+          answered from the cache (question similarity {done.cache_similarity?.toFixed(3)}): no
+          retrieval or generation this time
+        </div>
+      )}
       {(done.sub_questions?.length ?? 0) > 1 && (
         <div className="mb-2 text-[11.5px] text-text-4">
           searched in {done.sub_questions!.length} parts: {done.sub_questions!.map((q) => `“${q}”`).join(" · ")}
@@ -346,7 +355,7 @@ function AnswerFooter({ done }: { done: Done }) {
       )}
       <div className="flex flex-wrap gap-1.5">
         {Object.entries(done.latency_ms)
-          .filter(([stage, ms]) => stage !== "plan" || ms > 0)
+          .filter(([stage, ms]) => !["plan", "cache"].includes(stage) || ms > 0)
           .map(([stage, ms]) => (
           <span key={stage} className="rounded-[5px] bg-chip px-1.5 py-0.5 font-mono text-[10.5px] text-text-3">
             {stage} {Math.round(ms)} ms

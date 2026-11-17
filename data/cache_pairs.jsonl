@@ -1,0 +1,64 @@
+{"cached": "What requirement levels do the key words MUST, SHOULD, and MAY indicate in IETF RFCs?", "asked": "In IETF RFCs, what requirement level does each of MUST, SHOULD and MAY signal?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the key word MUST NOT mean in an RFC?", "asked": "In an RFC, what is meant by the key word MUST NOT?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the key word MUST NOT mean in an RFC?", "asked": "What does the key word SHOULD NOT mean in an RFC?", "expect": "miss", "why": "SHOULD NOT vs MUST NOT"}
+{"cached": "What does the HTTP 429 status code indicate, and what header may the response include?", "asked": "What does a 429 status code mean in HTTP, and which header can the response carry?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the HTTP 429 status code indicate, and what header may the response include?", "asked": "What does the HTTP 503 status code indicate, and what header may the response include?", "expect": "miss", "why": "503 vs 429"}
+{"cached": "How does HTTP decide whether a stored cached response is still fresh?", "asked": "How does an HTTP cache determine if a stored response is still fresh?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How does HTTP decide whether a stored cached response is still fresh?", "asked": "How does HTTP decide whether a stored cached response can be served stale?", "expect": "miss", "why": "served stale vs fresh (hard: ordinary words)"}
+{"cached": "What does the 308 Permanent Redirect status code mean?", "asked": "What is the meaning of the 308 Permanent Redirect status code?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the 308 Permanent Redirect status code mean?", "asked": "What does the 307 Temporary Redirect status code mean?", "expect": "miss", "why": "307 vs 308"}
+{"cached": "What is the purpose of the dynamic table in HPACK header compression?", "asked": "Why does HPACK header compression have a dynamic table?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is the purpose of the dynamic table in HPACK header compression?", "asked": "What is the purpose of the dynamic table in QPACK field compression?", "expect": "miss", "why": "QPACK vs HPACK"}
+{"cached": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?", "asked": "In HTTP/2, what is controlled by the SETTINGS_HEADER_TABLE_SIZE parameter?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the SETTINGS_HEADER_TABLE_SIZE parameter control in HTTP/2?", "asked": "What does the SETTINGS_MAX_CONCURRENT_STREAMS parameter control in HTTP/2?", "expect": "miss", "why": "a different SETTINGS parameter"}
+{"cached": "What is the HTTP PATCH method used for, and is it idempotent?", "asked": "What is the PATCH method in HTTP for, and is it idempotent?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is the HTTP PATCH method used for, and is it idempotent?", "asked": "What is the HTTP PUT method used for, and is it idempotent?", "expect": "miss", "why": "PUT vs PATCH"}
+{"cached": "What does the 431 Request Header Fields Too Large status code indicate?", "asked": "What does status code 431 Request Header Fields Too Large mean?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the 431 Request Header Fields Too Large status code indicate?", "asked": "What does the 413 Content Too Large status code indicate?", "expect": "miss", "why": "413 vs 431"}
+{"cached": "What does the max-age directive in the HSTS Strict-Transport-Security header specify?", "asked": "In the HSTS Strict-Transport-Security header, what does the max-age directive specify?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the max-age directive in the HSTS Strict-Transport-Security header specify?", "asked": "What does the includeSubDomains directive in the HSTS Strict-Transport-Security header specify?", "expect": "miss", "why": "includeSubDomains vs max-age"}
+{"cached": "What does the Secure attribute of an HTTP cookie do?", "asked": "What is the effect of setting the Secure attribute on an HTTP cookie?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the Secure attribute of an HTTP cookie do?", "asked": "What does the SameSite attribute of an HTTP cookie do?", "expect": "miss", "why": "SameSite vs Secure"}
+{"cached": "What is the effect of the HttpOnly attribute on a cookie?", "asked": "What does the HttpOnly attribute do to a cookie?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is the effect of the HttpOnly attribute on a cookie?", "asked": "What is the effect of the Path attribute on a cookie?", "expect": "miss", "why": "Path vs HttpOnly"}
+{"cached": "How is the Sec-WebSocket-Accept header value computed during the WebSocket opening handshake?", "asked": "During the WebSocket opening handshake, how is the value of Sec-WebSocket-Accept computed?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is the purpose of the Sec-WebSocket-Key request header?", "asked": "Why does the client send a Sec-WebSocket-Key request header?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is the purpose of the Sec-WebSocket-Key request header?", "asked": "What is the purpose of the Sec-WebSocket-Protocol request header?", "expect": "miss", "why": "Sec-WebSocket-Protocol vs -Key"}
+{"cached": "What is a QUIC stateless reset and when is it used?", "asked": "When is a QUIC stateless reset used, and what is it?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is a QUIC stateless reset and when is it used?", "asked": "What is a QUIC version negotiation packet and when is it used?", "expect": "miss", "why": "version negotiation vs stateless reset (hard: ordinary words)"}
+{"cached": "How does QUIC detect lost packets?", "asked": "How are lost packets detected in QUIC?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How does QUIC detect lost packets?", "asked": "How does TCP detect lost packets?", "expect": "miss", "why": "TCP vs QUIC"}
+{"cached": "What is a QUIC connection ID used for?", "asked": "What purpose does a connection ID serve in QUIC?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is a QUIC connection ID used for?", "asked": "What is a QUIC stream ID used for?", "expect": "miss", "why": "stream ID vs connection ID (hard: ordinary words)"}
+{"cached": "What is the maximum segment lifetime (MSL) in TCP and why does it matter?", "asked": "Why does the TCP maximum segment lifetime (MSL) matter, and what is it?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is the maximum segment lifetime (MSL) in TCP and why does it matter?", "asked": "What is the maximum segment size (MSS) in TCP and why does it matter?", "expect": "miss", "why": "MSS vs MSL"}
+{"cached": "How does the TCP three-way handshake establish a connection?", "asked": "How is a connection established with the TCP three-way handshake?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How does the TCP three-way handshake establish a connection?", "asked": "How does the TCP four-way handshake close a connection?", "expect": "miss", "why": "closing vs establishing"}
+{"cached": "Which TLS 1.3 handshake message carries the server's certificate?", "asked": "In TLS 1.3, which handshake message carries the server's certificate?", "expect": "hit", "why": "paraphrase"}
+{"cached": "Which TLS 1.3 handshake message carries the server's certificate?", "asked": "Which TLS 1.3 handshake message carries the client's certificate?", "expect": "miss", "why": "client's vs server's certificate (hard: ordinary words)"}
+{"cached": "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?", "asked": "What is the TLS Application-Layer Protocol Negotiation (ALPN) extension for?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What is the purpose of the TLS Application-Layer Protocol Negotiation (ALPN) extension?", "asked": "What is the purpose of the TLS Encrypted Client Hello (ECH) extension?", "expect": "miss", "why": "ECH vs ALPN"}
+{"cached": "How does a TLS client indicate the target server name using Server Name Indication (SNI)?", "asked": "Using Server Name Indication (SNI), how does a TLS client indicate which server name it wants?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the invalid_grant error mean in OAuth 2.0?", "asked": "In OAuth 2.0, what is meant by the invalid_grant error?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the invalid_grant error mean in OAuth 2.0?", "asked": "What does the invalid_client error mean in OAuth 2.0?", "expect": "miss", "why": "invalid_client vs invalid_grant"}
+{"cached": "How does PKCE protect the OAuth 2.0 authorization code flow?", "asked": "In what way does PKCE protect the OAuth 2.0 authorization code flow?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How does PKCE protect the OAuth 2.0 authorization code flow?", "asked": "How does PKCE protect the OAuth 2.0 implicit flow?", "expect": "miss", "why": "implicit vs authorization code flow (hard: ordinary words)"}
+{"cached": "How is an OAuth 2.0 bearer token presented in an HTTP request?", "asked": "How does a client present an OAuth 2.0 bearer token in an HTTP request?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How is an OAuth 2.0 bearer token presented in an HTTP request?", "asked": "How is an OAuth 2.0 refresh token presented in an HTTP request?", "expect": "miss", "why": "refresh vs bearer token (hard: ordinary words)"}
+{"cached": "How are credentials encoded in the HTTP Basic authentication scheme?", "asked": "In the HTTP Basic authentication scheme, how are the credentials encoded?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How are credentials encoded in the HTTP Basic authentication scheme?", "asked": "How are credentials encoded in the HTTP Digest authentication scheme?", "expect": "miss", "why": "Digest vs Basic"}
+{"cached": "What are the registered claim names defined for a JSON Web Token (JWT)?", "asked": "Which registered claim names does a JSON Web Token (JWT) define?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What are the registered claim names defined for a JSON Web Token (JWT)?", "asked": "What are the registered header parameter names defined for a JSON Web Signature (JWS)?", "expect": "miss", "why": "JWS header parameters vs JWT claims"}
+{"cached": "How is a JWS Compact Serialization structured?", "asked": "What is the structure of a JWS Compact Serialization?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How is a JWS Compact Serialization structured?", "asked": "How is a JWE Compact Serialization structured?", "expect": "miss", "why": "JWE vs JWS"}
+{"cached": "How does base64url encoding differ from standard base64 encoding?", "asked": "What is the difference between base64url encoding and standard base64 encoding?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How does base64url encoding differ from standard base64 encoding?", "asked": "How does base32 encoding differ from standard base64 encoding?", "expect": "miss", "why": "base32 vs base64url"}
+{"cached": "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?", "asked": "In a DNS reply, what does the Name Error (NXDOMAIN) response code mean?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What does the Name Error (NXDOMAIN) response code indicate in a DNS reply?", "asked": "What does the Server Failure (SERVFAIL) response code indicate in a DNS reply?", "expect": "miss", "why": "SERVFAIL vs NXDOMAIN"}
+{"cached": "How are DNS queries carried in DNS over HTTPS (DoH)?", "asked": "In DNS over HTTPS (DoH), how are DNS queries carried?", "expect": "hit", "why": "paraphrase"}
+{"cached": "How are DNS queries carried in DNS over HTTPS (DoH)?", "asked": "How are DNS queries carried in DNS over TLS (DoT)?", "expect": "miss", "why": "DoT vs DoH"}
+{"cached": "What transport port does DNS over TLS (DoT) use by default?", "asked": "By default, which transport port does DNS over TLS (DoT) use?", "expect": "hit", "why": "paraphrase"}
+{"cached": "What transport port does DNS over TLS (DoT) use by default?", "asked": "What transport port does DNS over HTTPS (DoH) use by default?", "expect": "miss", "why": "DoH vs DoT"}
+{"cached": "What does the HTTP 429 status code indicate, and what header may the response include?", "asked": "what does http 429 mean", "expect": "hit", "why": "casual lower-case"}
+{"cached": "How does QUIC detect lost packets?", "asked": "how does quic detect packet loss", "expect": "hit", "why": "casual lower-case"}
+{"cached": "What transport port does DNS over TLS (DoT) use by default?", "asked": "dns over tls default port", "expect": "hit", "why": "casual lower-case"}

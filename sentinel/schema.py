@@ -84,6 +84,7 @@ class LatencyMs(BaseModel):
     guard: float = 0.0  # input guard, context redaction, output sanitising, citation check (v2)
     answer_check: float = 0.0  # the answer check; while it blocks, the client waits this long
     plan: float = 0.0          # the query planner (sentinel.plan), when query planning is on
+    cache: float = 0.0         # the semantic cache lookup (sentinel.cache), when the cache is on
 
 
 class GuardrailReport(BaseModel):
@@ -114,6 +115,10 @@ class Answer(BaseModel):
     # The search queries a multi-part question was split into (sentinel.plan); empty when it was
     # searched as asked.
     sub_questions: list[str] = Field(default_factory=list)
+    # Set when the answer was served from the semantic cache: the answer it replays and how
+    # similar the two questions were.
+    cached_from: str | None = None
+    cache_similarity: float | None = None
 
 
 # --------------------------------------------------------------------------- API I/O

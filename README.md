@@ -119,6 +119,34 @@ Gold passages are exact chunk texts, so the first three columns need no judge ([
 
 **It's on by default.** The injection gate was run with planning on, and it passed: 0 / 50 poisoned-document attacks and 0 / 35 attacks in the question got through with the input guard ([results](data/guardrails/gate_with_planning.json); one run, against 0 / 50 and 1.33 / 35 without planning, so read it as no worse, not better). The planner sees only questions that passed the input guard, and it can only choose search queries. Each question costs one extra `gpt-oss-20b` call (~$0.0001, ~0.3 s). The faithfulness eval and the injection gate retrieve the same way the service does. `SENTINEL_QUERY_PLANNING=false` turns it off.
 
+### Repeated questions: a semantic cache
+
+A question asked again, or reworded, can reuse the earlier answer: no retrieval, reranking (~10 s on Cloud Run), generation or answer check, and no Groq cost beyond the input guard ([`cache.py`](sentinel/cache.py)). The risk is a **false hit**: "What does 307 mean?" sits right next to "What does 308 mean?" in embedding space, and serving one's answer to the other is a confident, cited wrong answer. So a hit needs two things:
+
+1. **The same exact terms:** status codes, RFC and version numbers, header and parameter names, error codes, ALL-CAPS keywords. Any difference is a miss.
+2. **Embedding similarity of at least 0.98:** for questions that differ only in ordinary words ("the client's certificate" vs "the server's").
+
+Measured locally on [32 paraphrases and 29 near-misses](data/cache_pairs.jsonl) of ground-truth questions, plus all 1,128 pairs of distinct ground-truth questions ([`scripts/cache_eval.py`](scripts/cache_eval.py), [results](data/cache_eval.json)):
+
+| Similarity threshold | Paraphrases that hit | Near-miss false hits (tokens + embedding) | Near-miss false hits (embedding only) |
+|---|---|---|---|
+| 0.92 | 32 / 32 | 3 / 29 | 7 / 29 |
+| 0.96 | 27 / 32 | 1 / 29 | 4 / 29 |
+| 0.97 | 23 / 32 | 0 / 29 | 2 / 29 |
+| **0.98 (ships)** | **18 / 32** | **0 / 29** | 0 / 29 |
+
+- **Tokens stop most near-misses:** 23 of the 29 differ in an exact term and are stopped by the token check at any threshold.
+- **The rest set the threshold:** the most similar of the other 6 ("the client's certificate" vs "the server's") scores 0.966, so the threshold is that plus a 0.01 margin.
+- **Exact repeats always hit,** and the playground's sample questions are exactly that. No pair of distinct ground-truth questions comes close (highest 0.845).
+
+What makes it safe to share:
+- **Scoped:** answers are shared only within one context: the caller's scopes, the index build, the models and prompt, and every retrieval and guardrail setting, hashed together. A scope never sees answers built from documents it can't retrieve, and rebuilding the index starts afresh.
+- **Guarded:** the input guard runs on every question before the cache is consulted, so a reworded attack doesn't inherit a cached answer.
+- **Clean answers only:** only answers that went out clean are stored: cited, not abstained or withheld, nothing removed by the output guard. A question with personal data in it is never stored.
+- **Correctable:** a thumbs-down on any copy of an answer evicts it.
+
+It lives in memory, per instance, for 24 hours: nothing new to run or pay for. A restart or a new instance starts empty.
+
 ### Is the judge trustworthy?
 
 `gpt-oss-120b` on Groq, compared with hand labels — the second time with every judge score hidden:
@@ -257,6 +285,7 @@ flowchart LR
 | **[Ingestion](sentinel/ingest.py)** | clean → chunk (512 tokens, 12% overlap) → embed locally → FAISS **and** BM25 over the same chunk ids; idempotent, and incremental: only new or changed RFCs are chunked, screened and embedded |
 | **[Retrieval](sentinel/retrieve.py)** | dense + BM25 → RRF → cross-encoder; every chunk carries all four scores, so you can see *why* it was chosen. Dense search runs in FAISS, or in Postgres with [pgvector](sentinel/vectorstore.py) behind one setting |
 | **[Query planning](sentinel/plan.py)** | splits a multi-part question into up to 3 searches that share one rerank budget; a question it doesn't split takes the ordinary path, and a planner failure falls back to it |
+| **[Semantic cache](sentinel/cache.py)** | a repeated or reworded question in the same scopes and settings reuses the earlier answer; needs identical technical terms and similarity ≥ 0.98 |
 | **[Generation](sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
 | **[API](sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, `GET /me`; rate limited per account (per IP for the demo account and sign-in) |
 | **[Evaluation](sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
@@ -460,6 +489,7 @@ Everything tunable lives in [`config.py`](sentinel/config.py) and can be overrid
 | `SENTINEL_JWT_SECRET` | yes | signs API tokens |
 | `SENTINEL_DEMO_USER` / `SENTINEL_DEMO_PASSWORD` | no | the shared demo account (default scope only) |
 | `SENTINEL_USERS_FILE` | no | named accounts: scrypt hashes and scopes, managed with `scripts/users.py` |
+| `SENTINEL_SEMANTIC_CACHE` / `SENTINEL_CACHE_THRESHOLD` | no | `false` turns off answer reuse; the threshold defaults to the measured 0.98 |
 | `SENTINEL_QUERY_PLANNING` | no | `false` turns off splitting multi-part questions into separate searches (on by default) |
 | `SENTINEL_VECTOR_STORE` / `SENTINEL_DATABASE_URL` | no | `faiss` (default) or `pgvector`, and the Postgres to use (default: the local container) |
 | `SENTINEL_SPEND_LIMIT_USD` | no | stop any run once its metered spend reaches this |
@@ -481,6 +511,7 @@ Sentinel/
 │   ├── retrieve.py          # dense + sparse → RRF → cross-encoder rerank
 │   ├── vectorstore.py       # dense search in Postgres + pgvector; incremental sync from an index
 │   ├── plan.py              # query planner: splits a multi-part question into searches
+│   ├── cache.py             # semantic cache: exact-term check + embedding similarity, scoped
 │   ├── generate.py          # grounded, cited generation with abstention
 │   ├── llm.py               # provider-agnostic chat-model factory
 │   ├── serve.py             # FastAPI: JWT scopes, rate limiting, SSE, guardrails
@@ -508,6 +539,8 @@ Sentinel/
 │   ├── ground_truth.jsonl   # hand-built eval set
 │   ├── multistep_questions.jsonl # 16 two-part questions, gold chunks + evidence per part
 │   ├── multistep_eval.json  # single search vs planned, per question
+│   ├── cache_pairs.jsonl    # paraphrases and near-misses of ground-truth questions
+│   ├── cache_eval.json      # cache threshold sweep
 │   ├── ground_truth_audit.md# second-pass review + judge calibration
 │   ├── faithfulness_baseline.json # main's per-question scores, for the relative gate
 │   ├── retrieval_ablation.json # dense / BM25 / fusion / rerank, per question
@@ -526,6 +559,7 @@ Sentinel/
 │   ├── compare_judge_hosts.py       # same judge, two providers, identical inputs
 │   ├── retrieval_ablation.py        # does each retrieval stage earn its place?
 │   ├── compare_vector_stores.py     # FAISS vs pgvector: same results under the same filters?
+│   ├── cache_eval.py                # semantic cache threshold: paraphrases vs near-misses
 │   ├── answer_check_eval.py         # the answer check on every recorded answer
 │   ├── build_bipia.py               # fetch BIPIA (pinned) and plant it in RFC passages
 │   ├── bench_latency.py             # per-stage p50/p95/p99
@@ -551,6 +585,7 @@ Stated plainly:
 | **Scope** | One corpus (IETF RFCs), 48 hand-built questions, one demo tenant. The pipeline is generic; the numbers aren't claimed to transfer. |
 | **Accounts** | A file, not a database: accounts are added by the operator (no sign-up, no password reset), and every instance re-reads the same file. Fine for a handful of accounts. The production RFC index holds only `public` chunks, so a named account's extra scopes have nothing more to retrieve there yet. |
 | **Multi-part questions** | Planning is measured on 16 two-part questions that Claude drafted and reviewed, with no person's review. It still covers every part of only 7 of them, and its gate run is a single run. |
+| **Semantic cache** | In memory per instance, so hits don't survive a restart or cross instances. The threshold comes from 61 pairs written by Claude; a near-miss closer than "the client's vs the server's certificate" would get through. Casual lower-case phrasings ("what does http 429 mean") always miss. |
 | **The judge** | A model, calibrated against one labeller (blind r = +0.78). Judged context recall is too coarse to tell fusion from reranking. |
 | **The CI gate** | Sees 24 of 48 questions, faithfulness only. The baseline comes from 4 runs, so about 1 healthy PR in 40 may fail by chance; regressions under ~0.07 pass. Refresh the baseline when main changes generation on purpose. |
 | **Attack sets** | The 85 hand-written attacks share an author with the defences; BIPIA showed the bias — screening caught 59% of its attacks vs 93% of our dev and held-out ones. A second policy now catches 74 / 75, but it was written because of that result, so BIPIA is no longer a fully independent test of screening. |

@@ -57,8 +57,16 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sse_starlette.sse import EventSourceResponse
 
-from sentinel.config import settings
-from sentinel.generate import generate, is_abstention, parse_citations
+from sentinel.cache import AnswerCache, Entry, context_key
+from sentinel.config import IndexPaths, settings
+from sentinel.generate import (
+    HARDENING_REMINDER,
+    HARDENING_RULE,
+    SYSTEM_PROMPT,
+    generate,
+    is_abstention,
+    parse_citations,
+)
 from sentinel.guardrails.answer import WITHHELD_MESSAGE, AnswerCheck, check_answer
 from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening, screen_question
 from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_citations
@@ -72,6 +80,7 @@ from sentinel.users import User, UserStore
 from sentinel.schema import (
     Account,
     Answer,
+    Citation,
     FeedbackRequest,
     GuardrailReport,
     LatencyMs,
@@ -95,6 +104,13 @@ class QueryEngine:
 
     def plan(self, question: str) -> Plan:
         return plan_question(question)
+
+    def embed(self, question: str):
+        """The question's embedding, as retrieval computes it (the semantic cache's key)."""
+        from sentinel.retrieve import QUERY_INSTRUCTION, _embedder
+
+        return _embedder().encode([QUERY_INSTRUCTION + question], normalize_embeddings=True,
+                                  convert_to_numpy=True).astype("float32")[0]
 
     def retrieve_many(
         self, queries: list[str], top_k: int | None, access: Access
@@ -204,8 +220,93 @@ def _scrub(text: str) -> str:
     return redact(text)[0]
 
 
+def default_cache() -> AnswerCache:
+    return AnswerCache(settings.cache_threshold, settings.cache_ttl_seconds,
+                       settings.cache_max_entries)
+
+
+_index_meta: dict[tuple, str] = {}
+
+
+def _index_build() -> str:
+    """Identifies the index being served, so a rebuilt index never reuses old answers."""
+    meta = IndexPaths(settings.index_dir.resolve()).meta
+    try:
+        st = meta.stat()
+    except OSError:
+        return "no-index"
+    key = (str(meta), st.st_mtime_ns, st.st_size)
+    if key not in _index_meta:
+        import hashlib
+        _index_meta[key] = hashlib.sha256(meta.read_bytes()).hexdigest()[:16]
+    return _index_meta[key]
+
+
+def _cache_context(user: Principal, req: QueryRequest) -> str:
+    """Everything besides the question that decides an answer. Two requests share cached
+    answers only when all of it matches: above all the scopes, so a scope never sees answers
+    built from documents it can't retrieve."""
+    return context_key(
+        scopes=user.scopes, index=_index_build(), vector_store=settings.vector_store,
+        top_k=req.top_k or settings.rerank_top_k,
+        prompt=SYSTEM_PROMPT + HARDENING_RULE + HARDENING_REMINDER,
+        models=(settings.embedding_model, settings.reranker_model, settings.generation_provider,
+                settings.generation_model, settings.planner_model),
+        retrieval=(settings.dense_top_n, settings.sparse_top_n, settings.rrf_k,
+                   settings.rerank_pool_size, settings.multistep_top_k, settings.query_planning),
+        guards=(settings.input_guard, settings.prompt_hardening, settings.redact_context_pii,
+                settings.output_guard, settings.answer_check, settings.answer_check_blocks),
+    )
+
+
+def _cached_events(entry: Entry, similarity: float, answer_id: str, user: Principal,
+                   req: QueryRequest, latency: dict[str, float], t_request: float,
+                   cost: list[float] | None) -> Iterator[dict]:
+    """Replay a cached answer: the same events a fresh answer sends, under its own answer_id."""
+    p = entry.payload
+    retrieved = [RetrievedChunk.model_validate(c) for c in p["retrieved"]]
+    yield {"event": "retrieved", "data": json.dumps([
+        {"chunk_id": c.chunk_id, "doc_id": c.chunk_id.split("#", 1)[0],
+         "dense_score": c.dense_score, "sparse_score": c.sparse_score,
+         "fused_score": c.fused_score, "rerank_score": c.rerank_score} for c in retrieved])}
+    first_token = time.perf_counter()
+    for part in p["parts"]:
+        yield {"event": "token", "data": part}
+    answer = Answer(
+        question=req.question, text=p["text"],
+        citations=[Citation.model_validate(c) for c in p["citations"]],
+        retrieved=retrieved,
+        latency_ms=LatencyMs(retrieve=0.0, rerank=0.0, generate=0.0, **latency),
+        guardrails=GuardrailReport.model_validate(p["guardrails"]),
+        answer_id=answer_id, sub_questions=p["sub_questions"],
+        cached_from=entry.answer_id, cache_similarity=round(similarity, 4),
+    )
+    log.info(
+        "query",
+        answer_id=answer_id,
+        question=_scrub(req.question),
+        answer=p["text"][:_LOGGED_ANSWER_CHARS],
+        user=user.subject,
+        scopes=sorted(user.scopes),
+        chunk_ids=[c.chunk_id for c in retrieved],
+        cache_hit=True,
+        cached_from=entry.answer_id,
+        cache_similarity=round(similarity, 4),
+        cache_age_s=round(time.time() - entry.created),
+        latency_ms={k: round(v, 1) for k, v in latency.items()},
+        first_token_ms=round((first_token - t_request) * 1000.0, 1),
+        request_ms=round((time.perf_counter() - t_request) * 1000.0, 1),
+        cost_usd=round(cost[0], 6) if cost is not None else None,
+        n_citations=len(answer.citations),
+        outcome="answered",
+        guardrails_flagged=False,
+    )
+    yield {"event": "done", "data": answer.model_dump_json()}
+
+
 def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
-                  cost: list[float] | None = None) -> Iterator[dict]:
+                  cost: list[float] | None = None,
+                  cache: AnswerCache | None = None) -> Iterator[dict]:
     """Sync generator of SSE events: retrieved -> token* -> done. Runs in a threadpool (the
     LLM stream is sync), so it never blocks the event loop. `cost` is the request's spend tally
     (spend.start_request_cost), reported in the query log."""
@@ -221,6 +322,22 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         if screening.flagged:
             yield from _refusal(user, req, screening, guard_s, answer_id, cost)
             return
+    # The semantic cache, consulted only after the input guard has passed the question. A
+    # question with PII in it is neither looked up nor stored.
+    cache_key = vector = None
+    if cache is not None and settings.semantic_cache and not redact(req.question)[1]:
+        t = time.perf_counter()
+        vector = engine.embed(req.question)
+        cache_key = _cache_context(user, req)
+        hit = cache.lookup(req.question, vector, cache_key)
+        latency["cache"] = (time.perf_counter() - t) * 1000.0
+        if hit is not None:
+            latency["guard"] = guard_s * 1000.0
+            cache.served(answer_id, hit.entry)   # so a thumbs-down on this reply evicts it
+            yield from _cached_events(hit.entry, hit.similarity, answer_id, user, req, latency,
+                                      t_request, cost)
+            return
+
     access = Access(scopes=user.scopes)
     plan = engine.plan(req.question) if settings.query_planning else None
     if plan is not None:
@@ -319,6 +436,20 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         sub_questions=plan.queries if plan is not None and plan.multi else [],
     )
 
+    # Only an answer that went out clean is reused: cited, not abstained, not withheld, and
+    # nothing removed or flagged by the output guard.
+    stored = False
+    if (cache_key is not None and citations and not abstained and not withheld
+            and not guardrails.flagged and not guardrails.removed):
+        cache.store(req.question, vector, cache_key, {
+            "text": text, "parts": parts,
+            "citations": [c.model_dump() for c in citations],
+            "retrieved": [c.model_dump() for c in chunks],
+            "sub_questions": answer.sub_questions,
+            "guardrails": guardrails.model_dump(),
+        }, answer_id)
+        stored = True
+
     # The question and answer are logged (PII scrubbed) so feedback can be reviewed against
     # what was actually said; the answer already passed the output guard's PII redaction.
     log.info(
@@ -332,6 +463,8 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         scopes=sorted(user.scopes),
         chunk_ids=[c.chunk_id for c in chunks],
         sub_queries=len(plan.queries) if plan is not None else None,
+        cache_hit=False if cache_key is not None else None,
+        cache_stored=stored,
         plan_error=plan.error if plan is not None else None,
         latency_ms={k: round(v, 1) for k, v in latency.items()},
         # End to end inside the service: the first word the reader saw, and the whole request.
@@ -402,6 +535,7 @@ def create_app(users: UserStore | None = None) -> FastAPI:
             allow_headers=["Authorization", "Content-Type"],
         )
     app.state.users = users or default_user_store()
+    app.state.cache = default_cache()
     # Limiter is created per-app (fresh in-memory storage) so tests don't bleed rate state.
     limiter = Limiter(key_func=_rate_key)
     app.state.limiter = limiter
@@ -460,7 +594,8 @@ def create_app(users: UserStore | None = None) -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="The demo's daily API budget is used up; it resets at 00:00 UTC.",
             )
-        return EventSourceResponse(_query_events(engine, user, body, start_request_cost()))
+        return EventSourceResponse(_query_events(engine, user, body, start_request_cost(),
+                                                 request.app.state.cache))
 
     # Feedback is a log event, not a database row: the service stays stateless and adds no
     # infrastructure, and scripts/feedback_candidates.py joins it to the query log by
@@ -472,10 +607,13 @@ def create_app(users: UserStore | None = None) -> FastAPI:
         body: FeedbackRequest,
         user: Principal = Depends(get_current_user),
     ) -> dict[str, str]:
+        # A reader saying an answer is wrong also stops it being served again from the cache.
+        evicted = body.rating == "down" and request.app.state.cache.evict_answer(body.answer_id)
         log.info(
             "feedback",
             answer_id=body.answer_id,
             rating=body.rating,
+            cache_evicted=evicted,
             comment=_scrub(body.comment) if body.comment else None,
             user=user.subject,
         )

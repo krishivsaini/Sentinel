@@ -178,6 +178,17 @@ class Settings(BaseSettings):
     query_planning: bool = True
     planner_model: str = "openai/gpt-oss-20b"   # on generation_provider
     multistep_top_k: int = 6               # passages for a split question (2-3 per part)
+    # Semantic cache (sentinel/cache.py): a question that matches an earlier one, in the same
+    # scopes, index build and settings, gets the earlier answer without retrieval or generation.
+    # A match needs the same technical tokens AND embedding similarity >= cache_threshold. 0.98
+    # is the most similar negative the token check lets through (0.966: "the client's
+    # certificate" vs "the server's") plus a 0.01 margin; there, 18 of 32 paraphrases hit and
+    # none of 29 near-misses or 1,128 ground-truth pairs does (data/cache_eval.json). In memory,
+    # per instance; entries expire after cache_ttl_seconds.
+    semantic_cache: bool = True
+    cache_threshold: float = 0.98
+    cache_ttl_seconds: int = 86400
+    cache_max_entries: int = 2000
 
     # ---------------------------------------------------------------- Eval + gate (§12/§13)
     faithfulness_threshold: float = 0.80   # CI gate fails below this
