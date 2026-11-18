@@ -18,6 +18,11 @@ type Guardrails = {
   unresolved_citations: string[];
   uncited: boolean;
   answer_withheld?: boolean;
+  answer_ungrounded?: boolean;
+  answer_check_error?: string | null;
+  input_flagged?: boolean;
+  input_error?: string | null;
+  off_topic?: boolean;
 };
 // A citation carries its RFC's standing: later RFCs that replaced (obsoleted_by) or amended it.
 type Citation = { chunk_id: string; doc_id: string; obsoleted_by?: string[]; updated_by?: string[] };
@@ -79,7 +84,8 @@ async function streamAnswer(
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${access_token}` },
     body: JSON.stringify({ question }),
   });
-  if (!res.ok || !res.body) throw new Error(`query ${res.status}`);
+  if (!res.ok || !res.body) throw new ApiError(res.status, await errorDetail(res));
+  let finished = false;
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -117,13 +123,51 @@ async function streamAnswer(
       } else if (event === "done") {
         try {
           onDone(JSON.parse(payload));
+          finished = true;
         } catch {
           /* ignore malformed frame */
         }
+      } else if (event === "error") {
+        let detail = "The answer failed partway through.";
+        try {
+          detail = JSON.parse(payload).detail ?? detail;
+        } catch {
+          /* keep the default */
+        }
+        throw new ApiError(0, detail);
       }
     }
   }
+  // A stream that ends without its `done` event was cut off: don't present it as an answer.
+  if (!finished) throw new ApiError(0, "The connection dropped before the answer finished. Try again.");
 }
+
+// A failed request, with the API's own reason when it gave one (budget, rate limit, validation).
+class ApiError extends Error {
+  constructor(public status: number, public detail: string) {
+    super(detail);
+  }
+}
+
+async function errorDetail(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    const d = body.detail ?? body.error;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d) && d[0]?.msg) return `The question was rejected: ${d[0].msg}.`;
+  } catch {
+    /* not JSON */
+  }
+  return `The API returned ${res.status}.`;
+}
+
+const ERROR_TITLES: Record<number, string> = {
+  0: "The answer didn't finish",
+  400: "Question not accepted",
+  422: "Question not accepted",
+  429: "Too many questions",
+  503: "The demo is resting",
+};
 
 export function Playground({ latest }: { latest: RunResult }) {
   const samples = latest.per_item.slice(0, 3).map((i) => i.question);
@@ -136,6 +180,7 @@ export function Playground({ latest }: { latest: RunResult }) {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [done, setDone] = useState<Done | null>(null);
   const [error, setError] = useState("");
+  const [apiError, setApiError] = useState<ApiError | null>(null);
   const [token, setToken] = useState("");
   const [session, setSession] = useState<Session | null>(null);
   // A slow first response: "waking" while sign-in waits on a cold start, "working" while the
@@ -163,6 +208,24 @@ export function Playground({ latest }: { latest: RunResult }) {
     return () => clearTimeout(id);
   }, [answer, revealed]);
   const revealing = revealed.length < answer.length;
+  // The service replaced the answer (no citation, or the answer check flagged it).
+  const g = done?.guardrails;
+  const heldBack = !!(g?.answer_ungrounded || g?.answer_withheld || g?.input_flagged || g?.off_topic);
+  // What the header says about the answer: only a cited answer is called grounded.
+  const verdict = !done
+    ? "grounded · cited"
+    : g?.input_flagged
+      ? "refused by the input guard"
+      : g?.off_topic
+        ? "off-topic · model not called"
+        : g?.answer_ungrounded || g?.answer_withheld
+          ? "withheld by guardrails"
+          : done.text.trim().toLowerCase().startsWith("i don't have enough information")
+            ? "not enough context"
+            : (done.citations?.length ?? 0) > 0
+              ? "grounded · cited"
+              : "uncited";
+  const known = new Set(chunks.map((c) => c.chunk_id.toLowerCase()));
 
   async function ask(q: string) {
     if (!q.trim()) return;
@@ -172,6 +235,7 @@ export function Playground({ latest }: { latest: RunResult }) {
       return;
     }
     setPhase("streaming");
+    setApiError(null);
     setAnswer("");
     setChunks([]);
     setDone(null);
@@ -214,6 +278,7 @@ export function Playground({ latest }: { latest: RunResult }) {
       );
       setPhase("done");
     } catch (e) {
+      setApiError(e instanceof ApiError ? e : null);
       setError(String(e));
       setPhase("error");
     } finally {
@@ -237,6 +302,7 @@ export function Playground({ latest }: { latest: RunResult }) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && ask(query)}
             placeholder="Ask a question about the RFC corpus…"
+            maxLength={2000}
             className="flex-1 border-none bg-transparent py-3.5 text-[14px] text-text placeholder:text-text-4"
           />
           <button
@@ -275,9 +341,17 @@ export function Playground({ latest }: { latest: RunResult }) {
       {phase === "error" && (
         <div className="rounded-xl border border-dashed border-input-bd p-11 text-center">
           <div className="mb-1.5 text-[13px] font-medium text-text-2">
-            {error === "no-api" ? "No API endpoint configured" : error.startsWith("Your session") ? error : "Couldn't reach the API"}
+            {error === "no-api"
+              ? "No API endpoint configured"
+              : error.startsWith("Your session")
+                ? error
+                : apiError
+                  ? ERROR_TITLES[apiError.status] ?? "The API returned an error"
+                  : "Couldn't reach the API"}
           </div>
-          {API && error !== "no-api" ? (
+          {apiError ? (
+            <div className="mx-auto max-w-[520px] text-[12px] leading-[1.6] text-text-4">{apiError.detail}</div>
+          ) : API && error !== "no-api" ? (
             <div className="mx-auto max-w-[520px] text-[12px] leading-[1.6] text-text-4">
               The API didn&apos;t answer. It may still be waking up, or the demo&apos;s rate limit or
               daily budget may be used up. Try again in a minute. The other views run on exported
@@ -302,14 +376,21 @@ export function Playground({ latest }: { latest: RunResult }) {
               <span className="text-[12.5px] font-semibold">
                 {phase === "streaming" ? "streaming · SSE" : phase === "checking" ? "checking the answer…" : "answer"}
               </span>
-              <span className="ml-auto font-mono text-[10.5px] text-text-4">grounded · cited</span>
+              <span
+                className={`ml-auto font-mono text-[10.5px] ${verdict === "grounded · cited" ? "text-text-4" : "text-warn-fg"}`}
+              >
+                {verdict}
+              </span>
             </div>
             <div className="min-h-[96px] p-[18px] text-[14px] leading-[1.7] text-text-1">
               {revealed && (
-                <Markdown
-                  text={revealed}
-                  tail={(phase === "streaming" || revealing) && <span className="text-accent">▍</span>}
-                />
+                <div className={heldBack ? "text-text-3" : undefined}>
+                  <Markdown
+                    text={revealed}
+                    known={chunks.length ? known : undefined}
+                    tail={(phase === "streaming" || revealing) && <span className="text-accent">▍</span>}
+                  />
+                </div>
               )}
               {phase === "streaming" && !answer && wait && (
                 <span className="text-text-4">
@@ -361,7 +442,11 @@ function AnswerFooter({ done }: { done: Done }) {
     for (const [k, n] of Object.entries(g.removed))
       notes.push(k === "link" ? `${n} untrusted link removed` : k === "image" ? `${n} image removed` : `${n} ${k} redacted`);
     if (g.unresolved_citations.length) notes.push(`unresolved citation: ${g.unresolved_citations.join(", ")}`);
-    if (g.uncited) notes.push("no valid citation");
+    if (g.input_flagged) notes.push(g.input_error ? "input guard unreachable, so the question was refused (fails closed)" : "question refused by the input guard");
+    if (g.off_topic) notes.push("no passage matched the question, so the model wasn't called");
+    if (g.answer_check_error) notes.push("answer check unreachable, so the answer was withheld (fails closed)");
+    if (g.answer_ungrounded) notes.push("answer withheld: it cited no retrieved passage");
+    else if (g.uncited) notes.push("no valid citation");
     if (g.answer_withheld) notes.push("answer withheld by the answer check");
   }
   // One line per cited RFC, at most: replaced outright is a warning, amended is a note.
@@ -399,7 +484,7 @@ function AnswerFooter({ done }: { done: Done }) {
       )}
       <div className="flex flex-wrap gap-1.5">
         {Object.entries(done.latency_ms)
-          .filter(([stage, ms]) => !["plan", "cache"].includes(stage) || ms > 0)
+          .filter(([, ms]) => ms > 0)
           .map(([stage, ms]) => (
           <span key={stage} className="rounded-[5px] bg-chip px-1.5 py-0.5 font-mono text-[10.5px] text-text-3">
             {stage} {Math.round(ms)} ms

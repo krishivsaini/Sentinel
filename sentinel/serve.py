@@ -69,7 +69,13 @@ from sentinel.generate import (
 )
 from sentinel.guardrails.answer import WITHHELD_MESSAGE, AnswerCheck, check_answer
 from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening, screen_question
-from sentinel.guardrails.output import OutputReport, StreamSanitizer, check_citations
+from sentinel.guardrails.output import (
+    OFF_TOPIC_MESSAGE,
+    UNGROUNDED_MESSAGE,
+    OutputReport,
+    StreamSanitizer,
+    check_citations,
+)
 from sentinel.guardrails.pii import redact, redact_chunks
 from sentinel.logging_config import configure_logging, log
 from sentinel.plan import Plan
@@ -315,6 +321,17 @@ def _cached_events(entry: Entry, similarity: float, answer_id: str, user: Princi
     yield {"event": "done", "data": answer.model_dump_json()}
 
 
+def _failsafe(events: Iterator[dict]) -> Iterator[dict]:
+    """Ends a stream that fails partway (a provider outage mid-answer) with an `error` event, so
+    the client can say so instead of showing a cut-off answer as if it were finished."""
+    try:
+        yield from events
+    except Exception as exc:   # noqa: BLE001 - anything that escapes is reported, then logged
+        log.exception("query.failed", error=type(exc).__name__)
+        yield {"event": "error", "data": json.dumps(
+            {"detail": "The answer failed partway through. Try again in a moment."})}
+
+
 def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
                   cost: list[float] | None = None,
                   cache: AnswerCache | RedisAnswerCache | None = None) -> Iterator[dict]:
@@ -384,6 +401,16 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         ),
     }
 
+    # Off-topic: the best passage barely relates to the question, so there's nothing to ground
+    # an answer in. Stop before the model (and the answer check) is called.
+    cutoff = settings.min_rerank_score
+    scores = [c.rerank_score for c in chunks if c.rerank_score is not None]
+    if cutoff is not None and scores and max(scores) < cutoff:
+        latency["guard"] = guard_s * 1000.0
+        yield from _off_topic(user, req, chunks, redactions, latency, answer_id, plan,
+                              max(scores), t_request, cost)
+        return
+
     report = OutputReport()
     sanitizer = StreamSanitizer(report) if settings.output_guard else None
     # Blocking: tokens are collected, not sent, until the answer check has passed.
@@ -415,8 +442,13 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
     abstained = is_abstention(text)
     guard_s += time.perf_counter() - t
     latency["guard"] = guard_s * 1000.0
+    # An answer that cites nothing it was given isn't grounded: a reply to "hi", small talk, or
+    # the model's own memory. It's replaced outright, so the answer check has nothing to read.
+    ungrounded = settings.withhold_uncited and report.uncited
+    if ungrounded:
+        text = UNGROUNDED_MESSAGE
     verdict = None
-    if settings.answer_check and not abstained:
+    if settings.answer_check and not abstained and not ungrounded:
         if blocking:
             yield {"event": "checking", "data": ""}   # lets a client say why it's waiting
         t = time.perf_counter()
@@ -429,13 +461,15 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         # Released as the model's own tokens, so clients can still render word by word; a
         # withheld answer goes out as the replacement alone.
         first_token or first_token.append(time.perf_counter())
-        for part in [WITHHELD_MESSAGE] if withheld else parts:
+        for part in [text] if withheld or ungrounded else parts:
             yield {"event": "token", "data": part}
-    citations = [] if abstained or withheld else parse_citations(text, chunks)
+    citations = [] if abstained or withheld or ungrounded else parse_citations(text, chunks)
     guardrails = GuardrailReport(context_redactions=redactions, **report.as_dict())
     if withheld:
         guardrails.answer_withheld = guardrails.flagged = True
         guardrails.answer_check_error = verdict.error
+    if ungrounded:
+        guardrails.answer_ungrounded = guardrails.flagged = True
     answer = Answer(
         question=req.question,
         text=text,
@@ -483,9 +517,43 @@ def _query_events(engine: QueryEngine, user: Principal, req: QueryRequest,
         request_ms=round((time.perf_counter() - t_request) * 1000.0, 1),
         cost_usd=round(cost[0], 6) if cost is not None else None,
         n_citations=len(citations),
-        outcome="withheld" if withheld else "abstained" if abstained else "answered",
+        outcome=("withheld" if withheld else "ungrounded" if ungrounded
+                 else "abstained" if abstained else "answered"),
         guardrails_flagged=guardrails.flagged or bool(redactions),
     )
+    yield {"event": "done", "data": answer.model_dump_json()}
+
+
+def _off_topic(user: Principal, req: QueryRequest, chunks: list[RetrievedChunk],
+               redactions: dict[str, int], latency: dict[str, float], answer_id: str,
+               plan: Plan | None, top_score: float, t_request: float,
+               cost: list[float] | None = None):
+    """The rest of the SSE stream when no passage matches the question: no generation."""
+    answer = Answer(
+        question=req.question,
+        text=OFF_TOPIC_MESSAGE,
+        retrieved=chunks,
+        latency_ms=LatencyMs(generate=0.0, **latency),
+        guardrails=GuardrailReport(context_redactions=redactions, off_topic=True, flagged=True),
+        answer_id=answer_id,
+        sub_questions=plan.queries if plan is not None and plan.multi else [],
+    )
+    log.info(
+        "query",
+        answer_id=answer_id,
+        question=_scrub(req.question),
+        user=user.subject,
+        scopes=sorted(user.scopes),
+        chunk_ids=[c.chunk_id for c in chunks],
+        top_rerank_score=round(top_score, 3),
+        latency_ms={k: round(v, 1) for k, v in latency.items()},
+        request_ms=round((time.perf_counter() - t_request) * 1000.0, 1),
+        cost_usd=round(cost[0], 6) if cost is not None else None,
+        n_citations=0,
+        outcome="off_topic",
+        guardrails_flagged=True,
+    )
+    yield {"event": "token", "data": OFF_TOPIC_MESSAGE}
     yield {"event": "done", "data": answer.model_dump_json()}
 
 
@@ -605,8 +673,8 @@ def create_app(users: UserStore | None = None) -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="The demo's daily API budget is used up; it resets at 00:00 UTC.",
             )
-        return EventSourceResponse(_query_events(engine, user, body, start_request_cost(),
-                                                 request.app.state.cache))
+        return EventSourceResponse(_failsafe(_query_events(engine, user, body, start_request_cost(),
+                                                           request.app.state.cache)))
 
     # Feedback is a log event, not a database row: the service stays stateless and adds no
     # infrastructure, and scripts/feedback_candidates.py joins it to the query log by

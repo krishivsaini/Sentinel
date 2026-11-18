@@ -261,6 +261,15 @@ class Settings(BaseSettings):
     # tokens as they're generated and retracts in the `done` event — a client that ignores the
     # retraction would still show the answer.
     answer_check_blocks: bool = True
+    # Withhold an answer that cites none of the retrieved passages (and isn't an abstention):
+    # a greeting, small talk, or an answer from the model's own memory is replaced with a fixed
+    # message instead of being shown. Released the same way as the answer check's withholds.
+    withhold_uncited: bool = True
+    # Off-topic cutoff: when even the best reranked passage scores below this, no passage is
+    # about the question ("hi", the weather, a recipe), so the model isn't called and a fixed
+    # message goes back. Over 254 eval answers the lowest top score was 3.35; greetings and
+    # off-topic requests score below 0 (data/offtopic_cutoff.json). None turns it off.
+    min_rerank_score: float | None = 0.0
     # Second CI gate (v2-R5): the share of the 40 adversarial attacks allowed to succeed with every
     # defence on. Set from measurement — see data/guardrails/report.json.
     injection_asr_threshold: float = 0.05

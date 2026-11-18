@@ -1,0 +1,75 @@
+{
+ "what": "Top reranker score per question: the eval set's real questions vs greetings and off-topic requests. Picks config.min_rerank_score.",
+ "reranker": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+ "date": "2026-11-18",
+ "cutoff": 0.0,
+ "eval_questions": {
+  "n": 48,
+  "min": 3.353,
+  "p5": 3.693,
+  "median": 6.159
+ },
+ "off_topic_probes": [
+  {
+   "question": "hi",
+   "top_rerank_score": -2.811
+  },
+  {
+   "question": "hello",
+   "top_rerank_score": 0.733
+  },
+  {
+   "question": "thanks!",
+   "top_rerank_score": -2.687
+  },
+  {
+   "question": "how are you?",
+   "top_rerank_score": -5.08
+  },
+  {
+   "question": "who are you?",
+   "top_rerank_score": -6.479
+  },
+  {
+   "question": "what can you do?",
+   "top_rerank_score": -4.075
+  },
+  {
+   "question": "what's the weather in Delhi today?",
+   "top_rerank_score": -10.052
+  },
+  {
+   "question": "write a poem about cats",
+   "top_rerank_score": -10.137
+  },
+  {
+   "question": "who won the 2022 world cup?",
+   "top_rerank_score": -9.512
+  },
+  {
+   "question": "what is the capital of France?",
+   "top_rerank_score": -10.759
+  },
+  {
+   "question": "explain quantum computing",
+   "top_rerank_score": -1.847
+  },
+  {
+   "question": "give me a recipe for pasta",
+   "top_rerank_score": -10.71
+  },
+  {
+   "question": "what is python?",
+   "top_rerank_score": -6.375
+  },
+  {
+   "question": "how do I reverse a linked list?",
+   "top_rerank_score": 1.549
+  },
+  {
+   "question": "what is kubernetes?",
+   "top_rerank_score": -7.856
+  }
+ ],
+ "below_cutoff": 13
+}

@@ -82,11 +82,19 @@ function parseBlocks(src: string): Block[] {
 const INLINE =
   /([[【]\s*([a-z][a-z0-9]*)#(\d+)\s*[\]】])|`([^`]+)`|\*\*([^*]+?)\*\*|__([^_]+?)__|\*([^*\s][^*]*?)\*|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi;
 
-function Citation({ doc, ordinal }: { doc: string; ordinal: string }) {
+function Citation({ doc, ordinal, forged }: { doc: string; ordinal: string; forged: boolean }) {
   const m = doc.match(/^rfc(\d+)$/i);
   const label = m ? `RFC ${m[1]}` : doc;
-  const cls =
-    "mx-0.5 inline-flex items-center rounded-[5px] border border-border-2 bg-chip px-1.5 py-px align-[1px] font-mono text-[10.5px] leading-[1.5] text-accent no-underline";
+  const base =
+    "mx-0.5 inline-flex items-center rounded-[5px] border px-1.5 py-px align-[1px] font-mono text-[10.5px] leading-[1.5] no-underline";
+  // A citation to a passage that wasn't retrieved is flagged, never shown as a source.
+  if (forged)
+    return (
+      <span title={`${label}, passage #${ordinal}: not one of the retrieved passages`} className={`${base} border-warn-fg bg-warn-bg text-warn-fg line-through`}>
+        {label}
+      </span>
+    );
+  const cls = `${base} border-border-2 bg-chip text-accent`;
   const title = `${label}, passage #${ordinal}`;
   return m ? (
     <a href={`https://www.rfc-editor.org/rfc/rfc${m[1]}`} target="_blank" rel="noreferrer" title={title} className={`${cls} hover:bg-border-soft`}>
@@ -99,7 +107,8 @@ function Citation({ doc, ordinal }: { doc: string; ordinal: string }) {
   );
 }
 
-function inline(text: string, keyPrefix: string): ReactNode[] {
+// `known` is the set of retrieved chunk ids; without it every citation is taken at face value.
+function inline(text: string, keyPrefix: string, known?: Set<string>): ReactNode[] {
   const out: ReactNode[] = [];
   let last = 0;
   let k = 0;
@@ -107,10 +116,13 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
     const at = m.index ?? 0;
     if (at > last) out.push(text.slice(last, at));
     const key = `${keyPrefix}-${k++}`;
-    if (m[1]) out.push(<Citation key={key} doc={m[2]} ordinal={m[3]} />);
+    if (m[1]) {
+      const forged = !!known && !known.has(`${m[2]}#${m[3]}`.toLowerCase());
+      out.push(<Citation key={key} doc={m[2]} ordinal={m[3]} forged={forged} />);
+    }
     else if (m[4]) out.push(<code key={key} className="rounded bg-chip px-1 py-px font-mono text-[12.5px]">{m[4]}</code>);
-    else if (m[5] || m[6]) out.push(<strong key={key} className="font-semibold text-text">{inline(m[5] ?? m[6], key)}</strong>);
-    else if (m[7]) out.push(<em key={key}>{inline(m[7], key)}</em>);
+    else if (m[5] || m[6]) out.push(<strong key={key} className="font-semibold text-text">{inline(m[5] ?? m[6], key, known)}</strong>);
+    else if (m[7]) out.push(<em key={key}>{inline(m[7], key, known)}</em>);
     else if (m[8]) out.push(<a key={key} href={m[9]} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2">{m[8]}</a>);
     last = at + m[0].length;
   }
@@ -119,7 +131,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
 }
 
 // `tail` (the streaming cursor) is placed at the end of the last block rather than below it.
-export function Markdown({ text, tail }: { text: string; tail?: ReactNode }) {
+export function Markdown({ text, tail, known }: { text: string; tail?: ReactNode; known?: Set<string> }) {
   const blocks = parseBlocks(text);
   if (!blocks.length) return <>{tail}</>;
   return (
@@ -138,11 +150,11 @@ export function Markdown({ text, tail }: { text: string; tail?: ReactNode }) {
               </Fragment>
             );
           case "h":
-            return <div key={key} className="font-semibold text-text">{inline(b.text, key)}{end}</div>;
+            return <div key={key} className="font-semibold text-text">{inline(b.text, key, known)}{end}</div>;
           case "quote":
             return (
               <blockquote key={key} className="border-l-2 border-border-2 pl-3 text-text-2">
-                {inline(b.text, key)}
+                {inline(b.text, key, known)}
                 {end}
               </blockquote>
             );
@@ -157,7 +169,7 @@ export function Markdown({ text, tail }: { text: string; tail?: ReactNode }) {
               >
                 {b.items.map((item, j) => (
                   <li key={j} className="pl-1">
-                    {inline(item, `${key}-${j}`)}
+                    {inline(item, `${key}-${j}`, known)}
                     {j === b.items.length - 1 ? end : null}
                   </li>
                 ))}
@@ -165,7 +177,7 @@ export function Markdown({ text, tail }: { text: string; tail?: ReactNode }) {
             );
           }
           default:
-            return <p key={key}>{inline(b.text, key)}{end}</p>;
+            return <p key={key}>{inline(b.text, key, known)}{end}</p>;
         }
       })}
     </div>

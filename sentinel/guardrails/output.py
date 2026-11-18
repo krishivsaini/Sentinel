@@ -163,6 +163,18 @@ def _apply(text: str, edits: list[_Edit]) -> str:
     return "".join(parts)
 
 
+UNGROUNDED_MESSAGE = (
+    "I can only answer questions about the IETF RFCs in this collection, and every answer has to "
+    "cite the passages it comes from. This one didn't, so it wasn't shown. Try asking about a "
+    "specific protocol, header or RFC."
+)
+
+OFF_TOPIC_MESSAGE = (
+    "Nothing in this collection of IETF RFCs matches that question, so it wasn't sent to the "
+    "model. Ask about a protocol, header, status code or RFC, for example \"What is HSTS?\""
+)
+
+
 @dataclass
 class OutputReport:
     """What the output guard changed and found."""

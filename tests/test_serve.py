@@ -26,6 +26,7 @@ from fastapi.testclient import TestClient
 from sentinel.config import settings
 from sentinel.guardrails.answer import WITHHELD_MESSAGE, AnswerCheck
 from sentinel.guardrails.input import REFUSAL_MESSAGE, InputScreening
+from sentinel.guardrails.output import OFF_TOPIC_MESSAGE, UNGROUNDED_MESSAGE
 from sentinel.retrieve import Access
 from sentinel.schema import RetrievedChunk
 from sentinel.serve import create_app, get_engine
@@ -220,9 +221,30 @@ def test_stream_never_carries_untrusted_links_images_or_pii() -> None:
 def test_forged_citation_is_flagged() -> None:
     engine = FakeEngine(tokens=["Confirmed by ballot ", "[rfc7517#9999]."])
     c = _client(engine)
-    _, answer = _done(c, _auth_header(c))
+    tokens, answer = _done(c, _auth_header(c))
     assert answer["guardrails"]["unresolved_citations"] == ["rfc7517#9999"]
     assert answer["guardrails"]["uncited"] is True
+    assert tokens == [UNGROUNDED_MESSAGE] and answer["guardrails"]["answer_ungrounded"]
+
+
+def test_uncited_answer_is_withheld_before_it_reaches_the_client() -> None:
+    # "hi" -> "Hello!": nothing retrieved is cited, so nothing of it is sent.
+    engine = FakeEngine(tokens=["Hello", "!"])
+    c = _client(engine)
+    tokens, answer = _done(c, _auth_header(c))
+    assert tokens == [UNGROUNDED_MESSAGE] and answer["text"] == UNGROUNDED_MESSAGE
+    g = answer["guardrails"]
+    assert g["uncited"] and g["answer_ungrounded"] and g["flagged"]
+    assert answer["citations"] == [] and engine.checked == []   # no answer check to pay for
+
+
+def test_uncited_answers_pass_through_when_the_switch_is_off(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "withhold_uncited", False)
+    engine = FakeEngine(tokens=["Hello", "!"])
+    c = _client(engine)
+    tokens, answer = _done(c, _auth_header(c))
+    assert "".join(tokens) == answer["text"] == "Hello!"
+    assert answer["guardrails"]["uncited"] and not answer["guardrails"]["answer_ungrounded"]
 
 
 def test_flagged_question_is_refused_before_retrieval_or_generation() -> None:
@@ -241,7 +263,7 @@ def _kinds(client: TestClient) -> list[str | None]:
 
 
 # Long enough that the output guard's held-back tail doesn't swallow the whole answer.
-_LONG = [f"Sentence {i} of a longer answer about status codes. " for i in range(20)]
+_LONG = [f"Sentence {i} of a longer answer about status codes. " for i in range(20)] + ["[rfc6585#0002]"]
 
 
 def test_flagged_answer_never_reaches_the_client() -> None:
@@ -464,3 +486,46 @@ def test_the_query_log_carries_this_requests_cost_and_end_to_end_time(capsys) ->
     for q in (first, second):
         assert q["cost_usd"] == pytest.approx(0.375)
         assert 0 <= q["first_token_ms"] <= q["request_ms"]
+
+
+class OffTopicEngine(FakeEngine):
+    """Retrieval finds nothing about the question: the best passage scores below the cutoff."""
+
+    def retrieve(self, question, top_k, access):
+        chunks, r, k = super().retrieve(question, top_k, access)
+        return [c.model_copy(update={"rerank_score": -2.8}) for c in chunks], r, k
+
+
+def test_off_topic_question_never_reaches_the_model() -> None:
+    engine = OffTopicEngine()
+    c = _client(engine)
+    tokens, answer = _done(c, _auth_header(c))
+    assert tokens == [OFF_TOPIC_MESSAGE] and answer["text"] == OFF_TOPIC_MESSAGE
+    assert engine.generated is False and engine.checked == []
+    assert answer["guardrails"]["off_topic"] and answer["guardrails"]["flagged"]
+    assert answer["retrieved"] and answer["citations"] == []
+
+
+def test_off_topic_cutoff_can_be_turned_off(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "min_rerank_score", None)
+    engine = OffTopicEngine()
+    c = _client(engine)
+    _, answer = _done(c, _auth_header(c))
+    assert engine.generated is True and not answer["guardrails"]["off_topic"]
+
+
+class FailingEngine(FakeEngine):
+    """The model provider drops the connection after the first token."""
+
+    def generate_tokens(self, question, chunks):
+        yield "The 429 "
+        raise ConnectionError("provider went away")
+
+
+def test_a_stream_that_fails_partway_ends_with_an_error_event(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "answer_check_blocks", False)
+    c = _client(FailingEngine())
+    r = c.post("/query", json={"question": "q"}, headers=_auth_header(c))
+    events = _parse_sse(r.text)
+    assert events[-1][0] == "error" and "failed partway" in json.loads(events[-1][1])["detail"]
+    assert "done" not in [ev for ev, _ in events]

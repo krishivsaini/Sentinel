@@ -56,7 +56,7 @@ function Row({ item }: { item: ItemResult }) {
         </div>
         <div className="mb-[7px] text-[10px] font-semibold uppercase tracking-[0.05em] text-text-4">Grounded answer</div>
         <div className="border-l-2 border-border-2 pl-3.5 text-[13px] leading-[1.6] text-text-1">
-          <Markdown text={item.generated_answer} />
+          <Markdown text={item.generated_answer} known={new Set(item.retrieved.map((c) => c.chunk_id.toLowerCase()))} />
         </div>
       </div>
     </details>
