@@ -1,6 +1,6 @@
 # Sentinel dashboard
 
-Read-only Next.js + Tailwind dashboard for the eval pipeline (§14). It is a **pure JSON
+Read-only Next.js + Tailwind dashboard for the eval pipeline. It is a **pure JSON
 consumer** (FR-D4): it reads static exports from `public/data/` and never opens a DB connection
 or calls an LLM. Every number it shows is measured — see *Honesty* below.
 

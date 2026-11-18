@@ -1,4 +1,4 @@
-"""Failure attribution (§12, FR-E3) — the classifier used by Day 9's run, calibrated in Day 10.
+"""Failure attribution (FR-E3) — the classifier used by Day 9's run, calibrated in Day 10.
 
 For each item, decide whether a weak result is the retriever's fault or the generator's:
   - context_recall < config.retrieval_fail_recall_threshold  => RETRIEVAL failure
@@ -10,7 +10,7 @@ For each item, decide whether a weak result is the retriever's fault or the gene
 An item only *fails* at all if any metric dips below config.low_score_threshold; a fully
 healthy item is a "pass" regardless of recall. This single distinction — retrieval vs
 generation — is what separates real RAG work from prompt-tweaking, and its counts feed the
-dashboard's attribution view (the README screenshot, §14).
+dashboard's attribution view (the README screenshot).
 """
 
 from __future__ import annotations

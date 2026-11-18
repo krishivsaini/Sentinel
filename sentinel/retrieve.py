@@ -1,4 +1,4 @@
-"""Retrieval layer (§9) — engineering-signal #1 — Phase 1, Days 3-4.
+"""Retrieval layer — Phase 1, Days 3-4.
 
 Pipeline:
   1. Dense retrieval  — FAISS top-N by bge cosine similarity (config.dense_top_n).
@@ -267,7 +267,7 @@ def build_ensemble_retriever(weights: tuple[float, float] = (0.5, 0.5)):
 
 def rrf_fuse(ranked_lists: list[list[str]], k: int | None = None) -> dict[str, float]:
     """Reciprocal Rank Fusion: score(id) = sum_l 1/(k + rank_l(id)), ranks 1-based.
-    Parameter-light and robust to the two retrievers' incomparable score scales (§9.3)."""
+    Parameter-light and robust to the two retrievers' incomparable score scales."""
     k = k if k is not None else settings.rrf_k
     fused: dict[str, float] = {}
     for ranked in ranked_lists:

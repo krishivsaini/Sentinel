@@ -1,4 +1,4 @@
-"""Eval persistence + dashboard export (§12) — Phase 3, Day 9.
+"""Eval persistence + dashboard export — Phase 3, Day 9.
 
 Two responsibilities:
 
@@ -8,7 +8,7 @@ Two responsibilities:
    (NFR-5) — `load_scored_items()` tells `run_eval` which questions are already done.
 
 2. **Export.** `save()` writes the run summary row and dumps the full `EvalResult` as one JSON
-   file per run into `dashboard/data/` for the read-only dashboard (§14) — the dashboard
+   file per run into `dashboard/data/` for the read-only dashboard — the dashboard
    consumes JSON, never a live DB connection (FR-D4).
 """
 

@@ -1,6 +1,6 @@
 # Sentinel — Requirements Specification
 
-> This document restates the original build brief as a testable requirements spec.
+> Sentinel's requirements, written as a testable spec.
 > **Status:** Draft for the v1 core build. v2 (security guardrails) requirements are captured in §7 but are **not** in scope until every v1 acceptance criterion passes.
 
 ---
@@ -14,7 +14,7 @@ The differentiator is **not** "a RAG chatbot." It is three things, in order of i
 2. Hybrid BM25 + dense retrieval with cross-encoder reranking — tuned and measured, not naive top-k cosine.
 3. Production service hygiene: FastAPI, SSE streaming, JWT auth, rate limiting, per-stage latency capture.
 
-**Success = a focused, defensible, recruiter-legible artifact** in 14 days (~3 hrs/day, ₹0–low to run) whose story leads with *evaluation wired into CI*.
+**Success = a focused, defensible, easy-to-evaluate system** in 14 days (~3 hrs/day, ₹0–low to run) whose story leads with *evaluation wired into CI*.
 
 ---
 
@@ -22,9 +22,9 @@ The differentiator is **not** "a RAG chatbot." It is three things, in order of i
 
 | Actor | Interest |
 |---|---|
-| **Krishiv (owner/author)** | Ships the artifact; must be able to defend every number in an interview. |
+| **Maintainer** | Ships the system; every number must be reproducible and explainable. |
 | **End user of the service** | Sends a question, receives a grounded, cited answer over a streaming API. |
-| **Recruiter / hiring engineer** | Reads the README, watches the Loom, opens the dashboard, inspects the CI gate. |
+| **Evaluating engineer** | Reads the README, watches the demo video, opens the dashboard, inspects the CI gate. |
 | **CI system (GitHub Actions)** | Runs the eval subset on every PR and enforces the faithfulness gate. |
 | **Dashboard viewer** | Read-only consumer of eval trends, per-question drill-down, and failure attribution. |
 
@@ -36,7 +36,7 @@ Requirement IDs are grouped by subsystem. Each is testable and maps to an accept
 
 ### 3.1 Corpus & Ingestion (FR-C, FR-I)
 
-- **FR-C1** — The corpus MUST be a single, specific, nameable domain explainable in one interview sentence (not "10K random documents"). See build plan §6.
+- **FR-C1** — The corpus MUST be a single, specific, nameable domain explainable in one sentence (not "10K random documents").
 - **FR-C2** — The corpus MUST contain exact-match terms (names, codes, section numbers) so BM25 demonstrably earns its place over pure-dense retrieval.
 - **FR-C3** — The corpus MUST be legally clean to demo over publicly; if its license forbids redistribution, it MUST be gitignored with documented fetch instructions.
 - **FR-C4** — Corpus size SHOULD be a few thousand to ~10K chunks — non-trivial but free/fast to ingest.
@@ -46,7 +46,7 @@ Requirement IDs are grouped by subsystem. Each is testable and maps to an accept
 - **FR-I4** — The chunking strategy MUST be configurable in `config.py`, and each index MUST record which strategy produced it so eval runs are attributable.
 - **FR-I5** — The service MUST be runnable via `python -m sentinel.ingest`.
 
-### 3.2 Retrieval (FR-R) — *engineering-signal location #1*
+### 3.2 Retrieval (FR-R)
 
 - **FR-R1** — Dense retrieval MUST return top-N (e.g. 50) chunks by embedding similarity from FAISS.
 - **FR-R2** — Sparse retrieval MUST return top-N chunks by BM25 over the same chunk set.
@@ -73,7 +73,7 @@ Requirement IDs are grouped by subsystem. Each is testable and maps to an accept
 - **FR-S6** — All inputs and outputs MUST be validated with Pydantic models.
 - **FR-S7** — The service MUST be runnable via `python -m sentinel.serve`.
 
-### 3.5 Evaluation Pipeline (FR-E) — *engineering-signal location #2, the headline*
+### 3.5 Evaluation Pipeline (FR-E) — *the headline*
 
 - **FR-E1** — `run_eval.py` MUST run the full retrieve → rerank → generate pipeline over every item in `ground_truth.jsonl`.
 - **FR-E2** — Each item MUST be scored with **Ragas**: faithfulness, answer relevance, context recall.
@@ -88,7 +88,7 @@ Requirement IDs are grouped by subsystem. Each is testable and maps to an accept
 - **FR-GT2** — Items MAY be LLM-drafted (`build_ground_truth.py`) but **every item MUST be hand-corrected**. Fully synthetic gold is prohibited.
 - **FR-GT3** — A second-annotator agreement writeup on a ≥20-case subset MUST exist in `ground_truth_audit.md`.
 
-### 3.7 CI/CD Faithfulness Gate (FR-CI) — *engineering-signal location #3, the rarest part*
+### 3.7 CI/CD Faithfulness Gate (FR-CI)
 
 - **FR-CI1** — On every PR, `eval-gate.yml` MUST install deps, run a **subset** of the eval (e.g. 25 representative items), and compute mean faithfulness.
 - **FR-CI2** — The check MUST **fail the build** if mean faithfulness < threshold (set in `config.py`, e.g. 0.80), blocking merge.
@@ -124,7 +124,7 @@ Pydantic models in `schema.py`, defined before pipeline code:
 | **NFR-1** | Reproducibility | Clean clone → running service in **< 10 minutes**: `git clone && uv sync && set keys && python -m sentinel.ingest && python -m sentinel.serve`. |
 | **NFR-2** | Cost | Nearly ₹0 to run: embeddings + cross-encoder run **locally**; only generation + Ragas judge call the Gemini Flash free tier. |
 | **NFR-3** | Latency observability | p95 latency MUST be measured **per stage** (retrieve/rerank/generate), not blended. Numbers in README MUST be measured, never guessed. |
-| **NFR-4** | Metric honesty | Every reported number MUST be one actually produced and explainable. Targets (e.g. "87% faithfulness") are aims, not claims. See build plan §18. |
+| **NFR-4** | Metric honesty | Every reported number MUST be one actually produced and explainable. Targets (e.g. "87% faithfulness") are aims, not claims. |
 | **NFR-5** | Resilience | Ragas judge calls MUST use exponential backoff (`tenacity`) so 429s from the free tier retry rather than crash the eval. |
 | **NFR-6** | CI cost/time | The CI eval subset MUST be small enough that a PR check costs cents and finishes in a few minutes, staying well under free-tier RPM/RPD ceilings. |
 | **NFR-7** | Security hygiene | No secrets in git history; CI key is a repo secret. `.gitignore` excludes `.env`, `*.db`, `indexes/`, `__pycache__`, `.next`, `node_modules`. |
@@ -138,7 +138,7 @@ Pydantic models in `schema.py`, defined before pipeline code:
 - **Corpus (DECIDED — 2026-07-06):** the **IETF RFC** web-protocol stack (HTTP / URI / TLS / OAuth / JWT / cookies / TCP / DNS), a curated cluster of ~40–60 RFCs targeting a few thousand chunks. Chosen for the strongest BM25 justification (RFC numbers, section refs, header/status-code tokens) and the cleanest license.
   - **Licensing basis (verified):** the IETF Trust explicitly permits **reproduction of whole RFCs** with no restrictions, so the corpus text may be committed to the public repo. The Trust does **not** grant rights to create **derivative works** of RFCs (code components excepted — BSD-licensed). Sentinel stays inside this boundary: it **quotes verbatim** (chunks + cited excerpts) and never modifies the standard text. Sources: [IETF Trust FAQ](https://trustee.ietf.org/about/faq/), [TLP-5](https://trustee.ietf.org/documents/trust-legal-provisions/tlp-5/).
 - **Language/tooling:** Python managed with `uv`, versions pinned in `pyproject.toml`; dashboard is Next.js + Tailwind core.
-- **Models (verify IDs before writing config — build plan §5 note):**
+- **Models (verify IDs before writing config):**
   - Embeddings: local `bge-small-en` / `bge-base-en` via `sentence-transformers`.
   - Reranker: local cross-encoder `ms-marco-MiniLM`.
   - Generation + Ragas judge: **Gemini Flash free tier** — exact model ID and free-tier eligibility MUST be verified against provider docs before writing `config.py` (do not invent model IDs or pricing).
@@ -149,7 +149,7 @@ Pydantic models in `schema.py`, defined before pipeline code:
 
 ## 6. Acceptance Criteria (Definition of Done)
 
-Mirrors build plan §16. v1 is **done** only when all boxes below pass.
+v1 is **done** only when all boxes below pass.
 
 **Retrieval**
 - [ ] BM25 and dense indexes share chunk IDs; RRF fusion aligns them correctly. *(FR-I2, FR-R3)*
@@ -171,14 +171,14 @@ Mirrors build plan §16. v1 is **done** only when all boxes below pass.
 - [ ] `eval-gate.yml` runs on PRs and fails the build when faithfulness < threshold. *(FR-CI1, FR-CI2)*
 - [ ] A demonstration PR exists showing the gate catching a regression. *(FR-CI5)*
 
-**README + Loom**
+**README + demo video**
 - [ ] README opens with the eval-gate headline, not "RAG chatbot."
 - [ ] "Why hybrid retrieval" section with the concrete BM25-caught-this query.
 - [ ] "Why LangChain for retrieval orchestration" two-sentence subsection.
 - [ ] Real metric numbers + per-stage p95 latency; no placeholders.
 - [ ] "Limitations" section (single corpus, ~100 GT items, LLM-judge eval, FAISS).
 - [ ] "Reproducing" section with literal commands.
-- [ ] 90-second Loom, eval-gate-first script.
+- [ ] 90-second demo video, eval-gate-first script.
 
 **Repo hygiene**
 - [ ] `.gitignore` excludes the specified paths. *(NFR-7)*
@@ -189,7 +189,7 @@ Mirrors build plan §16. v1 is **done** only when all boxes below pass.
 
 ## 7. Out of Scope (v1) & v2 Requirements
 
-### 7.1 Explicitly out of scope for v1 (build plan §1.3)
+### 7.1 Explicitly out of scope for v1
 - No fine-tuning — off-the-shelf models only.
 - No multi-tenant auth / RBAC / SSO — single JWT demo user; dashboard is unauthenticated.
 - No agentic retrieval / query-planning agent — retrieval is a single inspectable pipeline.
@@ -215,4 +215,4 @@ Adds ~3–4 days. Each capability MUST be **measured**, not merely present, and 
 
 ## 8. Prioritization
 
-If time slips, cut in this order (build plan §15): **dashboard polish → extra corpus size**. **Never cut** the eval gate or the hand-built ground truth. The eval-gate-in-CI story is the resume-critical deliverable; everything else supports it.
+If time slips, cut in this order: **dashboard polish → extra corpus size**. **Never cut** the eval gate or the hand-built ground truth. The eval gate in CI is the critical deliverable; everything else supports it.

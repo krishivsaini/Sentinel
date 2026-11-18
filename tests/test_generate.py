@@ -1,4 +1,4 @@
-"""Generation tests (§10) — Phase 2, Day 5.
+"""Generation tests — Phase 2, Day 5.
 
 Hermetic tests (no API) cover the faithfulness-critical pure logic: citation parsing with
 hallucinated-ID filtering, abstention detection, and grounded-prompt assembly. A live

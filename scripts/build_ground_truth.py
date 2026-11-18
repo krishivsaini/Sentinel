@@ -1,4 +1,4 @@
-"""Ground-truth draft generator (§7, §15 day 8) — Phase 3, Day 8.
+"""Ground-truth draft generator — Phase 3, Day 8.
 
 For each seed question (data/gt_seed_questions.jsonl), runs the real hybrid retriever and drafts
 a GROUNDED reference answer with our generation layer — which answers only from retrieved

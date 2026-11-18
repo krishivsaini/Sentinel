@@ -1,4 +1,4 @@
-"""Provider-agnostic chat-model factory (§10/§12).
+"""Provider-agnostic chat-model factory.
 
 Product generation and the Ragas judge both need a LangChain chat model. Every backend here
 returns a `BaseChatModel`, so callers stay provider-agnostic: only `config` picks the

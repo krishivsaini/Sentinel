@@ -1,4 +1,4 @@
-"""API contract tests (§4, §11) — Phase 2, Day 6.
+"""API contract tests — Phase 2, Day 6.
 
 Hermetic: the retrieval+generation pipeline is replaced by a fake engine via
 `dependency_overrides`, so these tests exercise the *service* (auth, rate limiting, SSE

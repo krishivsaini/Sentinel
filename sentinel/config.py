@@ -1,7 +1,7 @@
 """Single source of truth for all tunable parameters, model IDs, thresholds, and paths.
 
 Nothing elsewhere in the package should hardcode a model name, a top-N, a threshold, or a
-path — import it from here. Retrieval tuning (§9) means changing values here and re-measuring
+path — import it from here. Retrieval tuning means changing values here and re-measuring
 against the eval set, so every knob is centralized and attributable.
 
 Secrets and per-environment overrides load from the environment / .env via pydantic-settings;
@@ -135,13 +135,13 @@ class Settings(BaseSettings):
     judge_provider: str = "groq"
     judge_model: str = "openai/gpt-oss-120b"
 
-    # ---------------------------------------------------------------- Chunking (§8)
-    # Record which strategy produced an index so eval runs are attributable (§8).
+    # ---------------------------------------------------------------- Chunking
+    # Record which strategy produced an index so eval runs are attributable.
     chunk_strategy: str = "recursive"      # "recursive" | "semantic"
     chunk_tokens: int = 512
     chunk_overlap_pct: float = 0.12        # ~10–15% overlap
 
-    # ---------------------------------------------------------------- Retrieval (§9)
+    # ---------------------------------------------------------------- Retrieval
     # Which index retrieval reads. The adversarial eval points this at ADVERSARIAL_INDEX_DIR.
     index_dir: Path = INDEXES_DIR
     # Where dense search runs (sentinel/vectorstore.py). "faiss": the in-memory index in
@@ -196,7 +196,7 @@ class Settings(BaseSettings):
     cache_backend: str = "memory"          # "memory" | "redis"
     redis_url: str = "redis://127.0.0.1:6390/0"
 
-    # ---------------------------------------------------------------- Eval + gate (§12/§13)
+    # ---------------------------------------------------------------- Eval + gate
     faithfulness_threshold: float = 0.80   # CI gate fails below this
     # Representative subset run in CI (faithfulness only — see run_eval.run): every other item of
     # the 48. At 10 items the mean moved ~0.08 between runs of the same code (0.967 vs 0.891), too
@@ -215,7 +215,7 @@ class Settings(BaseSettings):
     # regressions (0.855, 0.865). k=2.5 (line 0.866) would pass the 0.865 one by noise alone.
     faithfulness_regression_margin: float = 0.05
     faithfulness_regression_sd_k: float = 2.0
-    # A per-item score below this flags the item for failure attribution (§12).
+    # A per-item score below this flags the item for failure attribution.
     low_score_threshold: float = 0.60
     # context_recall below this => classify as a retrieval failure (else generation failure).
     retrieval_fail_recall_threshold: float = 0.50
@@ -265,7 +265,7 @@ class Settings(BaseSettings):
     # defence on. Set from measurement — see data/guardrails/report.json.
     injection_asr_threshold: float = 0.05
 
-    # ---------------------------------------------------------------- Service (§11)
+    # ---------------------------------------------------------------- Service
     jwt_algorithm: str = "HS256"
     jwt_expiry_minutes: int = 60
     rate_limit: str = "20/minute"          # per named account, or per IP for the demo account
@@ -278,7 +278,7 @@ class Settings(BaseSettings):
     # Cloud Run sets PORT; locally SENTINEL_API_PORT or the default.
     api_port: int = Field(default=8000, validation_alias=AliasChoices("SENTINEL_API_PORT", "PORT"))
 
-    # ---------------------------------------------------------------- Resilience (§5)
+    # ---------------------------------------------------------------- Resilience
     # We do NOT storm-retry: each attempt is one real hit AFTER waiting out the window the server
     # tells us to (RetryInfo.retryDelay — e.g. "retry in 45s" for a 10-RPM free-tier burst), so
     # retries are genuine, quota-respectful attempts, not amplification. max cap must exceed a

@@ -2,7 +2,7 @@
 
 Reads data/corpus_manifest.json and downloads each RFC's plain-text into data/corpus/
 as rfc<NNNN>.txt. Text is stored VERBATIM (no cleaning, no derivatives) - the IETF Trust
-permits whole-RFC reproduction; ingestion does its own cleaning downstream (§8).
+permits whole-RFC reproduction; ingestion does its own cleaning downstream.
 
 Idempotent (FR-I3 spirit): existing non-empty files are skipped unless --force. Every
 download is verified (HTTP 200, non-empty, the file names its own RFC number) and recorded

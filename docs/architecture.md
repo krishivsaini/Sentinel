@@ -20,7 +20,7 @@ The design principle throughout: **the retrieval plumbing is orchestrated with L
 
 ```
                           ┌───────────────────────────────────────────────┐
-                          │                 CORPUS (§6 choice)              │
+                          │                 CORPUS (IETF RFCs)              │
                           │        data/corpus/  — nameable domain          │
                           └───────────────────────┬─────────────────────────┘
                                                   │  ingest.py  (offline, batch, idempotent)
@@ -63,7 +63,7 @@ The design principle throughout: **the retrieval plumbing is orchestrated with L
 
 ## 2. Component Responsibilities
 
-Package: `sentinel/` (see build plan §4 for the full tree).
+Package: `sentinel/`.
 
 | Module | Responsibility | Signal location |
 |---|---|---|
@@ -183,7 +183,7 @@ Local / clean clone                         Cloud
 | Gemini Flash for generation + judge only | Minimizes paid surface; free tier | Verify model ID; backoff for 429s |
 | FAISS, local | Zero-cost demo simplicity | Documented pgvector / Pinecone path, unbuilt |
 | SQLite + JSON export | Simple, git-SHA-attributable | Dashboard reads static JSON — no live DB |
-| Eval subset in CI, full eval local | Keeps PR checks cheap + under rate limits | Full number is the resume number |
+| Eval subset in CI, full eval local | Keeps PR checks cheap + under rate limits | Full eval is the headline number |
 | SSE streaming, JWT, rate limit | "Reads as product," not Streamlit demo | Single demo user; no RBAC/SSO |
 
 ---

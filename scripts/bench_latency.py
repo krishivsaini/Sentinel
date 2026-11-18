@@ -1,4 +1,4 @@
-"""Honest per-stage latency benchmark (§11, NFR-3) — Phase 2, Day 7.
+"""Honest per-stage latency benchmark (NFR-3) — Phase 2, Day 7.
 
 Measures retrieve / rerank / generate latency PER STAGE, never blended. The two local stages
 (retrieve, rerank) are free and fast, so they get a few hundred samples; generation is an API

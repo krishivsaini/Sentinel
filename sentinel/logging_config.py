@@ -1,4 +1,4 @@
-"""Structured logging + per-stage latency capture (§11) — Phase 2, Days 6-7.
+"""Structured logging + per-stage latency capture — Phase 2, Days 6-7.
 
 Every /query logs, as structured fields: per-stage latency (retrieve/rerank/generate),
 retrieved chunk IDs, and outcome (FR-S5). This is what makes honest per-stage p95 possible

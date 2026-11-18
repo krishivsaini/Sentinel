@@ -1,6 +1,6 @@
 # Ground-Truth & Judge Audit
 
-> Companion artifact to the eval system (§12). Documents (1) how the evaluation ground truth
+> Companion artifact to the eval system. Documents (1) how the evaluation ground truth
 > was built, (2) a second-pass verification of its correctness (FR-GT3), and (3) calibration of
 > the Ragas faithfulness *judge* against human labels (FR-E6). The guiding principle: **a
 > calibrated, honestly-reported number beats an impressive uncalibrated one.**

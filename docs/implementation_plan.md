@@ -8,7 +8,7 @@
 
 ## 1. Phasing Overview
 
-The build plan's 14 days group into six phases. Each phase has a hard exit gate; do not advance until it passes.
+The 14 days group into six phases. Each phase has a hard exit gate; do not advance until it passes.
 
 | Phase | Days | Theme | Exit gate |
 |---|---|---|---|
@@ -17,7 +17,7 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 | **2 — Generation + service** | 5–7 | Grounded answers + FastAPI hygiene | `/query` SSE cited answers; auth + rate-limit tests green; honest per-stage latency |
 | **3 — Eval system** | 8–10 | Ground truth + Ragas + attribution | Full Ragas metrics; attribution counts; judge calibration reported |
 | **4 — The gate** | 11 | CI faithfulness gate | `eval-gate.yml` blocks a deliberately-bad PR |
-| **5 — Surface + ship** | 12–14 | Dashboard, deploy, narrative | Public dashboard URL; clean-clone <10 min; all §19 artifacts exist |
+| **5 — Surface + ship** | 12–14 | Dashboard, deploy, narrative | Public dashboard URL; clean-clone <10 min; all deliverables exist |
 
 ---
 
@@ -27,8 +27,8 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 
 **Tasks**
 1. **Corpus choice + licensing** — ✅ **DONE (2026-07-06): IETF RFC web-protocol stack, 48 curated RFCs** fetched verbatim into `data/corpus/`. Exact list + titles + thematic clusters are pinned in [`data/corpus_manifest.json`](../data/corpus_manifest.json); `scripts/fetch_corpus.py` downloads idempotently from rfc-editor.org and records per-file sha256/bytes in `data/corpus/PROVENANCE.json`. Coverage: HTTP core 9110–9114, HTTP compression 7541/9204, HTTP extensions (5789/6585/6797/8288/8615), URIs 3986/6570, cookies 6265, WebSocket 6455, QUIC 9000–9002, TCP 9293, TLS 8446/7301/6066/2818, PKI 5280/6960/8555, OAuth 6749/6750/7636/8628/9068, HTTP auth 7617/7616, JOSE/JWT 7515–7519, encodings 8259/4648/3339, DNS 1034/1035/8484/7858, keywords 2119/8174. Obsoleted HTTP RFCs (2616/7231) deliberately excluded so ground truth stays unambiguous against a single current spec. Size ~5.3 MB / ~2.0–2.4K chunks — inside the FR-C4 window. Licensing verified: IETF Trust permits whole-RFC reproduction; no derivative works — pipeline quotes verbatim only (see [`requirement.md` §5](./requirement.md)).
-2. Scaffold the repo tree (build plan §4): `sentinel/`, `data/`, `dashboard/`, `tests/`, `scripts/`, `.github/workflows/`.
-3. `pyproject.toml` via `uv` with pinned deps. **Verify current package names + exact Gemini Flash model ID against provider docs first** (build plan §5 note) — do not invent IDs.
+2. Scaffold the repo tree: `sentinel/`, `data/`, `dashboard/`, `tests/`, `scripts/`, `.github/workflows/`.
+3. `pyproject.toml` via `uv` with pinned deps. **Verify current package names + exact Gemini Flash model ID against provider docs first** — do not invent IDs.
 4. `.gitignore` (`.env`, `*.db`, `indexes/`, `__pycache__`, `.next`, `node_modules`, `dashboard/data/*.json`), `.env.example`, MIT `LICENSE` (already present).
 5. `config.py` — thresholds (faithfulness gate e.g. 0.80), model names, chunk params, N/K. Single source of truth.
 6. `schema.py` — all Pydantic models (requirement.md §3.9 / FR-DM).
@@ -41,7 +41,7 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 
 ## 3. Phase 1 — Retrieval Core (Days 2–4)
 
-**Goal:** hybrid retrieval that measurably beats naive vector search. *(Engineering-signal #1.)*
+**Goal:** hybrid retrieval that measurably beats naive vector search.
 
 > **Status (2026-07-07):** Days 2 & 3 done, and Day 4's *core* pulled forward — the full
 > dense→sparse→RRF→cross-encoder pipeline is built and tested. Ingestion: 48 RFCs → 2,888
@@ -127,7 +127,7 @@ The build plan's 14 days group into six phases. Each phase has a hard exit gate;
 > via local retrieval, and answers were authored/verified against the actual RFC text
 > (`scripts/assemble_ground_truth.py` holds the authored answers + gold chunk_ids; 17 verified
 > Gemini drafts reused, 31 hand-authored). Every `relevant_contexts` entry is a real corpus
-> passage; `[chunk_id]` markers stripped; faithfulness spot-checked. **To reach the §16 target
+> passage; `[chunk_id]` markers stripped; faithfulness spot-checked. **To reach the target
 > of 80–120:** append seeds to `data/gt_seed_questions.jsonl` and re-run the same LLM-free flow.
 
 > **Status (2026-07-09) — Day 9 done:** the Ragas pipeline runs end-to-end and produces real
@@ -219,8 +219,8 @@ judge key (a one-line `config` / secret swap).
 **Day 14 — Narrative + artifacts**
 - README (eval-gate-first hero; "why hybrid" with the concrete BM25 query; "why LangChain" two-sentence subsection; real per-stage p95 + true corpus size + measured Ragas means; limitations as scope choices; literal reproducing commands).
 - Root `ARCHITECTURE.md` deliverable (diagram + LangChain rationale — distilled from [`architecture.md`](./architecture.md)).
-- 90-second Loom (eval-gate-first script: gate catching a regression → dashboard attribution). Resume bullet with real numbers.
-- **Exit:** all build plan §19 artifacts exist and are public.
+- 90-second demo video (eval-gate-first script: gate catching a regression → dashboard attribution).
+- **Exit:** all deliverables exist and are public.
 
 ---
 
@@ -247,16 +247,16 @@ ground_truth ────────┴─────────────�
 | Free-tier 429s crash eval | Broken headline | `tenacity` backoff (mandatory); space full runs; small CI subset |
 | Uncalibrated / weak judge | Eval not credible | Hand-score 15, report correlation honestly (Day 10) |
 | Synthetic ground truth slips in | Tests LLM-vs-LLM, not retrieval | Hand-correct **every** item (Day 8) |
-| Blended latency reported | Indefensible in interview | Instrument each stage; report per-stage p95 (Day 7) |
+| Blended latency reported | Hides which stage is the bottleneck | Instrument each stage; report per-stage p95 (Day 7) |
 | Wrong/invented model ID | Build breaks / dishonest claim | Verify against provider docs before config (Day 1) |
-| Scope creep (agents/fine-tune/cache) | Dilutes the focused story | Hold the §1.3 scope boundary; say no visibly |
+| Scope creep (agents/fine-tune/cache) | Dilutes the focused story | Hold the scope boundary; say no visibly |
 | Time slip | Missed ship | Cut dashboard polish + corpus size first; never the gate or ground truth |
 
 ---
 
 ## 10. Definition of Done (v1)
 
-All acceptance criteria in [`requirement.md` §6](./requirement.md) pass, and all 10 output artifacts in build plan §19 exist and are public. Only then consider the **v2 security-guardrail extension** (requirement.md §7.2) — do not begin it until every v1 box is checked.
+All acceptance criteria in [`requirement.md` §6](./requirement.md) pass, and all deliverables exist and are public. Only then consider the **v2 security-guardrail extension** (requirement.md §7.2) — do not begin it until every v1 box is checked.
 
 ---
 

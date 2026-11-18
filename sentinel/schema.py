@@ -1,4 +1,4 @@
-"""Pydantic data contracts for the whole pipeline (§7).
+"""Pydantic data contracts for the whole pipeline.
 
 Defined before any pipeline code so every stage speaks the same types:
 ingest -> Chunk, retrieve -> RetrievedChunk, generate -> Answer, eval -> EvalResult.
@@ -26,7 +26,7 @@ class SourceDoc(BaseModel):
 
 class Chunk(BaseModel):
     """A unit of source text indexed for retrieval. chunk_id is shared by the FAISS and
-    BM25 indexes so fusion can align them (§8, FR-I2)."""
+    BM25 indexes so fusion can align them (FR-I2)."""
 
     chunk_id: str
     doc_id: str
@@ -46,7 +46,7 @@ class Chunk(BaseModel):
 
 class RetrievedChunk(BaseModel):
     """A candidate chunk carrying every score that selected it, so eval and the dashboard
-    can inspect *why* it was chosen (§9, FR-R5). Scores from a stage a chunk didn't reach
+    can inspect *why* it was chosen (FR-R5). Scores from a stage a chunk didn't reach
     are None (e.g. dense_score None => chunk came only from BM25)."""
 
     chunk_id: str
@@ -64,7 +64,7 @@ class RetrievedChunk(BaseModel):
 
 
 class Citation(BaseModel):
-    """A grounding pointer from the answer back to a retrieved chunk (§10)."""
+    """A grounding pointer from the answer back to a retrieved chunk."""
 
     chunk_id: str
     doc_id: str
@@ -76,7 +76,7 @@ class Citation(BaseModel):
 
 
 class LatencyMs(BaseModel):
-    """Per-stage latency, captured in isolation so p95 is reportable per stage (§1.2.6)."""
+    """Per-stage latency, captured in isolation so p95 is reportable per stage."""
 
     retrieve: float
     rerank: float
@@ -159,7 +159,7 @@ class Account(BaseModel):
 
 
 class GroundTruthItem(BaseModel):
-    """A hand-corrected evaluation triple (§15 day 8, FR-GT). Never fully synthetic."""
+    """A hand-corrected evaluation triple (FR-GT). Never fully synthetic."""
 
     question: str
     reference_answer: str
@@ -173,14 +173,14 @@ class EvalMeans(BaseModel):
 
 
 class AttributionCounts(BaseModel):
-    """Failure attribution tallies for a run (§12, FR-E3)."""
+    """Failure attribution tallies for a run (FR-E3)."""
 
     retrieval_fail: int = 0
     generation_fail: int = 0
 
 
 class EvalItemResult(BaseModel):
-    """Per-question eval detail — powers the dashboard drill-down (§14)."""
+    """Per-question eval detail — powers the dashboard drill-down."""
 
     question: str
     faithfulness: float
@@ -193,7 +193,7 @@ class EvalItemResult(BaseModel):
 
 
 class EvalResult(BaseModel):
-    """One eval run, keyed by git SHA; persisted to SQLite and exported to JSON (§12)."""
+    """One eval run, keyed by git SHA; persisted to SQLite and exported to JSON."""
 
     run_id: str
     git_sha: str

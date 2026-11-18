@@ -1,4 +1,4 @@
-# Quality and safety gates (§13, v2-R5).
+# Quality and safety gates (v2-R5).
 #
 # On every PR to main, three checks run against indexes built from the committed corpus:
 #   tests              the full pytest suite (hermetic; retrieval tests use the real indexes)
@@ -93,7 +93,7 @@ jobs:
         with:
           path: ~/.cache/huggingface
           key: ${{ steps.keys.outputs.hf }}
-      # Indexes are gitignored (rebuilt from source, §16.6). The service index embeds the whole
+      # Indexes are gitignored (rebuilt from source). The service index embeds the whole
       # corpus on CPU (~9 min); the adversarial index copies it and embeds only 50 passages.
       - name: Cache indexes
         id: index-cache

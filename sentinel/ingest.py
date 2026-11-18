@@ -1,4 +1,4 @@
-"""Ingestion pipeline (§8) — Phase 1, Day 2.
+"""Ingestion pipeline — Phase 1, Day 2.
 
 load source docs -> clean/normalize -> chunk (~512 tok, ~12% overlap)
 -> embed (local bge model) -> build FAISS dense index

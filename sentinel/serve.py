@@ -1,4 +1,4 @@
-"""FastAPI service (§11) — Phase 2, Day 6.
+"""FastAPI service — Phase 2, Day 6.
 
 Endpoints:
     POST /token   -> issue a JWT (OAuth2 password form): the shared demo account, or a named

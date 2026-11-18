@@ -1,4 +1,4 @@
-"""Generation layer (§10) — Phase 2, Day 5.
+"""Generation layer — Phase 2, Day 5.
 
 Grounded generation: the system prompt instructs the model to answer ONLY from retrieved
 context and to emit inline citations referencing chunk IDs (FR-G1, FR-G2). If context is

@@ -1,4 +1,4 @@
-"""Retrieval tests (§4) — Phase 1, Days 3-4.
+"""Retrieval tests — Phase 1, Days 3-4.
 
 Coverage:
   - dense and BM25 indexes share identical, aligned chunk IDs (guards the silent

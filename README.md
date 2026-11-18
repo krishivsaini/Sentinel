@@ -197,7 +197,7 @@ The main ones, stated plainly ([all of them](docs/design.md#limitations)):
 | [docs/requirement.md](docs/requirement.md) | Functional and non-functional requirements |
 | [docs/product_design.md](docs/product_design.md) | Product thesis, personas, dashboard IA |
 | [docs/architecture.md](docs/architecture.md) | The original planning-stage design (superseded where they differ) |
-| [docs/implementation_plan.md](docs/implementation_plan.md) | Phased build plan and risk register |
+| [docs/implementation_plan.md](docs/implementation_plan.md) | Phased implementation plan and risk register |
 
 <div align="center">
 

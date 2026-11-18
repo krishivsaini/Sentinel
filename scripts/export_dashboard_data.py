@@ -1,4 +1,4 @@
-"""Export eval run history to JSON for the dashboard (§14, FR-D4).
+"""Export eval run history to JSON for the dashboard (FR-D4).
 
 `store.save()` already writes per-run JSON + `latest.json`. The dashboard's trend + runs views
 also need the *history* across runs, which lives in the `eval_runs` SQLite table. This writes that

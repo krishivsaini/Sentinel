@@ -6,11 +6,11 @@
 
 ## 1. Product Thesis
 
-Most fresher RAG portfolios ship a chatbot. Sentinel ships an **evaluation system that happens to have a RAG service attached to it.** The product is designed backwards from a single sentence a recruiter should be able to repeat:
+Most RAG projects ship a chatbot. Sentinel ships an **evaluation system that happens to have a RAG service attached to it.** The product is designed backwards from a single sentence that should be true of it:
 
 > *"Every pull request runs a Ragas evaluation over a hand-built ground-truth set; merges are blocked when faithfulness regresses below threshold."*
 
-Every product surface — the API, the CI gate, the dashboard, the README — exists to make that sentence **true, visible, and defensible.** When a design choice trades "impressive-looking" against "defensible in an interview," defensibility wins.
+Every product surface — the API, the CI gate, the dashboard, the README — exists to make that sentence **true, visible, and defensible.** When a design choice trades "impressive-looking" against "defensible under scrutiny," defensibility wins.
 
 **Positioning line (README hero):**
 > Sentinel: a production RAG service with an evaluation gate in CI. Hybrid BM25 + dense retrieval with cross-encoder reranking, served over FastAPI with SSE streaming, JWT auth, and rate limiting. Every PR runs a Ragas evaluation over a hand-built ground-truth set; merges are **blocked when faithfulness regresses below threshold**. The dashboard attributes every low-scoring answer to either a retrieval failure or a generation failure.
@@ -21,13 +21,13 @@ Every product surface — the API, the CI gate, the dashboard, the README — ex
 
 | Persona | Primary job-to-be-done | What they touch | What convinces them |
 |---|---|---|---|
-| **Recruiter / hiring engineer** | Decide in 90 seconds whether this candidate is serious | README hero → Loom → live dashboard → Actions tab | The CI gate catching a real regression; real (not round) numbers |
-| **Interviewer (deep dive)** | Probe whether the numbers are real and the choices are understood | ARCHITECTURE.md, `ground_truth_audit.md`, retrieval code, the demonstration PR | Per-stage latency, judge calibration correlation, the "BM25 caught this" query |
+| **Evaluating engineer** | Decide quickly whether the system is real and its claims hold | README → demo video → live dashboard → Actions tab | The CI gate catching a real regression; real (not round) numbers |
+| **Reviewer (deep dive)** | Probe whether the numbers are real and the choices are justified | ARCHITECTURE.md, `ground_truth_audit.md`, retrieval code, the demonstration PR | Per-stage latency, judge calibration correlation, the "BM25 caught this" query |
 | **Service consumer** | Ask a question, get a grounded, cited answer | `POST /query` (SSE) | Streaming tokens, inline citations, "insufficient context" honesty |
 | **Dashboard viewer** | Understand eval health over time and *why* answers fail | Trends, drill-down, attribution views | Failure attribution — retrieval vs generation, with the offending questions |
-| **Owner (Krishiv)** | Ship a defensible artifact and speak to every number | Everything | The whole thing reproduces in <10 min from a clean clone |
+| **Maintainer** | Keep every number reproducible and every choice explained | Everything | The whole thing reproduces in <10 min from a clean clone |
 
-**Design implication:** the recruiter and interviewer are the *real* primary users. The service consumer is a means, not the end. This is why the eval and dashboard get design attention while the service stays deliberately lean (single demo user, no chat UI).
+**Design implication:** the evaluating engineer and reviewer are the primary users. The service consumer matters, but the system's value is in proving answer quality, not in the chat itself. This is why the eval and dashboard get design attention while the service stays deliberately lean (single demo user, no chat UI).
 
 ---
 
@@ -45,7 +45,7 @@ Sentinel has four user-facing surfaces plus one narrative surface. Each has a di
 ### 3.2 The Evaluation Pipeline — *the headline product*
 - **Design goal:** make evaluation feel like a **first-class engineering system**, not a script. It has a schema (`EvalResult`), persistent storage (SQLite keyed by git SHA), and an export contract (JSON for the dashboard).
 - **Two audiences, two run modes:**
-  - **Full eval** — runs over all 80–120 ground-truth items, locally / on-demand, spaced out to respect rate limits. This is the number that goes on the resume.
+  - **Full eval** — runs over all 80–120 ground-truth items, locally / on-demand, spaced out to respect rate limits. This is the headline number.
   - **CI subset** — ~25 representative items on every PR, fast and cheap, powering the gate.
 - **Failure attribution is the signature feature.** A low score is never just "bad" — it's classified as a *retrieval failure* (relevant context wasn't retrieved) or a *generation failure* (context was there, answer was still wrong). This single distinction is the product's intellectual differentiator.
 - **Judge honesty as a designed artifact:** the pipeline ships with `ground_truth_audit.md` reporting the correlation between hand scores and Ragas scores. An uncalibrated judge is treated as an unfinished product.
@@ -61,10 +61,10 @@ Sentinel has four user-facing surfaces plus one narrative surface. Each has a di
 - **Three views** (see §4 for IA).
 - **Non-goals:** no animations, no charts library flourish, no auth, no live DB. It reads a static JSON export and renders. Simplicity here is a *scope signal*, not a limitation to apologize for.
 
-### 3.5 The Narrative Surface — README + Loom + ARCHITECTURE.md
+### 3.5 The Narrative Surface — README + demo video + ARCHITECTURE.md
 - **Design goal:** control the reading order so the eval-gate story lands first and the "RAG chatbot" framing never gets a chance to form.
-- **README reading path:** hero sentence → live dashboard link → 90s Loom → architecture → "why hybrid" (with the concrete BM25 query) → "why LangChain" → real results (per-stage p95, true corpus size, measured Ragas means) → limitations (framed as scope choices) → reproducing (literal commands).
-- **Loom script (90s):** open on the CI gate catching a regression, *then* show the dashboard attribution view. The chatbot is shown last, briefly, if at all.
+- **README reading path:** hero sentence → live dashboard link → 90s demo video → architecture → "why hybrid" (with the concrete BM25 query) → "why LangChain" → real results (per-stage p95, true corpus size, measured Ragas means) → limitations (framed as scope choices) → reproducing (literal commands).
+- **Demo video (90s):** open on the CI gate catching a regression, *then* show the dashboard attribution view. The chatbot is shown last, briefly, if at all.
 
 ---
 
@@ -93,14 +93,14 @@ Three views, navigable from a single top nav. Data source: exported eval JSON, o
 
 - **Grounded-or-abstain:** the model answers only from retrieved context and abstains when context is insufficient. This is a product promise, enforced in the generation prompt and checked by faithfulness.
 - **Everything is attributable:** an index records its chunking strategy; an eval run records its git SHA; an answer records its retrieved chunks and per-stage latency. Any result can be traced to the conditions that produced it.
-- **Measured, not claimed:** no placeholder numbers anywhere user-facing. If faithfulness is 0.79, the product says 0.79. Honest numbers are a designed trust signal (build plan §18).
+- **Measured, not claimed:** no placeholder numbers anywhere user-facing. If faithfulness is 0.79, the product says 0.79. Honest numbers are a designed trust signal.
 - **Cost is visible, not optimized:** cost per query is tracked and surfaced; it is deliberately *not* optimized (that's a separate project). Tracking-without-optimizing is itself a stated scope decision.
 
 ---
 
 ## 6. Experience Principles
 
-1. **Lead with the gate.** Every entry point (README, Loom, dashboard nav) surfaces the eval-gate story before the chatbot.
+1. **Lead with the gate.** Every entry point (README, demo video, dashboard nav) surfaces the eval-gate story before the chatbot.
 2. **Inspectable over impressive.** Prefer surfacing internals (four retrieval scores, per-stage latency, attribution) over polish.
 3. **Honest by construction.** Abstention, real numbers, and judge calibration are features, not caveats.
 4. **Dense over decorative.** Especially the dashboard — functional clarity beats visual flourish; low ornament is a scope signal.
@@ -112,9 +112,9 @@ Three views, navigable from a single top nav. Data source: exported eval JSON, o
 
 | Signal | Target / definition |
 |---|---|
-| Recruiter comprehension | The eval-gate sentence is understood from the README hero + Loom alone. |
+| First-read comprehension | The eval-gate sentence is understood from the README hero + demo video alone. |
 | Reproducibility | A stranger clones and runs the service in **< 10 minutes**. |
-| Defensibility | Every number on the README is reconstructable by the owner on a whiteboard. |
+| Defensibility | Every number on the README is reconstructable from the committed code and data. |
 | Proof of the gate | A real demonstration PR shows the gate turning red on a regression. |
 | Attribution clarity | A viewer can name, from the dashboard, whether the last run's failures were retrieval or generation. |
 

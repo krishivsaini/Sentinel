@@ -1,4 +1,4 @@
-"""Eval-system tests (§12) — Phase 3, Day 9.
+"""Eval-system tests — Phase 3, Day 9.
 
 Hermetic tests (no API) cover the load-bearing, easy-to-regress logic of the headline eval:
   * failure attribution (retrieval vs generation) at the threshold boundaries,

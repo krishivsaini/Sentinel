@@ -1,4 +1,4 @@
-"""Judge calibration (§12, FR-E6) — Phase 3, Day 10.
+"""Judge calibration (FR-E6) — Phase 3, Day 10.
 
 Is the Ragas faithfulness *judge* trustworthy? An eval gate is only as credible as the judge
 behind it, so we don't take the judge on faith: we hand-score a spread of generated answers for

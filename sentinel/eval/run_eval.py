@@ -1,4 +1,4 @@
-"""Ragas evaluation pipeline (§12) — the headline — Phase 3, Day 9.
+"""Ragas evaluation pipeline — the headline — Phase 3, Day 9.
 
 Runs the full retrieve -> rerank -> generate pipeline over every item in ground_truth.jsonl,
 scores each with Ragas (faithfulness, answer relevance, context recall), attributes failures
@@ -17,7 +17,7 @@ Design for the free tier (NFR-5):
   * **₹0.** Judge = config.judge_provider/model (Groq's llama-3.3-70b free tier, ~1,000 req/day).
     Answer-relevancy embeddings = the same local bge model as retrieval — no OpenAI dependency.
 
-Run:  python -m sentinel.eval.run_eval [--subset N | --ci]   (--ci drives the gate, §13)
+Run:  python -m sentinel.eval.run_eval [--subset N | --ci]   (--ci drives the gate)
 """
 
 from __future__ import annotations
@@ -454,7 +454,7 @@ def _baseline_check(result: EvalResult) -> dict | None:
 
 
 def _ci_gate(result: EvalResult) -> bool:
-    """The CI faithfulness gate (§13, FR-CI2/3). Returns True to pass, False to fail. Fails on
+    """The CI faithfulness gate (FR-CI2/3). Returns True to pass, False to fail. Fails on
     insufficient coverage (too few items scored to trust the mean — throttle/skips), on mean
     faithfulness below the absolute threshold, OR on a drop below main's committed baseline larger
     than the noise-calibrated margin (_baseline_check). Writes a Markdown summary to
@@ -581,7 +581,7 @@ def main() -> None:
     log.info("eval.spend", **meter.summary())
 
     if args.ci and not _ci_gate(result):
-        raise SystemExit(1)  # the gate: a red build below threshold / on thin coverage (§13)
+        raise SystemExit(1)  # the gate: a red build below threshold / on thin coverage
 
 
 if __name__ == "__main__":

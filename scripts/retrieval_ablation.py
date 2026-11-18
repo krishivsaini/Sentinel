@@ -1,4 +1,4 @@
-"""Retrieval ablation: does each stage of the hybrid pipeline earn its place? (§16.1)
+"""Retrieval ablation: does each stage of the hybrid pipeline earn its place?
 
 Scores the top-K (config.rerank_top_k) passages each retrieval configuration would hand the
 generator, over every ground-truth question:
