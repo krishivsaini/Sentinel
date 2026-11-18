@@ -1,6 +1,7 @@
 # Deploy the API to Cloud Run (deploy/terraform creates everything this needs).
 #
-# Manual only: a deploy is a deliberate act, and main isn't gated by CI on push. GitHub's OIDC
+# Manual only: a deploy is a deliberate act. It first waits for the commit's test run (the
+# eval-gate workflow runs the tests on every push to main) and stops unless it passed. GitHub's OIDC
 # token is exchanged for the deployer service account through Workload Identity Federation, so
 # no cloud credential is stored anywhere — the provider only accepts tokens from this
 # repository's main branch. The image is built here (linux/amd64, as Cloud Run runs it) and
@@ -17,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  actions: read     # to read the commit's test run
   id-token: write   # to request the OIDC token GCP exchanges
 
 concurrency:
@@ -24,7 +26,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The tests for the commit being deployed must have passed: waits while they run, fails if
+  # they failed, were cancelled or never ran (e.g. a commit pushed before this check existed).
+  tests-passed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          for i in $(seq 1 85); do
+            run=$(gh run list -R "$REPO" --workflow eval-gate.yml --event push --commit "$GITHUB_SHA" \
+                    --json status,conclusion,url --jq '.[0] // empty')
+            if [ -z "$run" ]; then
+              # A run appears within seconds of a push; none after 3 minutes means none is coming.
+              [ "$i" -ge 6 ] && { echo "no test run for ${GITHUB_SHA::7}: push it again or run eval-gate"; exit 1; }
+              echo "no test run for ${GITHUB_SHA::7} yet"; sleep 30; continue
+            fi
+            status=$(echo "$run" | jq -r .status); conclusion=$(echo "$run" | jq -r .conclusion)
+            if [ "$status" = completed ]; then
+              echo "tests for ${GITHUB_SHA::7}: $conclusion ($(echo "$run" | jq -r .url))"
+              [ "$conclusion" = success ] && exit 0 || exit 1
+            fi
+            echo "tests $status…"; sleep 30
+          done
+          echo "timed out waiting for the tests"; exit 1
+
   deploy:
+    needs: tests-passed
     runs-on: ubuntu-latest
     timeout-minutes: 40
     if: github.ref == 'refs/heads/main'

@@ -190,8 +190,10 @@ export function Playground({ latest }: { latest: RunResult }) {
   // The API scales to zero when idle and a cold start loads the models (~1 min). Ping it as soon
   // as the page opens, so it's often awake by the time someone asks. Fire and forget: the
   // response isn't read, so it needs no CORS and an error changes nothing.
+  // /health, not /healthz: Cloud Run's front end answers paths ending in "z" itself, so a
+  // /healthz ping never reaches (or wakes) the service.
   useEffect(() => {
-    if (API) fetch(`${API}/healthz`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
+    if (API) fetch(`${API}/health`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
   }, []);
 
   useEffect(() => {

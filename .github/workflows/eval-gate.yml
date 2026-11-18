@@ -1,6 +1,7 @@
 # Quality and safety gates (v2-R5).
 #
-# On every PR to main, three checks run against indexes built from the committed corpus:
+# On every PR to main, three checks run against indexes built from the committed corpus (and on
+# every push to main, the tests alone: they're free, and the deploy waits for them):
 #   tests              the full pytest suite (hermetic; retrieval tests use the real indexes)
 #   faithfulness-gate  a Ragas faithfulness eval over half the ground truth; fails below
 #                      config.faithfulness_threshold, if too few items score (config.ci_min_items),
@@ -15,7 +16,8 @@
 # Jobs run only when the PR touches something that can change their result (the `changes` job):
 # README, docs, dashboard, scripts and regenerated reports skip everything, and only code and the
 # data the gates read trigger the two gates — the only jobs that call the paid API. A skipped job
-# counts as passing. Manual runs (workflow_dispatch) always run everything.
+# counts as passing. Manual runs (workflow_dispatch) always run everything; a push to main runs
+# the tests only, never the paid gates.
 #
 # Requires the GROQ_API_KEY repository secret (FR-CI4); the repo's key is on Groq's paid tier,
 # under a fixed monthly budget. Each gate is capped at $0.25 of metered spend and fails if a run
@@ -28,13 +30,16 @@ name: eval-gate
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
 concurrency:
-  group: eval-gate-${{ github.ref }}
+  # Per commit on main, so a deploy waiting on one commit's tests isn't left with a cancelled run.
+  group: eval-gate-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -53,6 +58,9 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
+          if [ "$EVENT" = "push" ]; then
+            echo "gates=false" >> "$GITHUB_OUTPUT"; echo "tests=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           if [ "$EVENT" != "pull_request" ]; then
             echo "gates=true" >> "$GITHUB_OUTPUT"; echo "tests=true" >> "$GITHUB_OUTPUT"; exit 0
           fi

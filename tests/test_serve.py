@@ -165,6 +165,43 @@ def test_rate_limit_fires_under_load(client: TestClient) -> None:
     assert all(c == 429 for c in codes[first_429:])
 
 
+def _sign_in_codes(client: TestClient, forwarded_for: list[str]) -> list[int]:
+    return [
+        client.post("/token", data={"username": "nobody", "password": "x"},
+                    headers={"X-Forwarded-For": xff}).status_code
+        for xff in forwarded_for
+    ]
+
+
+def test_a_made_up_forwarded_for_header_does_not_dodge_the_rate_limit() -> None:
+    # The caller writes the left of X-Forwarded-For; the proxy appends the address it saw.
+    c = _client(FakeEngine())
+    limit = int(settings.token_rate_limit.split("/")[0])
+    codes = _sign_in_codes(c, [f"203.0.113.{i}, 198.51.100.7" for i in range(limit + 2)])
+    assert codes[:limit] == [401] * limit and codes[limit:] == [429, 429]
+
+
+def test_each_real_client_address_has_its_own_bucket() -> None:
+    c = _client(FakeEngine())
+    limit = int(settings.token_rate_limit.split("/")[0])
+    assert 429 in _sign_in_codes(c, ["198.51.100.7"] * (limit + 1))
+    assert _sign_in_codes(c, ["198.51.100.8"]) == [401]     # a different caller isn't limited
+
+
+def test_index_fingerprint_ignores_the_build_time(tmp_path, monkeypatch) -> None:
+    from sentinel import serve
+
+    monkeypatch.setattr(settings, "index_dir", tmp_path)
+    meta = tmp_path / "meta.json"
+    fingerprints = []
+    for built, chunks in (("2026-11-16T05:19:24Z", 2888), ("2026-11-18T09:00:00Z", 2888),
+                          ("2026-11-18T09:00:00Z", 2889)):
+        meta.write_text(json.dumps({"built_utc": built, "chunk_count": chunks}))
+        fingerprints.append(serve._index_build())
+    assert fingerprints[0] == fingerprints[1]        # rebuilt, same content: cache kept
+    assert fingerprints[1] != fingerprints[2]        # different content: cache not reused
+
+
 # --------------------------------------------------------------------------- guardrails (v2)
 
 
@@ -529,3 +566,56 @@ def test_a_stream_that_fails_partway_ends_with_an_error_event(monkeypatch) -> No
     events = _parse_sse(r.text)
     assert events[-1][0] == "error" and "failed partway" in json.loads(events[-1][1])["detail"]
     assert "done" not in [ev for ev, _ in events]
+
+
+class _FakeRedis:
+    """Just enough of redis.Redis for RedisDayTotal; `down` makes every call fail."""
+
+    def __init__(self) -> None:
+        self.data: dict[str, float] = {}
+        self.down = False
+
+    def _check(self) -> None:
+        import redis
+        if self.down:
+            raise redis.ConnectionError("down")
+
+    def get(self, key):
+        self._check()
+        return None if key not in self.data else str(self.data[key]).encode()
+
+    def pipeline(self):
+        outer = self
+
+        class Pipe:
+            ops: list = []
+
+            def incrbyfloat(self, key, v):
+                self.ops.append((key, v))
+
+            def expire(self, key, s):
+                pass
+
+            def execute(self):
+                outer._check()
+                for key, v in self.ops:
+                    outer.data[key] = outer.data.get(key, 0.0) + v
+                self.ops.clear()
+
+        return Pipe()
+
+
+def test_daily_spend_survives_a_restart_through_the_shared_store() -> None:
+    from sentinel.spend import RedisDayTotal, _Meter
+
+    redis = _FakeRedis()
+    before = _Meter()
+    before.use_store(RedisDayTotal(redis))
+    before.record("openai/gpt-oss-20b", 1_000_000, 0)            # $0.075
+    after = _Meter()                                              # a cold start
+    assert after.spent_today() == 0.0
+    after.use_store(RedisDayTotal(redis))
+    assert after.spent_today() == pytest.approx(0.075)            # today's spend is still known
+    redis.down = True                                             # Redis unreachable:
+    after.record("openai/gpt-oss-20b", 2_000_000, 0)              # recording doesn't fail,
+    assert after.spent_today() == pytest.approx(0.15)             # and the process's own count is used

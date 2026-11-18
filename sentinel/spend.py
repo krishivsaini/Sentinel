@@ -11,6 +11,8 @@ being sent: a run stops within the cost of the calls already in flight.
 
 The deployed API also has a per-day budget (config.daily_spend_limit_usd), checked when a request
 starts rather than per call, so a request either runs to completion or is turned away whole.
+Its tally is kept in Redis when the service has one (RedisDayTotal), so a cold start or a
+redeploy doesn't reset it; without Redis it lives in the process.
 Each request also gets its own tally (start_request_cost), so the query log can say what that
 one answer cost.
 """
@@ -55,10 +57,48 @@ class BudgetExceeded(RuntimeError):
     """The run reached config.spend_limit_usd; no further paid calls are sent."""
 
 
+class RedisDayTotal:
+    """Each UTC day's spend in Redis, shared by every process and kept across restarts. Short
+    timeouts and no exceptions: if Redis is unreachable the meter falls back to its own count."""
+
+    def __init__(self, client: Any, prefix: str = "sentinel:spend:") -> None:
+        import redis as redis_lib
+        self._r = client
+        self._prefix = prefix
+        self._errors: tuple[type[BaseException], ...] = (redis_lib.RedisError, OSError)
+
+    @classmethod
+    def from_url(cls, url: str) -> RedisDayTotal:
+        import redis as redis_lib
+        return cls(redis_lib.Redis.from_url(url, socket_connect_timeout=0.5, socket_timeout=0.5))
+
+    def add(self, day: date, usd: float) -> None:
+        key = f"{self._prefix}{day.isoformat()}"
+        try:
+            pipe = self._r.pipeline()
+            pipe.incrbyfloat(key, usd)
+            pipe.expire(key, 3 * 86400)
+            pipe.execute()
+        except self._errors:
+            pass
+
+    def get(self, day: date) -> float | None:
+        try:
+            value = self._r.get(f"{self._prefix}{day.isoformat()}")
+        except self._errors:
+            return None
+        return float(value) if value is not None else 0.0
+
+
 class _Meter:
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self._store: RedisDayTotal | None = None
         self.reset()
+
+    def use_store(self, store: RedisDayTotal | None) -> None:
+        """Keep the daily tally in `store` as well (see RedisDayTotal)."""
+        self._store = store
 
     def reset(self) -> None:
         self.usd = 0.0
@@ -68,9 +108,13 @@ class _Meter:
         self._usd_day = 0.0
 
     def spent_today(self) -> float:
-        """USD recorded since 00:00 UTC (by this process)."""
+        """USD recorded since 00:00 UTC: by every process when a store is attached (or by this
+        one, if the store can't be read or is behind), else by this process."""
+        today = datetime.now(timezone.utc).date()
         with self._lock:
-            return self._usd_day if self._day == datetime.now(timezone.utc).date() else 0.0
+            local = self._usd_day if self._day == today else 0.0
+        shared = self._store.get(today) if self._store is not None else None
+        return max(local, shared) if shared is not None else local
 
     def check(self) -> None:
         limit = settings.spend_limit_usd
@@ -91,6 +135,8 @@ class _Meter:
             self.calls[model] += 1
             self.tokens[model][0] += input_tokens
             self.tokens[model][1] += output_tokens
+        if self._store is not None and cost:
+            self._store.add(today, cost)
 
     def summary(self) -> dict:
         with self._lock:

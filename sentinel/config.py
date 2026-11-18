@@ -279,6 +279,11 @@ class Settings(BaseSettings):
     jwt_expiry_minutes: int = 60
     rate_limit: str = "20/minute"          # per named account, or per IP for the demo account
     token_rate_limit: str = "10/minute"    # sign-in attempts per IP: slows password guessing
+    # Proxies in front of the service that append the caller's address to X-Forwarded-For.
+    # Cloud Run's front end is one: it appends the address it saw, and everything to the left of
+    # that is whatever the caller sent, so the client IP is the entry this many from the right.
+    # 0 ignores the header (a server reached directly, with no proxy in front).
+    trusted_proxy_hops: int = 1
     # A public deployment: turn /query away once the day's metered LLM spend reaches this
     # many USD (None = no cap), and the browser origins allowed to call the API (the dashboard).
     daily_spend_limit_usd: float | None = None

@@ -81,7 +81,7 @@ from sentinel.logging_config import configure_logging, log
 from sentinel.plan import Plan
 from sentinel.plan import plan as plan_question
 from sentinel.retrieve import Access, hybrid_retrieve_timed, multi_retrieve_timed
-from sentinel.spend import meter, start_request_cost
+from sentinel.spend import RedisDayTotal, meter, start_request_cost
 from sentinel.users import User, UserStore
 from sentinel.schema import (
     Account,
@@ -203,6 +203,19 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> P
     return Principal(subject=user.username, scopes=scopes, shared=user.shared)
 
 
+def _client_ip(request: Request) -> str:
+    """The caller's address for rate limiting. Not the leftmost X-Forwarded-For entry (what
+    uvicorn's proxy_headers puts in request.client): the caller writes that one, so a made-up
+    header per request would get a fresh rate-limit bucket each time. The trusted proxy appends
+    the address it actually saw, so count settings.trusted_proxy_hops entries from the right."""
+    hops = settings.trusted_proxy_hops
+    forwarded = [h.strip() for h in request.headers.get("x-forwarded-for", "").split(",")]
+    forwarded = [h for h in forwarded if h]
+    if hops > 0 and forwarded:
+        return forwarded[max(0, len(forwarded) - hops)]
+    return get_remote_address(request)
+
+
 def _rate_key(request: Request) -> str:
     """Rate limit bucket: a named account's own (wherever it calls from), or the caller's IP
     for the shared demo account and anything unauthenticated."""
@@ -211,7 +224,7 @@ def _rate_key(request: Request) -> str:
         found = _verified_account(auth[7:].strip(), request.app.state.users)
         if found and not found[0].shared:
             return f"user:{found[0].username}"
-    return get_remote_address(request)
+    return _client_ip(request)
 
 
 # --------------------------------------------------------------------------- SSE query stream
@@ -255,7 +268,12 @@ def _index_build() -> str:
     key = (str(meta), st.st_mtime_ns, st.st_size)
     if key not in _index_meta:
         import hashlib
-        _index_meta[key] = hashlib.sha256(meta.read_bytes()).hexdigest()[:16]
+        # By content: the image rebuilds the index on every deploy, and the build time it
+        # records would otherwise make each deploy orphan every cached answer.
+        content = json.loads(meta.read_text())
+        content.pop("built_utc", None)
+        _index_meta[key] = hashlib.sha256(
+            json.dumps(content, sort_keys=True).encode()).hexdigest()[:16]
     return _index_meta[key]
 
 
@@ -615,6 +633,10 @@ def create_app(users: UserStore | None = None) -> FastAPI:
         )
     app.state.users = users or default_user_store()
     app.state.cache = default_cache()
+    # The daily budget's tally goes to the same Redis as the cache, so a cold start or a
+    # redeploy doesn't reset what today has already spent.
+    meter.use_store(RedisDayTotal.from_url(settings.redis_url)
+                    if settings.cache_backend == "redis" else None)
     # Limiter is created per-app (fresh in-memory storage) so tests don't bleed rate state.
     limiter = Limiter(key_func=_rate_key)
     app.state.limiter = limiter
@@ -626,7 +648,7 @@ def create_app(users: UserStore | None = None) -> FastAPI:
         return {"status": "ok"}
 
     @app.post("/token", response_model=TokenResponse)
-    @limiter.limit(settings.token_rate_limit, key_func=get_remote_address)
+    @limiter.limit(settings.token_rate_limit, key_func=_client_ip)
     def issue_token(request: Request,
                     form: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
         user = app.state.users.authenticate(form.username, form.password)
