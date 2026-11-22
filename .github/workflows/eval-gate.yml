@@ -52,8 +52,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
       # The same ruff as `uv run ruff` locally, without installing the project's dependencies.
       - run: |
           version=$(awk '/^name = "ruff"$/ {getline; gsub(/"/, "", $3); print $3}' uv.lock)
@@ -66,7 +66,7 @@ jobs:
       gates: ${{ steps.paths.outputs.gates }}
       tests: ${{ steps.paths.outputs.tests }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: paths
@@ -104,19 +104,19 @@ jobs:
       index_key: ${{ steps.keys.outputs.index }}
       hf_key: ${{ steps.keys.outputs.hf }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Everything that determines the indexes' contents: corpus, adversarial corpus, chunking and
       # embedding code, schema, config, and the injection screening policy and its verdicts.
       - id: keys
         run: |
           echo "index=indexes-${{ hashFiles('data/corpus/**', 'data/adversarial/**', 'data/guardrails/screening_cache.jsonl', 'sentinel/ingest.py', 'sentinel/schema.py', 'sentinel/config.py', 'sentinel/guardrails/injection.py') }}" >> "$GITHUB_OUTPUT"
           echo "hf=hf-models-${{ hashFiles('sentinel/config.py') }}" >> "$GITHUB_OUTPUT"
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --frozen
       - name: Cache HuggingFace models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/huggingface
           key: ${{ steps.keys.outputs.hf }}
@@ -124,7 +124,7 @@ jobs:
       # corpus on CPU (~9 min); the adversarial index copies it and embeds only 50 passages.
       - name: Cache indexes
         id: index-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             indexes
@@ -163,16 +163,16 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 2s --health-timeout 3s --health-retries 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --frozen --extra pgvector
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: ~/.cache/huggingface
           key: ${{ needs.indexes.outputs.hf_key }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             indexes
@@ -190,16 +190,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --frozen
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: ~/.cache/huggingface
           key: ${{ needs.indexes.outputs.hf_key }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             indexes
@@ -230,16 +230,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --frozen
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: ~/.cache/huggingface
           key: ${{ needs.indexes.outputs.hf_key }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             indexes
