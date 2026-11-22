@@ -31,11 +31,17 @@ The baseline is always read from main, so a PR can't pass by editing it.
 
 ## Full evaluation — 48 questions
 
-| Faithfulness | Answer relevance | Context recall | Failure attribution |
-|---|---|---|---|
-| **0.951** | 0.867 | 0.905 | 42 pass · 3 retrieval · 3 generation |
+| Run | Faithfulness | Answer relevance | Context recall | Failure attribution |
+|---|---|---|---|---|
+| **2026-11-22**, the live pipeline (`5ec4ada`, query planning on) | **0.928** | 0.906 | 0.873 | 42 pass · 3 retrieval · 3 generation |
+| 2026-10-22 (`ce5f455`, before query planning was on by default) | 0.951 | 0.867 | 0.905 | 42 pass · 3 retrieval · 3 generation |
+| 2026-09-03 (`d0c59e4`) | 0.932 | 0.890 | 0.880 | 41 pass · 4 retrieval · 3 generation |
 
-All three retrieval failures ended in a correct "I don't have enough information", not a guess. Each failure is written up in the [audit](../data/ground_truth_audit.md).
+The full eval cost **$0.126** in Groq calls (383 calls; the gpt-oss-120b judge is most of it).
+
+**The drop from 0.951 to 0.928 is within run-to-run noise.** The same code scored 0.916–0.993 over 4 runs of the 24-question CI subset (SD 0.034, about 0.024 for 48 questions); generation and the judge both vary between runs, and individual questions swung by up to ±0.7 in both directions between the two latest runs. Read the three full runs together: 0.928–0.951.
+
+Two of the three retrieval failures ended in a correct "I don't have enough information", not a guess. The third (`invalid_grant` in OAuth 2.0) answered from the passages it did retrieve, faithfully (1.00), but not from the passage the question was written against. Each failure is written up in the [audit](../data/ground_truth_audit.md).
 
 ## Does each retrieval stage earn its place?
 

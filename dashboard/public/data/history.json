@@ -86,6 +86,18 @@
       "generation_fail": 3,
       "items": 48,
       "gate_pass": true
+    },
+    {
+      "run_id": "84a30f84973a",
+      "git_sha": "5ec4ada",
+      "timestamp": "2026-11-22T10:21:22.917247+00:00",
+      "faithfulness": 0.9277,
+      "answer_relevance": 0.9059,
+      "context_recall": 0.8734,
+      "retrieval_fail": 3,
+      "generation_fail": 3,
+      "items": 48,
+      "gate_pass": true
     }
   ]
 }

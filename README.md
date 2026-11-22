@@ -43,7 +43,7 @@ It runs on **Google Cloud Run**, provisioned with Terraform and deployed from Gi
 | | Result |
 |---|---|
 | **Blocks bad merges, even subtle ones** | a prompt that let the model answer from memory dropped faithfulness **0.967 → 0.746** and was blocked; two subtle regressions (0.855, 0.865) that pass a fixed 0.80 line fail the baseline gate, while every healthy run (0.904–0.993) passes |
-| **Answers stay grounded** | faithfulness **0.951** on 48 hand-verified questions, scored by a judge that agrees with blind hand labels (r = 0.78) |
+| **Answers stay grounded** | faithfulness **0.928** on 48 hand-verified questions with the live pipeline (0.928–0.951 across three full runs), scored by a judge that agrees with blind hand labels (r = 0.78) |
 | **Hybrid retrieval earns its complexity** | hit@5 **0.729 → 0.896** (+23%) over dense or BM25 alone |
 | **Poisoned documents** | **29% → 0%** of 50 attacks get through, in all 3 runs |
 | **Attacks nobody here wrote** | **2 / 75** from Microsoft's BIPIA benchmark get through — both "answer in French" |
