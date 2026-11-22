@@ -40,7 +40,9 @@ class FakeEngine:
     def __init__(self, text: str = "The 429 status code indicates too many requests.",
                  tokens: list[str] | None = None) -> None:
         self.text = text
-        self.tokens = tokens or ["The 429 ", "status code ", "means too many requests ", "[rfc6585#0002]"]
+        self.tokens = tokens or [
+            "The 429 ", "status code ", "means too many requests ", "[rfc6585#0002]",
+        ]
         self.accesses: list[Access] = []
         self.refuse = False
         self.withhold = False
@@ -188,6 +190,30 @@ def test_each_real_client_address_has_its_own_bucket() -> None:
     assert _sign_in_codes(c, ["198.51.100.8"]) == [401]     # a different caller isn't limited
 
 
+class _LogRecorder:
+    def __init__(self) -> None:
+        self.events: list[tuple[str, dict]] = []
+
+    def __getattr__(self, level: str):
+        return lambda event, **fields: self.events.append((event, fields))
+
+
+def test_query_log_tags_the_rate_limit_bucket_without_the_address(monkeypatch) -> None:
+    from sentinel import serve
+
+    recorder = _LogRecorder()
+    monkeypatch.setattr(serve, "log", recorder)
+    c = _client(FakeEngine())
+    headers = _auth_header(c)
+    for xff in ("203.0.113.1, 198.51.100.7", "203.0.113.2, 198.51.100.7", "198.51.100.8"):
+        c.post("/query", json={"question": "q"}, headers={**headers, "X-Forwarded-For": xff})
+    tags = [f for e, f in recorder.events if e == "query.client"]
+    assert [t["xff_entries"] for t in tags] == [2, 2, 1]
+    assert tags[0]["bucket"] == tags[1]["bucket"]     # a made-up left entry: the same caller
+    assert tags[1]["bucket"] != tags[2]["bucket"]     # a different address: a different bucket
+    assert not any("198.51.100" in json.dumps(f) for _, f in recorder.events)
+
+
 def test_index_fingerprint_ignores_the_build_time(tmp_path, monkeypatch) -> None:
     from sentinel import serve
 
@@ -229,7 +255,8 @@ def test_token_scopes_reach_retrieval(tmp_path) -> None:
 
 
 def test_pii_in_retrieved_passages_is_redacted_before_the_client_sees_it() -> None:
-    engine = FakeEngine(text="Contact: Roy Fielding, Email: fielding@gbiv.com, Phone: +1-949-679-2960")
+    engine = FakeEngine(
+        text="Contact: Roy Fielding, Email: fielding@gbiv.com, Phone: +1-949-679-2960")
     c = _client(engine)
     _, answer = _done(c, _auth_header(c))
     passage = answer["retrieved"][0]["text"]
@@ -300,7 +327,8 @@ def _kinds(client: TestClient) -> list[str | None]:
 
 
 # Long enough that the output guard's held-back tail doesn't swallow the whole answer.
-_LONG = [f"Sentence {i} of a longer answer about status codes. " for i in range(20)] + ["[rfc6585#0002]"]
+_LONG = [f"Sentence {i} of a longer answer about status codes. " for i in range(20)]
+_LONG.append("[rfc6585#0002]")
 
 
 def test_flagged_answer_never_reaches_the_client() -> None:
@@ -618,4 +646,4 @@ def test_daily_spend_survives_a_restart_through_the_shared_store() -> None:
     assert after.spent_today() == pytest.approx(0.075)            # today's spend is still known
     redis.down = True                                             # Redis unreachable:
     after.record("openai/gpt-oss-20b", 2_000_000, 0)              # recording doesn't fail,
-    assert after.spent_today() == pytest.approx(0.15)             # and the process's own count is used
+    assert after.spent_today() == pytest.approx(0.15)             # and the local count is used

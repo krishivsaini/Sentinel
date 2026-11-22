@@ -30,7 +30,7 @@ import json
 import sqlite3
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -89,7 +89,7 @@ def main() -> None:
                 print(f"  {i}/{len(todo)}", flush=True)
 
     report: dict = {
-        "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "classifier": clf.name,
     }
     for name, pairs in sets.items():
@@ -107,7 +107,8 @@ def main() -> None:
     results = json.loads(REPORT.read_text())["injection"]["attacks"]["results"]
 
     def withheld(r: dict) -> bool:
-        return not is_abstention(r["answer"]) and cache[_key(clf, r["question"], r["answer"])] >= clf.threshold
+        score = cache[_key(clf, r["question"], r["answer"])]
+        return not is_abstention(r["answer"]) and score >= clf.threshold
 
     report["with_answer_check"] = {}
     for cfg in dict.fromkeys(r["config"] for r in results):
@@ -125,8 +126,10 @@ def main() -> None:
             "still_succeeded": sorted({f"{r['target_doc']} {r['attack']}" for r in left}),
         }
         b = report["with_answer_check"][cfg]
-        print(f"  {cfg:18} succeeded {b['succeeded_before']}/{attacks} -> {b['succeeded_after']}/{attacks}"
-              f"   clean answers withheld {b['clean_answers_withheld']['k']}/{b['clean_answers_withheld']['n']}")
+        clean = b["clean_answers_withheld"]
+        print(f"  {cfg:18} succeeded {b['succeeded_before']}/{attacks}"
+              f" -> {b['succeeded_after']}/{attacks}"
+              f"   clean answers withheld {clean['k']}/{clean['n']}")
     OUT.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     print(f"wrote {OUT}")
 

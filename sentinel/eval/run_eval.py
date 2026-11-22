@@ -31,7 +31,7 @@ import statistics
 import subprocess
 import uuid
 import warnings
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import partial
 
 # ragas 0.4.x emits DeprecationWarnings nudging toward its v1.0 API: metric classes move to
@@ -47,13 +47,12 @@ for _pat in (
 
 # Importing this package first runs sentinel/eval/__init__.py, which installs the
 # langchain-community <-> ragas compatibility shim BEFORE ragas is imported below.
+import tenacity
 from ragas import SingleTurnSample
 from ragas.embeddings.base import LangchainEmbeddingsWrapper
 from ragas.llms.base import LangchainLLMWrapper
 from ragas.metrics import Faithfulness, LLMContextRecall, ResponseRelevancy
 from ragas.run_config import RunConfig
-
-import tenacity
 
 from sentinel.config import DATA_DIR, GROUND_TRUTH_PATH, REPO_ROOT, settings
 from sentinel.eval import attribution, store
@@ -180,7 +179,8 @@ def _is_parse_error(exc: BaseException) -> bool:
 
 
 def _is_retryable(exc: BaseException) -> bool:
-    """Retry rate-limit/timeout bursts AND transient judge parse failures (a re-call often parses)."""
+    """Retry rate-limit/timeout bursts AND transient judge parse failures (a re-call often
+    parses)."""
     return _is_transient(exc) or (_is_parse_error(exc) and not _is_daily_quota(exc))
 
 
@@ -379,7 +379,7 @@ def _aggregate(run_id: str, git_sha: str, per_item: list[EvalItemResult]) -> Eva
     return EvalResult(
         run_id=run_id,
         git_sha=git_sha,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         per_item=per_item,
         means=means,
         attribution_counts=counts,
@@ -543,7 +543,7 @@ def write_baseline(runs: int) -> None:
         log.info("baseline.run", run=k + 1, of=runs, mean=round(res.means.faithfulness, 4))
     BASELINE_PATH.write_text(json.dumps({
         "git_sha": _git_sha(),
-        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "created_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "runs": runs,
         "subset_size": settings.ci_eval_subset_size,
         "judge_model": settings.judge_model,

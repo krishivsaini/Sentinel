@@ -22,7 +22,7 @@ from __future__ import annotations
 import threading
 from collections import defaultdict
 from contextvars import ContextVar
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -110,7 +110,7 @@ class _Meter:
     def spent_today(self) -> float:
         """USD recorded since 00:00 UTC: by every process when a store is attached (or by this
         one, if the store can't be read or is behind), else by this process."""
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         with self._lock:
             local = self._usd_day if self._day == today else 0.0
         shared = self._store.get(today) if self._store is not None else None
@@ -124,7 +124,7 @@ class _Meter:
     def record(self, model: str, input_tokens: int, output_tokens: int) -> None:
         p_in, p_out = PRICES.get(model, _FALLBACK)
         cost = (input_tokens * p_in + output_tokens * p_out) / 1e6
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         with self._lock:
             if self._day != today:
                 self._day, self._usd_day = today, 0.0

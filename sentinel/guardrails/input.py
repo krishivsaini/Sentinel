@@ -61,7 +61,8 @@ class InputPolicyClassifier:
     def score(self, text: str) -> float:
         out = chat(
             self.model,
-            [{"role": "system", "content": self.policy}, {"role": "user", "content": f"QUESTION:\n{text}"}],
+            [{"role": "system", "content": self.policy},
+             {"role": "user", "content": f"QUESTION:\n{text}"}],
             temperature=0,
             reasoning_effort="low",
         ).strip()

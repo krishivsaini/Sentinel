@@ -70,7 +70,8 @@ def top_k_ids(question: str, k: int) -> dict[str, list[str]]:
     pool = sorted(fused, key=lambda c: fused[c], reverse=True)[:RERANK_POOL_SIZE]
     idx = _load_index()
     scores = _reranker().predict([[question, idx.id2chunk[c].text] for c in pool])
-    reranked = [c for c, _ in sorted(zip(pool, scores), key=lambda x: x[1], reverse=True)]
+    ranked = sorted(zip(pool, scores, strict=True), key=lambda x: x[1], reverse=True)
+    reranked = [c for c, _ in ranked]
     return {"dense": dense[:k], "bm25": sparse[:k], "fusion": pool[:k], "hybrid": reranked[:k]}
 
 
@@ -85,7 +86,9 @@ def rank_metrics(retrieved: list[str], relevant: set[str]) -> dict[str, float]:
 
 async def judge_recall(items: list[dict]) -> None:
     """Add Ragas context recall for fusion and hybrid to each item, in place."""
+    # isort: off
     import sentinel.eval  # noqa: F401  (installs the ragas <-> langchain-community shim)
+    # isort: on
     from ragas import SingleTurnSample
 
     from sentinel.eval.run_eval import _build_metrics, _coerce, _score_async
@@ -130,7 +133,9 @@ def pool_sweep(timing_repeats: int = 3) -> None:
     for size in POOL_SIZES:
         metrics, times = [], []
         for _, relevant, pool, scores, pairs in per_q:
-            top = [c for c, _ in sorted(zip(pool[:size], scores[:size]), key=lambda x: x[1], reverse=True)][:k]
+            ranked = sorted(zip(pool[:size], scores[:size], strict=True),
+                            key=lambda x: x[1], reverse=True)
+            top = [c for c, _ in ranked][:k]
             metrics.append(rank_metrics(top, relevant))
             for _ in range(timing_repeats):
                 t0 = time.perf_counter()
@@ -150,7 +155,8 @@ def pool_sweep(timing_repeats: int = 3) -> None:
               f"MRR {row['mrr']:.3f}  rerank p50 {row['rerank_p50_ms']:7.1f} ms  "
               f"p95 {row['rerank_p95_ms']:7.1f} ms", flush=True)
     SWEEP_PATH.write_text(json.dumps({
-        "k": k, "n": len(per_q), "device": str(settings.torch_device), "timing_repeats": timing_repeats,
+        "k": k, "n": len(per_q), "device": str(settings.torch_device),
+        "timing_repeats": timing_repeats,
         "rows": rows,
     }, indent=2) + "\n", encoding="utf-8")
     print(f"\n  wrote {SWEEP_PATH}\n")

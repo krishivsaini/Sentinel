@@ -99,7 +99,7 @@ class GuardrailReport(BaseModel):
     uncited: bool = False
     answer_withheld: bool = False      # the answer check withheld it (text is the replacement)
     answer_check_error: str | None = None  # the answer check couldn't run (it fails closed)
-    answer_ungrounded: bool = False    # withheld for citing no retrieved passage (text is the replacement)
+    answer_ungrounded: bool = False    # withheld: cites no retrieved passage (text is the stand-in)
     off_topic: bool = False            # no passage matched well enough; the model wasn't called
     flagged: bool = False
 

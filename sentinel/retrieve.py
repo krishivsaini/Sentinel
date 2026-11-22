@@ -191,7 +191,7 @@ def dense_search(
     else:
         params = faiss.SearchParameters(sel=faiss.IDSelectorBatch(allowed))
         sims, rows = idx.faiss.search(vec, top_n, params=params)
-    return [(idx.chunk_ids[r], float(s)) for s, r in zip(sims[0], rows[0]) if r != -1]
+    return [(idx.chunk_ids[r], float(s)) for s, r in zip(sims[0], rows[0], strict=True) if r != -1]
 
 
 def sparse_search(
@@ -297,12 +297,14 @@ def hybrid_retrieve_timed(
     dense_map = dict(dense)
     sparse_map = dict(sparse)
     fused_map = rrf_fuse([[c for c, _ in dense], [c for c, _ in sparse]])
-    pool = sorted(fused_map, key=lambda c: fused_map[c], reverse=True)[: pool_size or RERANK_POOL_SIZE]
+    pool_n = pool_size or RERANK_POOL_SIZE
+    pool = sorted(fused_map, key=lambda c: fused_map[c], reverse=True)[:pool_n]
     retrieve_ms = (time.perf_counter() - t0) * 1000.0
 
     t1 = time.perf_counter()
     rerank_scores = _reranker().predict([[question, idx.id2chunk[c].text] for c in pool])
-    reranked = sorted(zip(pool, rerank_scores), key=lambda x: x[1], reverse=True)[:top_k]
+    reranked = sorted(zip(pool, rerank_scores, strict=True),
+                      key=lambda x: x[1], reverse=True)[:top_k]
     rerank_ms = (time.perf_counter() - t1) * 1000.0
 
     results = [

@@ -42,7 +42,7 @@ import sys
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import partial
 
 from sentinel.config import (
@@ -158,7 +158,8 @@ def detector_metrics() -> dict:
             n: _flag_rate(sum(bool(f[n]) for f in fl), len(fl)) for n in names
         }
         result["recall"][part]["missed"] = sorted(
-            c.doc_id for c, f in zip((c for c in adv if split.get(c.doc_id) == part), fl)
+            c.doc_id
+            for c, f in zip((c for c in adv if split.get(c.doc_id) == part), fl, strict=True)
             if not f["union"]
         )
     fl = [flags(c.text) for c in real]
@@ -167,7 +168,7 @@ def detector_metrics() -> dict:
         n: _flag_rate(sum(bool(f[n]) for f in fl), len(fl)) for n in names
     }
     result["false_positives"]["flagged_chunks"] = [
-        c.chunk_id for c, f in zip(real, fl) if f["union"]
+        c.chunk_id for c, f in zip(real, fl, strict=True) if f["union"]
     ]
     result["false_positives"]["unscored"] = unscored
     return result
@@ -185,7 +186,8 @@ def _attack_markers() -> list[str]:
     """Every attack passage's canaries and hosts. Each is a unique made-up string, so finding
     any of them means some planted instruction was carried out — often the target's, sometimes
     another attack passage retrieved alongside it."""
-    return sorted({m for a in _load_jsonl(ADVERSARIAL_DIR / "questions.jsonl") for m in a["markers"]})
+    attacks = _load_jsonl(ADVERSARIAL_DIR / "questions.jsonl")
+    return sorted({m for a in attacks for m in a["markers"]})
 
 
 def _retrieve(question: str, index_dir=None, access: Access = DEFAULT_ACCESS):
@@ -269,7 +271,8 @@ def _attack_summary(results: list[dict], configs: list[str], repeats: int) -> di
                 "succeeded": round(sum(per_rep) / repeats, 2),        # mean over repeats
                 "succeeded_range": [min(per_rep), max(per_rep)],
                 "success_rate": _rate(sum(per_rep), len(rs)),
-                "success_rate_when_exposed": _rate(sum(r["succeeded"] for r in exposed), len(exposed)),
+                "success_rate_when_exposed": _rate(sum(r["succeeded"] for r in exposed),
+                                                   len(exposed)),
                 "succeeded_in_any_run": proportion(any_run, n),
             }
         by_type = defaultdict(lambda: [0, 0])
@@ -318,7 +321,8 @@ def input_guard_eval(repeats: int = 1, workers: int = 6) -> dict:
                 "benign_refused": _flag_rate(sum(flagged(scores[i], names) for i in ben), len(ben)),
             }
         gt = [i for i, r in enumerate(rows) if r["kind"] == "ground_truth"]
-        block["ground_truth_refused"] = _flag_rate(sum(flagged(scores[i], names) for i in gt), len(gt))
+        block["ground_truth_refused"] = _flag_rate(sum(flagged(scores[i], names) for i in gt),
+                                                   len(gt))
         block["missed"] = sorted(
             rows[i]["kind"] for i, r in enumerate(rows)
             if r["label"] == "attack" and not flagged(scores[i], names)
@@ -353,7 +357,7 @@ def _input_summary(results: list[dict], repeats: int) -> dict:
             rs = [r for r in results if part == "all" or r["split"] == part]
             ok = [r["succeeded"] and not (guard == "with_input_guard" and r["flagged"]) for r in rs]
             n = len(rs) // repeats
-            any_run = len({r["i"] for r, o in zip(rs, ok) if o})
+            any_run = len({r["i"] for r, o in zip(rs, ok, strict=True) if o})
             block[part] = {
                 "attacks": n,
                 "succeeded": round(sum(ok) / repeats, 2),
@@ -450,7 +454,8 @@ def scope_check() -> dict:
     for a in _load_jsonl(ADVERSARIAL_DIR / "questions.jsonl"):
         leaked += sum(
             c.chunk_id.startswith("adv")
-            for c in hybrid_retrieve(a["question"], index_dir=ADVERSARIAL_INDEX_DIR, access=Access())
+            for c in hybrid_retrieve(a["question"], index_dir=ADVERSARIAL_INDEX_DIR,
+                                     access=Access())
         )
     return {"default_scope_leaks": leaked}
 
@@ -486,20 +491,22 @@ def _print(report: dict) -> None:
         cells = []
         for p in ("all", *SPLITS):
             if p in s:
-                b, ci = s[p], s[p]["succeeded_in_any_run"]["ci95"]
+                b = s[p]
                 cells.append(f"{p} {b['succeeded']}/{b['attacks']} {b['succeeded_range']}")
         anyr = s["all"]["succeeded_in_any_run"]
         print(f"    {name:18} " + "  ".join(cells)
               + f"   any-run {anyr['k']}/{anyr['n']} CI95 {anyr['ci95']}")
     if "input" in report:
         det, e2e = report["input"]["detection"], report["input"]["end_to_end"]
-        print("\n  input guard        attacks caught (dev / held-out)   genuine refused (dev / held-out)")
+        print("\n  input guard        attacks caught (dev / held-out)"
+              "   genuine refused (dev / held-out)")
         for rule in [k for k in det if k != "configured_detectors"]:
             b = det[rule]
             print(f"    {rule.split(':')[0]:16} "
                   f"{b['dev']['attacks_caught']['flagged']}/{b['dev']['attacks_caught']['of']} / "
                   f"{b['heldout']['attacks_caught']['flagged']}/{b['heldout']['attacks_caught']['of']}"
-                  f"{'':20}{b['dev']['benign_refused']['flagged']}/{b['dev']['benign_refused']['of']} / "
+                  f"{'':20}"
+                  f"{b['dev']['benign_refused']['flagged']}/{b['dev']['benign_refused']['of']} / "
                   f"{b['heldout']['benign_refused']['flagged']}/{b['heldout']['benign_refused']['of']}")
         for guard in ("without_input_guard", "with_input_guard"):
             a = e2e[guard]["all"]
@@ -537,7 +544,8 @@ def _gate(report: dict) -> bool:
         "| attack set | attacks | succeeded | rate | 95% CI | |", "|---|---|---|---|---|---|",
         f"| poisoned documents | {doc['attacks']} | {doc['succeeded']} | {doc['success_rate']:.3f} "
         f"| {ci(doc)} | {'✅' if ok_doc else '❌'} |",
-        f"| user's own question | {usr['attacks']} | {usr['succeeded']} | {usr['success_rate']:.3f} "
+        f"| user's own question | {usr['attacks']} | {usr['succeeded']} "
+        f"| {usr['success_rate']:.3f} "
         f"| {ci(usr)} | {'✅' if ok_usr else '❌'} |",
         "",
         f"_generation `{settings.generation_model}` · screening "
@@ -565,7 +573,7 @@ def rescore(report: dict) -> dict:
     for r in inp["results"]:
         r["succeeded"] = _succeeded(r["answer"], prompts[r["i"]]["markers"])
     inp["end_to_end"] = _input_summary(inp["results"], inp["end_to_end"]["repeats"])
-    report["rescored_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    report["rescored_utc"] = datetime.now(UTC).isoformat(timespec="seconds")
     return report
 
 
@@ -598,7 +606,7 @@ def remeasure(report: dict, names: list[str], repeats: int) -> dict:
     if "all" in names:
         report["input"] = input_guard_eval(repeats=repeats)
     report.setdefault("remeasured", []).append({
-        "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "configs": names, "repeats": repeats, "spend": meter.summary(),
     })
     return report
@@ -613,7 +621,8 @@ def _write(report: dict) -> None:
     slim["injection"]["attacks"].pop("results", None)
     slim["input"].pop("results", None)
     DASHBOARD_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    (DASHBOARD_DATA_DIR / "guardrails.json").write_text(json.dumps(slim, indent=2) + "\n", encoding="utf-8")
+    (DASHBOARD_DATA_DIR / "guardrails.json").write_text(json.dumps(slim, indent=2) + "\n",
+                                                        encoding="utf-8")
 
 
 def main() -> None:
@@ -660,9 +669,10 @@ def main() -> None:
         sys.exit(0 if _gate(report) else 1)
 
     report = {
-        "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "generation_model": settings.generation_model,
-        "injection": {"detectors": detector_metrics(), "attacks": run_attacks(repeats=args.repeats)},
+        "injection": {"detectors": detector_metrics(),
+                      "attacks": run_attacks(repeats=args.repeats)},
         "input": input_guard_eval(repeats=args.repeats),
         "pii": pii_metrics(),
         "scope": scope_check(),

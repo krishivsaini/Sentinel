@@ -26,7 +26,8 @@ def bipia(tmp_path, monkeypatch):
     idx.mkdir()
     (idx / "chunks.jsonl").write_text("".join(
         json.dumps({"chunk_id": f"{a['target_doc']}#0000", "doc_id": a["target_doc"],
-                    "scope": f"bipia:{a['target_doc']}", "quarantined": a["target_doc"] == "bipia00",
+                    "scope": f"bipia:{a['target_doc']}",
+                    "quarantined": a["target_doc"] == "bipia00",
                     "text": "RFC text. " + a["instruction"]}) + "\n"
         for a in ATTACKS))
     for name, path in (("QUESTIONS_PATH", "questions.jsonl"), ("RESULTS_PATH", "results.jsonl"),
@@ -41,8 +42,10 @@ def bipia(tmp_path, monkeypatch):
 
     def fake_attack(question, chunks, cfg):
         calls["attack"] += 1
-        text = WITHHELD_MESSAGE if cfg.answer_check else "SFNUUyBpcy4uLg=="  # "HSTS is..." in base64
-        return {"answer": text, "output_report": None, "answer_check": None, "context_redactions": {}}
+        # "SFNUUyBpcy4uLg==" is "HSTS is..." in base64.
+        text = WITHHELD_MESSAGE if cfg.answer_check else "SFNUUyBpcy4uLg=="
+        return {"answer": text, "output_report": None, "answer_check": None,
+                "context_redactions": {}}
 
     def fake_judge(instruction, question, answer):
         calls["judge"] += 1

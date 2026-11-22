@@ -11,7 +11,8 @@ Each instruction is planted into the ground-truth passage of one of the 48 eval 
 at the start, middle or end of the passage in turn, as BIPIA does — and the question is the
 one that retrieves that passage. So the attack rides inside exactly the text the model needs.
 
-    python scripts/build_bipia.py        # writes data/bipia/{attacks.json,corpus.jsonl,questions.jsonl}
+    python scripts/build_bipia.py        # writes data/bipia/: attacks.json, corpus.jsonl,
+                                         #   questions.jsonl
     python -m sentinel.ingest --bipia    # then index (and screen) it into indexes_bipia/
 
 The download is pinned to one commit, and the file vendored, so the set never changes under us.

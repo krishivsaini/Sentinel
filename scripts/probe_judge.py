@@ -31,7 +31,9 @@ sys.path.insert(0, str(REPO_ROOT))
 
 warnings.filterwarnings("ignore")
 
-import sentinel.eval  # noqa: E402  (installs the ragas<->langchain-community shim)
+# isort: off
+import sentinel.eval  # noqa: E402, F401  (installs the ragas<->langchain-community shim)
+# isort: on
 from ragas import SingleTurnSample  # noqa: E402
 from ragas.embeddings.base import LangchainEmbeddingsWrapper  # noqa: E402
 from ragas.llms.base import LangchainLLMWrapper  # noqa: E402

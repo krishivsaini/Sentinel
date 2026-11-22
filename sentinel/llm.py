@@ -47,7 +47,6 @@ from langchain_core.language_models import BaseChatModel
 from sentinel.config import settings
 from sentinel.spend import SpendCallback
 
-
 _OPENAI_REASONING_PREFIXES = ("gpt-5", "gpt-6", "o1", "o3", "o4")
 
 

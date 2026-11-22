@@ -83,6 +83,7 @@ uv run python -m sentinel.eval.run_guardrails --ci         # the injection gate
 uv run python -m sentinel.eval.run_bipia --max-spend 0.60  # the independent attack set
 uv run python -m sentinel.eval.run_multistep --judge --max-spend 0.25  # multi-part questions, planned vs not
 uv run pytest                                              # tests (live-LLM tests skipped by default)
+uv run ruff check .                                        # lint, as CI runs it
 ```
 
 **Dashboard** — ships with a committed data snapshot:

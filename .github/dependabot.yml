@@ -1,0 +1,32 @@
+# Weekly dependency updates. Minor and patch bumps arrive as one grouped PR per ecosystem;
+# majors come one PR each, since those are the ones that break things. Python PRs run the tests
+# but not the paid eval gates (see .github/workflows/eval-gate.yml); dashboard PRs get a Vercel
+# preview build.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /dashboard
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dashboard-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+

@@ -40,13 +40,15 @@ Run:  python -m sentinel.serve   (or: uvicorn sentinel.serve:app)
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import time
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -81,8 +83,6 @@ from sentinel.logging_config import configure_logging, log
 from sentinel.plan import Plan
 from sentinel.plan import plan as plan_question
 from sentinel.retrieve import Access, hybrid_retrieve_timed, multi_retrieve_timed
-from sentinel.spend import RedisDayTotal, meter, start_request_cost
-from sentinel.users import User, UserStore
 from sentinel.schema import (
     Account,
     Answer,
@@ -94,7 +94,8 @@ from sentinel.schema import (
     RetrievedChunk,
     TokenResponse,
 )
-
+from sentinel.spend import RedisDayTotal, meter, start_request_cost
+from sentinel.users import User, UserStore
 
 # --------------------------------------------------------------------------- injectable engine
 
@@ -165,7 +166,7 @@ def create_access_token(user: User, scopes: frozenset[str] | None = None) -> str
     scopes = user.scopes if scopes is None else scopes
     if not scopes <= user.scopes:
         raise ValueError(f"{user.username} may not be issued {sorted(scopes - user.scopes)}")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     claims = {"sub": user.username, "iat": now,
               "exp": now + timedelta(minutes=settings.jwt_expiry_minutes),
               "scopes": sorted(scopes), "cred": user.credential_tag(settings.jwt_secret)}
@@ -203,14 +204,18 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> P
     return Principal(subject=user.username, scopes=scopes, shared=user.shared)
 
 
+def _forwarded_for(request: Request) -> list[str]:
+    entries = [h.strip() for h in request.headers.get("x-forwarded-for", "").split(",")]
+    return [h for h in entries if h]
+
+
 def _client_ip(request: Request) -> str:
     """The caller's address for rate limiting. Not the leftmost X-Forwarded-For entry (what
     uvicorn's proxy_headers puts in request.client): the caller writes that one, so a made-up
     header per request would get a fresh rate-limit bucket each time. The trusted proxy appends
     the address it actually saw, so count settings.trusted_proxy_hops entries from the right."""
     hops = settings.trusted_proxy_hops
-    forwarded = [h.strip() for h in request.headers.get("x-forwarded-for", "").split(",")]
-    forwarded = [h for h in forwarded if h]
+    forwarded = _forwarded_for(request)
     if hops > 0 and forwarded:
         return forwarded[max(0, len(forwarded) - hops)]
     return get_remote_address(request)
@@ -225,6 +230,13 @@ def _rate_key(request: Request) -> str:
         if found and not found[0].shared:
             return f"user:{found[0].username}"
     return _client_ip(request)
+
+
+def _bucket_tag(key: str) -> str:
+    """A stand-in for a rate-limit key in the logs: the same caller always gets the same tag and
+    different callers different ones, but the tag can't be turned back into an address (it is
+    keyed with the JWT secret)."""
+    return hmac.new(settings.jwt_secret.encode(), key.encode(), hashlib.sha256).hexdigest()[:12]
 
 
 # --------------------------------------------------------------------------- SSE query stream
@@ -675,7 +687,7 @@ def create_app(users: UserStore | None = None) -> FastAPI:
                              expires_in=settings.jwt_expiry_minutes * 60)
 
     @app.get("/me", response_model=Account)
-    def me(user: Principal = Depends(get_current_user)) -> Account:  # noqa: B008
+    def me(user: Principal = Depends(get_current_user)) -> Account:
         return Account(username=user.subject, scopes=sorted(user.scopes), shared=user.shared)
 
     @app.post("/query")
@@ -686,6 +698,12 @@ def create_app(users: UserStore | None = None) -> FastAPI:
         user: Principal = Depends(get_current_user),
         engine: QueryEngine = Depends(get_engine),
     ) -> EventSourceResponse:
+        # Which rate-limit bucket the request landed in, and how many X-Forwarded-For entries
+        # arrived: enough to check in the logs that separate callers are limited separately and
+        # that a client-written entry isn't what decides the bucket.
+        log.info("query.client", bucket=_bucket_tag(_rate_key(request)),
+                 xff_entries=len(_forwarded_for(request)),
+                 trusted_proxy_hops=settings.trusted_proxy_hops)
         # Checked before any work, so a request either runs whole or is turned away: a public
         # demo must not be able to spend the API budget faster than the owner intends.
         limit = settings.daily_spend_limit_usd

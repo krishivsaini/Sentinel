@@ -48,7 +48,7 @@ flowchart LR
 | **[Generation](../sentinel/generate.py)** | answers only from the passages, cites each claim (`[rfc9110#0007]`), abstains with a fixed sentence when the context is thin |
 | **[API](../sentinel/serve.py)** | FastAPI: `POST /token` → JWT, `POST /query` → SSE stream (`retrieved` → `checking` → `token`… → `done`), `POST /feedback` → a thumbs up/down on one answer, `GET /me`; rate limited per account (per IP for the demo account and sign-in) |
 | **[Evaluation](../sentinel/eval/)** | Ragas over 48 hand-verified triples, checkpointed per item to SQLite by git SHA, so interrupted runs resume |
-| **[CI gates](../.github/workflows/eval-gate.yml)** | tests · faithfulness gate · injection gate, path-filtered and spend-capped |
+| **[CI gates](../.github/workflows/eval-gate.yml)** | lint · tests · faithfulness gate · injection gate, path-filtered and spend-capped; weekly Dependabot bumps run the tests, not the paid gates |
 | **[Dashboard](../dashboard/)** | Next.js: trends, drill-down, attribution, live playground, guardrails — from exported JSON, no backend |
 
 <details>

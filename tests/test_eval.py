@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -72,7 +72,7 @@ def test_attribution_low_recall_is_retrieval_fail_even_with_good_answer() -> Non
     assert attribution.classify(it) == "retrieval_fail"
 
 
-# --------------------------------------------------------------------------- store: checkpoint + resume
+# ------------------------------------------------------------------- store: checkpoint + resume
 
 
 @pytest.fixture()
@@ -122,7 +122,7 @@ def test_save_writes_run_row_and_json_export(tmp_store) -> None:
     result = EvalResult(
         run_id="run_xyz",
         git_sha="deadbee",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         per_item=[_item(question="q1"), _item(question="q2", faith=0.1, arel=0.2, crec=0.1)],
         means=EvalMeans(faithfulness=0.55, answer_relevance=0.6, context_recall=0.55),
         attribution_counts=AttributionCounts(retrieval_fail=1, generation_fail=0),
@@ -146,7 +146,7 @@ def _result(n: int, faith: float) -> EvalResult:
     return EvalResult(
         run_id="r",
         git_sha="abc",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         per_item=[_item(question=f"q{i}", faith=faith) for i in range(n)],
         means=EvalMeans(faithfulness=faith, answer_relevance=0.9, context_recall=0.9),
         attribution_counts=AttributionCounts(),
@@ -252,9 +252,10 @@ def test_is_transient_matches_rate_limit_signatures() -> None:
 
 
 def test_server_retry_delay_parses_all_forms() -> None:
-    assert run_eval._server_retry_delay(Exception("Please retry in 45.26s.")) == 45.26  # Gemini prose
-    assert run_eval._server_retry_delay(Exception("Please try again in 2.4s")) == 2.4    # Groq prose
-    assert run_eval._server_retry_delay(Exception("'retryDelay': '21s'")) == 21.0        # RetryInfo
+    delay = run_eval._server_retry_delay
+    assert delay(Exception("Please retry in 45.26s.")) == 45.26  # Gemini prose
+    assert delay(Exception("Please try again in 2.4s")) == 2.4    # Groq prose
+    assert delay(Exception("'retryDelay': '21s'")) == 21.0        # RetryInfo
     assert run_eval._server_retry_delay(Exception("no delay here")) is None
     assert run_eval._server_retry_delay(Exception("Please try again in 7m12.5s.")) == 432.5
     assert run_eval._server_retry_delay(Exception("Please try again in 1h2m3s")) == 3723.0
@@ -398,4 +399,5 @@ def test_gate_summary_reports_the_baseline_comparison(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
     run_eval._ci_gate(_result(settings.ci_min_items, 0.86))
     text = summary.read_text()
-    assert "FAIL" in text and "below main's baseline" in text and "Largest per-question drops" in text
+    assert "FAIL" in text and "below main's baseline" in text
+    assert "Largest per-question drops" in text

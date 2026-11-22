@@ -66,7 +66,8 @@ def test_adversarial_scope_is_never_retrieved_by_default(adv_index, attacks) -> 
     exposed = 0
     for a in attacks:
         q = a["question"]
-        exposed += bool(_adversarial(c.chunk_id for c in hybrid_retrieve(q, index_dir=adv_index, access=BOTH)))
+        hits = hybrid_retrieve(q, index_dir=adv_index, access=BOTH)
+        exposed += bool(_adversarial(c.chunk_id for c in hits))
         assert not _adversarial(c for c, _ in dense_search(q, index_dir=adv_index, access=PUBLIC))
         assert not _adversarial(c for c, _ in sparse_search(q, index_dir=adv_index, access=PUBLIC))
         assert not _adversarial(
@@ -89,8 +90,10 @@ def test_exact_canary_query_cannot_reach_a_poisoned_chunk(adv_index, attacks) ->
     assert len(verbatim) >= 30
     for a in verbatim:
         canary = a["markers"][0]
-        assert sparse_search(canary, index_dir=adv_index, access=BOTH)[0][0].startswith(a["target_doc"])
-        assert not _adversarial(c for c, _ in sparse_search(canary, index_dir=adv_index, access=PUBLIC))
+        top = sparse_search(canary, index_dir=adv_index, access=BOTH)[0][0]
+        assert top.startswith(a["target_doc"])
+        public = sparse_search(canary, index_dir=adv_index, access=PUBLIC)
+        assert not _adversarial(c for c, _ in public)
 
 
 def test_quarantined_chunk_is_excluded_unless_explicitly_included(adv_index, tmp_path) -> None:

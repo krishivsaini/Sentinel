@@ -8,7 +8,7 @@ lo = int(sys.argv[1]) if len(sys.argv) > 1 else 0
 hi = int(sys.argv[2]) if len(sys.argv) > 2 else lo + 12
 ncand = int(sys.argv[3]) if len(sys.argv) > 3 else 4
 
-rows = [json.loads(l) for l in REVIEW.open()]
+rows = [json.loads(line) for line in REVIEW.open()]
 for idx in range(lo, min(hi, len(rows))):
     r = rows[idx]
     print(f"\n{'='*90}\n[{idx}] ({r['cluster']}) {r['question']}")

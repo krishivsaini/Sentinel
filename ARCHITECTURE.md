@@ -37,7 +37,7 @@ flowchart TB
     subgraph gates["Every PR: .github/workflows/eval-gate.yml"]
         FG["faithfulness gate<br/>24 questions, Ragas, gpt-oss-120b judge<br/>absolute 0.80 + vs main's baseline"]
         IG["injection gate<br/>85 attacks, every defence on, ≤ 5%"]
-        T["tests"]
+        T["tests · lint"]
     end
     online -.->|same pipeline| FG
     online -.->|same pipeline| IG

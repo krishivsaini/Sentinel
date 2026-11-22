@@ -18,7 +18,7 @@ import io
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -49,7 +49,7 @@ def main() -> int:
         print(f"only {len(names)} names returned; refusing to overwrite {OUT.name}")
         return 1
     header = (f"# Given names from Wikidata (CC0): male/female/unisex given-name items on 2+ "
-              f"Wikipedias.\n# Fetched {datetime.now(timezone.utc):%Y-%m-%d} by "
+              f"Wikipedias.\n# Fetched {datetime.now(UTC):%Y-%m-%d} by "
               f"scripts/fetch_given_names.py; one per line.\n")
     OUT.write_text(header + "\n".join(names) + "\n", encoding="utf-8")
     print(f"wrote {len(names)} names to {OUT.relative_to(OUT.parents[2])}")

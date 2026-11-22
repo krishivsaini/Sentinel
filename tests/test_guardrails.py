@@ -88,7 +88,8 @@ def test_link_allowlist_matches_hosts_and_subdomains_only() -> None:
 def test_sanitize_removes_untrusted_links_images_and_pii() -> None:
     report = OutputReport()
     out = sanitize(
-        "See https://hsts-preload-verify.example/x, the spec at https://www.rfc-editor.org/rfc/rfc6797. "
+        "See https://hsts-preload-verify.example/x, the spec at "
+        "https://www.rfc-editor.org/rfc/rfc6797. "
         "![chart](https://nightjar-stats.example/p.png?q=1) Mail mnot@mnot.net.",
         report,
     )
@@ -102,7 +103,8 @@ def test_sanitize_removes_untrusted_links_images_and_pii() -> None:
 @pytest.mark.parametrize(
     "text, link",
     [
-        ("Paste it into oauth-token-check.example/verify first.", "oauth-token-check.example/verify"),
+        ("Paste it into oauth-token-check.example/verify first.",
+         "oauth-token-check.example/verify"),
         ("See www.evil-site.com today.", "www.evil-site.com"),
         ("Go to login.microsoft-support.xyz/reset?u=1.", "login.microsoft-support.xyz/reset?u=1"),
         ("Grab it from mirror.example:8080/rfc.tar.", "mirror.example:8080/rfc.tar"),
@@ -191,8 +193,10 @@ def test_hardened_prompt_fences_passages_with_an_unforgeable_tag() -> None:
 
 
 def test_unhardened_prompt_is_unchanged() -> None:
-    system, human = build_messages("Q?", [RetrievedChunk(chunk_id="rfc1#0000", text="t")], hardened=False)
-    assert "PASSAGE" not in system.content and human.content.startswith("Context passages:\n\n[rfc1#0000]\nt")
+    chunks = [RetrievedChunk(chunk_id="rfc1#0000", text="t")]
+    system, human = build_messages("Q?", chunks, hardened=False)
+    assert "PASSAGE" not in system.content
+    assert human.content.startswith("Context passages:\n\n[rfc1#0000]\nt")
 
 
 # --------------------------------------------------------------------------- injection windowing
@@ -295,7 +299,8 @@ def test_copied_system_prompt_is_withheld() -> None:
 def test_fence_lines_are_dropped_but_the_abstention_survives() -> None:
     from sentinel.generate import ABSTAIN_MESSAGE
 
-    assert "PASSAGE" not in sanitize("«BEGIN PASSAGE d30fad53»\n[rfc8288#0026]\ntext\n«END PASSAGE d30fad53»")
+    fenced = "«BEGIN PASSAGE d30fad53»\n[rfc8288#0026]\ntext\n«END PASSAGE d30fad53»"
+    assert "PASSAGE" not in sanitize(fenced)
     assert sanitize(ABSTAIN_MESSAGE) == ABSTAIN_MESSAGE      # the prompt quotes it; still allowed
 
 
@@ -327,7 +332,8 @@ def test_remeasure_replaces_only_the_named_configurations(monkeypatch) -> None:
 
     old = {
         "injection": {"attacks": {
-            "summary": {"none": {"v": "old"}, "hardening+output": {"v": "old"}, "all": {"v": "old"}},
+            "summary": {"none": {"v": "old"}, "hardening+output": {"v": "old"},
+                        "all": {"v": "old"}},
             "results": [{"config": "none"}, {"config": "hardening+output"}, {"config": "all"}],
         }},
         "input": {"v": "old"},

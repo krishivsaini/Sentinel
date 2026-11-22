@@ -96,7 +96,8 @@ def chat(model: str, messages: list[dict], *, rpm: int | None = None, **params) 
     if rpm:
         _limiter(model, rpm).acquire()
     resp = _client().post(GROQ_CHAT_URL, json={"model": model, "messages": messages, **params})
-    body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+    is_json = resp.headers.get("content-type", "").startswith("application/json")
+    body = resp.json() if is_json else {}
     if resp.status_code != 200 or "choices" not in body:
         detail = body.get("error", {}).get("message") or resp.text[:300]
         raise GuardrailAPIError(f"{resp.status_code} {model}: {detail}")

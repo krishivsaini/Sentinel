@@ -93,7 +93,8 @@ class Settings(BaseSettings):
     # Output cap sent on every Groq call. Groq's own default for gpt-oss is 3,072, which truncated
     # judge verdicts on long answers (see sentinel.llm). The model allows far more.
     groq_max_output_tokens: int = 16384
-    jwt_secret: str = Field(default="dev-insecure-change-me", validation_alias="SENTINEL_JWT_SECRET")
+    jwt_secret: str = Field(default="dev-insecure-change-me",
+                            validation_alias="SENTINEL_JWT_SECRET")
     # The shared demo account. Its password is public (the dashboard signs in with it), so it only
     # ever gets default_scopes; named accounts with their own scopes live in users_file.
     demo_user: str = "demo"
@@ -111,7 +112,8 @@ class Settings(BaseSettings):
     # Apple MPS, else CPU). Defaults to CPU: on a Mac, MPS memory grew across a long eval and a
     # 200-query latency benchmark until both died "MPS backend out of memory" — a long-running
     # service would too. CPU held up against the last MPS benchmark that completed (rerank p50 954
-    # vs 879 ms, p95 1,021 vs 1,928 ms; retrieve p95 14 vs 379 ms). CI runs on CPU as well. Override with SENTINEL_TORCH_DEVICE.
+    # vs 879 ms, p95 1,021 vs 1,928 ms; retrieve p95 14 vs 379 ms). CI runs on CPU as well.
+    # Override with SENTINEL_TORCH_DEVICE.
     torch_device: str | None = "cpu"
     # LLM providers for product generation + the Ragas judge. Live free-tier quotas were probed
     # against the API 2026-07-09 (do not invent IDs): EVERY Gemini free model here caps at
@@ -299,11 +301,12 @@ class Settings(BaseSettings):
     # full RPM window (~60s) or we'd wake early and 429 again.
     # A judged item fires ~6 calls (~18K tokens) that overrun the 8K-TPM free window mid-item, so
     # later calls must WAIT OUT the per-minute window; a generous retry budget lets each call grind
-    # through rather than skipping the item. Only engages on throttle — normal/paid runs hit attempt 1.
+    # through rather than skipping the item. Only engages on throttle — normal/paid runs hit
+    # attempt 1.
     judge_max_retries: int = 15            # attempts around 429s (tenacity, honoring retryDelay)
     judge_backoff_seconds: float = 2.0     # exponential base when the server gives no retryDelay
-    judge_backoff_max_seconds: float = 65.0  # cap per wait — long enough to clear a per-minute window
-    judge_call_timeout: float = 90.0       # per-metric-call ceiling (a hung judge can't stall a run)
+    judge_backoff_max_seconds: float = 65.0  # cap per wait: long enough to clear a minute window
+    judge_call_timeout: float = 90.0       # per-metric-call ceiling (a hung judge can't stall runs)
     # Whole-item wall-clock ceiling. A hung HTTP stream on the generation path has no other
     # timeout and once stalled a run indefinitely; this turns a hang into a skip (resume retries
     # it). Generous vs. an observed ~2-3 min throttled item, but far below an indefinite hang.

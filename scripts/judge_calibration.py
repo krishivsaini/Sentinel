@@ -97,7 +97,8 @@ BLIND_SCORES: dict[str, float] = {
 #            chunk is about packet reordering — the formula isn't in the retrieved text.  -> 0.5
 #   c5d31ac8 MSL: "2 minutes" cites the ISN chunk (rfc9293#0095); MSL def wasn't retrieved. -> 0.5
 #   563701c0 invalid_grant: "Section 5.2" cites the §11.4 registry chunk; never defines it.  -> 0.5
-#   17926543 SETTINGS_HEADER_TABLE_SIZE: claim is verbatim in CTX1 -> fully grounded 1.0 (judge 0.5).
+#   17926543 SETTINGS_HEADER_TABLE_SIZE: claim is verbatim in CTX1 -> fully grounded 1.0
+#            (judge 0.5).
 # Refreshed against the SHIPPED judge (gpt-oss-120b) on its own generated answers (18-item
 # spread from the run). Each label = author's faithfulness judgment of the answer's claims vs the
 # retrieved contexts it was given (grounding, not truth), verified chunk-by-chunk.
@@ -203,9 +204,12 @@ def _cohen_kappa(a, b) -> float:
 def compute() -> None:
     items = {it["qkey"]: it for it in _load_items()}
     missing = [k for k in items if k not in HAND_SCORES]
-    paired = [(k, HAND_SCORES[k], items[k]["ragas_faithfulness"]) for k in HAND_SCORES if k in items]
+    paired = [
+        (k, HAND_SCORES[k], items[k]["ragas_faithfulness"]) for k in HAND_SCORES if k in items
+    ]
     if not paired:
-        sys.exit("No overlap between HAND_SCORES and scored items. Run --dump and fill HAND_SCORES.")
+        sys.exit("No overlap between HAND_SCORES and scored items. "
+                 "Run --dump and fill HAND_SCORES.")
 
     hand = [p[1] for p in paired]
     ragas = [p[2] for p in paired]
@@ -218,15 +222,18 @@ def compute() -> None:
         print(f"  {k:8} {h:5.2f} {r:6.2f}  {items[k]['question'][:38]}")
     print("  " + "-" * 60)
 
-    mae = sum(abs(h - r) for h, r in zip(hand, ragas)) / n
+    mae = sum(abs(h - r) for h, r in zip(hand, ragas, strict=True)) / n
     # binary agreement: does each rater call the answer "faithful" (>= 0.5)?
     hb = [1 if h >= 0.5 else 0 for h in hand]
     rb = [1 if r >= 0.5 else 0 for r in ragas]
-    agree = sum(a == b for a, b in zip(hb, rb)) / n
+    agree = sum(a == b for a, b in zip(hb, rb, strict=True)) / n
 
     print(f"  n              : {n}")
-    print(f"  Pearson r      : {_pearson(hand, ragas):+.3f}" if len(set(ragas)) > 1 else "  Pearson r      : n/a (ragas constant)")
-    print(f"  Spearman rho   : {_spearman(hand, ragas):+.3f}" if len(set(ragas)) > 1 else "  Spearman rho   : n/a")
+    varied = len(set(ragas)) > 1
+    print(f"  Pearson r      : {_pearson(hand, ragas):+.3f}" if varied
+          else "  Pearson r      : n/a (ragas constant)")
+    print(f"  Spearman rho   : {_spearman(hand, ragas):+.3f}" if varied
+          else "  Spearman rho   : n/a")
     print(f"  MAE            : {mae:.3f}")
     print(f"  binary agree   : {agree:.1%}  (faithful vs not, threshold 0.5)")
     try:
@@ -242,10 +249,10 @@ def _stats(hand: list[float], judge: list[float]) -> str:
     """Pearson / Spearman / MAE over pairs where the judge produced a score."""
     import math
 
-    pairs = [(h, j) for h, j in zip(hand, judge) if not math.isnan(j)]
+    pairs = [(h, j) for h, j in zip(hand, judge, strict=True) if not math.isnan(j)]
     if len(pairs) < 3 or len({j for _, j in pairs}) < 2:
         return f"n={len(pairs)}  (too few / constant scores for correlation)"
-    h, j = zip(*pairs)
+    h, j = zip(*pairs, strict=True)
     mae = sum(abs(a - b) for a, b in pairs) / len(pairs)
     return f"n={len(pairs)}  r={_pearson(h, j):+.2f}  rho={_spearman(h, j):+.2f}  MAE={mae:.3f}"
 
@@ -286,7 +293,9 @@ def rejudge(provider: str, model: str, repeat: int, labels: str = "original") ->
     import warnings
 
     warnings.filterwarnings("ignore")
+    # isort: off
     import sentinel.eval  # noqa: F401  (installs the ragas <-> langchain-community shim)
+    # isort: on
     from ragas import SingleTurnSample
     from ragas.llms.base import LangchainLLMWrapper
     from ragas.metrics import Faithfulness
@@ -352,7 +361,7 @@ def rejudge(provider: str, model: str, repeat: int, labels: str = "original") ->
     hdr = "".join(f"  new#{i + 1}" for i in range(repeat))
     print(f"\n  {'qkey':8} {'hand':>5} {'old':>5}{hdr}  question")
     print("  " + "-" * (40 + 7 * repeat))
-    for k, h, b in zip(keys, hand, base):
+    for k, h, b in zip(keys, hand, base, strict=True):
         cells = "".join(f" {r[k]:6.2f}" for r in runs)
         print(f"  {k:8} {h:5.2f} {b:5.2f}{cells}  {items[k]['question'][:34]}")
     print("  " + "-" * (40 + 7 * repeat))
@@ -383,7 +392,8 @@ def rejudge(provider: str, model: str, repeat: int, labels: str = "original") ->
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Calibrate the Ragas faithfulness judge against hand scores.")
+    ap = argparse.ArgumentParser(
+        description="Calibrate the Ragas faithfulness judge against hand scores.")
     ap.add_argument("--dump", type=int, metavar="N", help="write N spread items to the review file")
     ap.add_argument("--rejudge", nargs=2, metavar=("PROVIDER", "MODEL"),
                     help="re-score the hand-labelled answers with a candidate judge")

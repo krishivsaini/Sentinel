@@ -27,7 +27,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 warnings.filterwarnings("ignore")
 
-import sentinel.eval  # noqa: E402  (installs the ragas <-> langchain-community shim)
+# isort: off
+import sentinel.eval  # noqa: E402, F401  (installs the ragas <-> langchain-community shim)
+# isort: on
 from ragas import SingleTurnSample  # noqa: E402
 from ragas.embeddings.base import LangchainEmbeddingsWrapper  # noqa: E402
 from ragas.llms.base import LangchainLLMWrapper  # noqa: E402
@@ -123,7 +125,10 @@ async def main_async(model: str, hosts: list[str], n: int, git_sha: str | None) 
     print("  " + "-" * 62)
     for metric in results[a]:
         va, vb = results[a][metric], results[b][metric]
-        deltas = [abs(x - y) for x, y in zip(va, vb) if not (math.isnan(x) or math.isnan(y))]
+        deltas = [
+            abs(x - y) for x, y in zip(va, vb, strict=True)
+            if not (math.isnan(x) or math.isnan(y))
+        ]
         ma = statistics.mean([v for v in va if not math.isnan(v)] or [float("nan")])
         mb = statistics.mean([v for v in vb if not math.isnan(v)] or [float("nan")])
         print(
@@ -133,7 +138,7 @@ async def main_async(model: str, hosts: list[str], n: int, git_sha: str | None) 
         )
     faith_d = [
         abs(x - y)
-        for x, y in zip(results[a]["faithfulness"], results[b]["faithfulness"])
+        for x, y in zip(results[a]["faithfulness"], results[b]["faithfulness"], strict=True)
         if not (math.isnan(x) or math.isnan(y))
     ]
     md = statistics.mean(faith_d) if faith_d else float("nan")

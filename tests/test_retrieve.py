@@ -108,7 +108,8 @@ def test_rerank_improves_context_recall_vs_fusion_only() -> None:
         fusion_recall.append(len(gold & set(pool[:k])) / len(gold))
         hybrid_recall.append(len(gold & hybrid) / len(gold))
 
-    fusion, hybrid = sum(fusion_recall) / len(fusion_recall), sum(hybrid_recall) / len(hybrid_recall)
+    fusion = sum(fusion_recall) / len(fusion_recall)
+    hybrid = sum(hybrid_recall) / len(hybrid_recall)
     assert hybrid >= fusion + 0.05, f"rerank recall@{k} {hybrid:.3f} vs fusion {fusion:.3f}"
 
 

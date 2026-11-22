@@ -20,7 +20,7 @@ import json
 import platform
 import statistics
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sentinel.config import settings
 
@@ -89,7 +89,8 @@ def main() -> None:
     ap.add_argument("--local-iters", type=int, default=200, help="retrieve+rerank samples")
     ap.add_argument("--gen-samples", type=int, default=50, help="generation samples (API-bound)")
     ap.add_argument("--gen-spacing", type=float, default=0.5, help="seconds between gen calls")
-    ap.add_argument("--gen-timeout", type=float, default=25.0, help="per-call timeout; skip if over")
+    ap.add_argument("--gen-timeout", type=float, default=25.0,
+                    help="per-call timeout; skip if over")
     ap.add_argument("--no-generate", action="store_true", help="skip the API-bound generate stage")
     ap.add_argument("--out", default="data/latency_report.json")
     args = ap.parse_args()
@@ -119,7 +120,7 @@ def main() -> None:
 
     def write_report(stages: list[dict], gen_failed: int) -> None:
         report = {
-            "measured_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "measured_utc": datetime.now(UTC).isoformat(timespec="seconds"),
             "platform": platform.platform(),
             "device": device,
             "generation_provider": settings.generation_provider,
@@ -154,10 +155,12 @@ def main() -> None:
     # --- generate stage: API-bound; retries OFF, spaced out, per-sample fault-tolerant ---
     gen_failed = 0
     if not args.no_generate:
-        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+        from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import TimeoutError as FutureTimeout
 
         generate_ms: list[float] = []
-        print(f"generate stage: up to {args.gen_samples} samples ({settings.generation_provider})...")
+        print(f"generate stage: up to {args.gen_samples} samples "
+              f"({settings.generation_provider})...")
         with ThreadPoolExecutor(max_workers=1) as pool:
             for i in range(args.gen_samples):
                 q = QUERIES[i % len(QUERIES)]

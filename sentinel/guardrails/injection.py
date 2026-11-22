@@ -147,7 +147,8 @@ class PromptGuard:
 
     def _score_window(self, window: str) -> float:
         try:
-            out = chat(self.model, [{"role": "user", "content": window}], rpm=settings.promptguard_rpm)
+            out = chat(self.model, [{"role": "user", "content": window}],
+                       rpm=settings.promptguard_rpm)
         except GuardrailAPIError as exc:
             if "reduce the length" not in str(exc) or len(window) < self.MIN_SPLIT_CHARS:
                 raise
@@ -270,7 +271,7 @@ def screen_texts(
 
     todo = {
         (d.name, k): (d, t)
-        for t, k in zip(texts, keys)
+        for t, k in zip(texts, keys, strict=True)
         for d in detectors
         if cache.get(d.name, k) is None
     }
@@ -341,7 +342,7 @@ def screen_chunks(
     screenings, in order; a released chunk's screening has `released` set."""
     screenings = screen_texts([c.text for c in chunks], offline=offline)
     exceptions = load_exceptions() if exceptions is None else exceptions
-    for c, s in zip(chunks, screenings):
+    for c, s in zip(chunks, screenings, strict=True):
         s.released = s.quarantined and any(e.covers(c, s) for e in exceptions)
         c.quarantined = s.quarantined and not s.released
     return chunks, screenings
