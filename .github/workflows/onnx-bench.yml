@@ -1,0 +1,44 @@
+# Temporary: reranker backend benchmark on an x86 runner. Lives only on bench/onnx-reranker.
+name: onnx-bench
+on:
+  push:
+    branches: [bench/onnx-reranker]
+permissions:
+  contents: read
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - id: keys
+        run: |
+          echo "index=indexes-${{ hashFiles('data/corpus/**', 'data/adversarial/**', 'data/guardrails/screening_cache.jsonl', 'sentinel/ingest.py', 'sentinel/schema.py', 'sentinel/config.py', 'sentinel/guardrails/injection.py') }}" >> "$GITHUB_OUTPUT"
+          echo "hf=hf-models-${{ hashFiles('sentinel/config.py') }}" >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ steps.keys.outputs.hf }}
+      - id: idx
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            indexes
+            indexes_adversarial
+          key: ${{ steps.keys.outputs.index }}
+      - name: Build indexes (cache miss only)
+        if: steps.idx.outputs.cache-hit != 'true'
+        run: |
+          uv run python -m sentinel.ingest
+          uv run python -m sentinel.ingest --adversarial
+      - run: lscpu | grep -E "Model name|^CPU\(s\)|Thread" || true
+      - run: uv run --with "sentence-transformers[onnx]==5.6.0" python .github/bench/onnx_rerank_bench.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: onnx-bench
+          path: onnx_bench.json
