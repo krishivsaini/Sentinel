@@ -83,6 +83,9 @@ AUTHORED: dict[int, tuple[str, list[str]]] = {
          "It provides flow control so the sender does not overrun the receiver's buffer; when the "
          "receiver advertises a zero window the sender stops sending data (apart from zero-window "
          "probes) until space is advertised again.",
+         # 0054 ("Managing the Window") is the passage this answer is written from. The file
+         # committed in July had 0009 (the header's Window field) instead; corrected 2026-11-23,
+         # see docs/results.md ("Ground-truth correction").
          ["rfc9293#0054", "rfc9293#0056"]),
     27: ("When the server authenticates with a certificate it sends that certificate in the "
          "Certificate handshake message, followed by a CertificateVerify message. In TLS 1.3 "
@@ -250,7 +253,8 @@ def main() -> int:
 
     with GROUND_TRUTH_PATH.open("w", encoding="utf-8") as out:
         for it in items:
-            out.write(it.model_dump_json() + "\n")
+            # The format the committed file is in (spaced separators, UTF-8 as is).
+            out.write(json.dumps(it.model_dump(), ensure_ascii=False) + "\n")
     print(f"\nwrote {len(items)} items -> {GROUND_TRUTH_PATH}")
     return 1 if problems else 0
 

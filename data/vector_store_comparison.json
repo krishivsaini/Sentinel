@@ -37,12 +37,12 @@
    "same_hybrid_top_k": 48,
    "hybrid_faiss": {
     "hit": 0.896,
-    "recall": 0.816,
+    "recall": 0.826,
     "rr": 0.759
    },
    "hybrid_pgvector": {
     "hit": 0.896,
-    "recall": 0.816,
+    "recall": 0.826,
     "rr": 0.759
    }
   },
@@ -577,12 +577,12 @@
     "not_allowed": 0,
     "hybrid_faiss": {
      "hit": 1.0,
-     "recall": 0.5,
+     "recall": 1.0,
      "rr": 1.0
     },
     "hybrid_pgvector": {
      "hit": 1.0,
-     "recall": 0.5,
+     "recall": 1.0,
      "rr": 1.0
     },
     "same_hybrid_top_k": true

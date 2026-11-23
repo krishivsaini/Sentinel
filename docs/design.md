@@ -96,7 +96,7 @@ Retriever composition is solved plumbing, so the dense and sparse stages are Lan
 - **Taming reasoning models.** `gpt-oss` at default effort sometimes "thought" until it returned nothing; low effort and an explicit output cap fixed both that and truncated judge verdicts.
 - **Provider-agnostic, judge pinned.** Groq, OpenAI, DeepSeek, NVIDIA and Google are wired; the judge stays on the host it was calibrated on.
 - **pgvector, measured against FAISS before anything relies on it.** `SENTINEL_VECTOR_STORE=pgvector` moves dense search into Postgres: one SQL query with the scope and quarantine filters in its `WHERE` clause, so a blocked chunk still can't take a candidate slot. FAISS's flat index is exact and pgvector's HNSW index isn't, so [`scripts/compare_vector_stores.py`](../scripts/compare_vector_stores.py) compares them on every question ([results](../data/vector_store_comparison.json)):
-  - **Top results:** the hybrid top-5 is identical on all 48 questions, with the same hit@5 0.896, recall@5 0.816 and MRR 0.759.
+  - **Top results:** the hybrid top-5 is identical on all 48 questions, with the same hit@5 0.896, recall@5 0.826 and MRR 0.759.
   - **Dense top-50:** the lists overlap 99.7% (96% at worst).
   - **Filters:** on the 50 attack questions, where the filters reject exactly the chunks the questions pull in, not one excluded chunk came back, and every result list was full.
   - **Speed:** 0.9 ms per dense query against 0.1 ms in memory, beside a 10 ms retrieve stage and ~1 s of reranking.

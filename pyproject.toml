@@ -64,7 +64,7 @@ pgvector = [
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
-    "httpx>=0.28",                          # FastAPI TestClient / async API tests
+    "httpx2>=2.16.0",                       # what Starlette's TestClient uses (httpx is deprecated there)
     "ruff>=0.9",
 ]
 

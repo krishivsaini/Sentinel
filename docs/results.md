@@ -49,14 +49,16 @@ Gold passages are exact chunk texts, so the first three columns need no judge ([
 
 | Retrieval | Hit@5 | Recall@5 | MRR | Context recall (judge) |
 |---|---|---|---|---|
-| Dense only | 0.729 | 0.615 | 0.547 | — |
-| BM25 only | 0.729 | 0.569 | 0.447 | — |
-| Dense + BM25, RRF fusion | 0.833 | 0.708 | 0.572 | 0.904 |
-| **+ cross-encoder rerank** (shipped) | **0.896** | **0.816** | **0.759** | 0.898 |
+| Dense only | 0.750 | 0.625 | 0.568 | — |
+| BM25 only | 0.708 | 0.559 | 0.442 | — |
+| Dense + BM25, RRF fusion | 0.854 | 0.719 | 0.593 | 0.904 |
+| **+ cross-encoder rerank** (shipped) | **0.896** | **0.826** | **0.759** | 0.898 |
 
-- **Hybrid earns its complexity** — on 6 questions BM25 finds the gold passage and dense search misses it.
-- **The reranker earns its latency** — recall@5 +0.11, MRR 0.57 → 0.76 (6 questions rescued, 3 lost).
+- **Hybrid earns its complexity** — on 5 questions BM25 finds the gold passage and dense search misses it.
+- **The reranker earns its latency** — recall@5 +0.11, MRR 0.59 → 0.76 (5 questions rescued, 3 lost).
 - **The judged metric can't see it** — Ragas context recall credits *any* supporting passage, which is why the ablation also reports judge-free ranking metrics.
+
+**Ground-truth correction (2026-11-23).** One gold passage was changed after these results were first published, so the table above is not the one first reported. For "What is the purpose of the TCP receive window?" the gold set had been `rfc9293#0009` (the header's Window field definition) plus `#0056`. The reference answer is written from `#0054` ("Managing the Window": the range of sequence numbers the receiver is prepared to accept, tied to its buffer space), and the build script where the answer was authored names `#0054`, but the file committed in July had `#0009` instead, apparently from a hand edit. Rebuilding the file from the script is how the mismatch surfaced. The gold set is now `#0054` + `#0056`. Retrieval itself didn't change. Every label-dependent number (this table, the [pool sweep](../data/rerank_pool_sweep.json) and the pgvector comparison) was recomputed from the stored results or from a fresh local run, and under the old label each reproduces the published numbers exactly. The judged context-recall column is unchanged because the judge never sees the gold passages. As first published: dense 0.729 / 0.615 / 0.547, BM25 0.729 / 0.569 / 0.447, fusion 0.833 / 0.708 / 0.572, shipped 0.896 / **0.816** / 0.759 (hit@5 / recall@5 / MRR), with 6 BM25-only finds and 6 rerank rescues. The shipped pipeline's recall@5 moves 0.816 → 0.826 on this one question; hit@5 and MRR are unchanged. The faithfulness, answer relevance and context recall scores above don't use gold passages and are unaffected.
 
 ## Multi-part questions
 
@@ -152,5 +154,5 @@ Apple M3, 8 GB, local models on CPU; generation on Groq `gpt-oss-20b` ([report](
 
 Live on Cloud Run's 2 vCPUs it is much slower: over the first 7 logged requests reranking took **10.6 s p50, 14.0 s p95**, generation 0.7 s and the guards 0.5 s ([ops report](../data/ops_report.json)). A semantic-cache hit skips all of it and returns in 0.5–0.6 s inside the service with the cache in Redis ([live check](../data/cache_live_check_redis.json)).
 
-Reranking is the bottleneck. A [measured sweep](../data/rerank_pool_sweep.json) shows a 20-candidate pool keeps hit@5 at 0.896 and recall@5 at 0.812 (vs 0.816) for **2.6× less rerank time**, but changes the top-5 for 13 of 48 questions. The pool stays at 50 — every number here is measured on it — and 20 is the fallback.
+Reranking is the bottleneck. A [measured sweep](../data/rerank_pool_sweep.json) shows a 20-candidate pool keeps hit@5 at 0.896 and recall@5 at 0.823 (vs 0.826) for **2.6× less rerank time**, but changes the top-5 for 13 of 48 questions. The pool stays at 50 — every number here is measured on it — and 20 is the fallback.
 
